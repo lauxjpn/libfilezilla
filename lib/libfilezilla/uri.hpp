@@ -58,13 +58,23 @@ public:
 	unsigned short port_{};
 	std::string path_;
 
-	/// THe part of a URI after ? but before #
+	/**
+	 * \brief The part of a URI after ? but before #
+	 *
+	 * The query string is not encoded when building the URI, neither is it decoded when parsing a URI.
+         *
+	 * \sa \c fz::query_string
+	 */
 	std::string query_;
 
-	/// The part of a URI after #
+	/**
+	 * \brief The part of a URI after #
+	 *
+	 * The fragment is not encoded when building the URI, neither is it decoded when parsing a URI.
+	 */
 	std::string fragment_;
 
-	/// \brief Checks that the URI is absolut, that is the path starting with a slash.
+	/// \brief Checks that the URI is absolute, that is the path starting with a slash.
 	bool is_absolute() const { return path_[0] == '/'; }
 
 	/**
@@ -80,7 +90,7 @@ private:
 /**
  * \brief Class for parsing a URI's query string.
  *
- * Assumes the usual semantivs of key-value pairs separated by ampersands.
+ * Assumes the usual semantics of key-value pairs separated by ampersands.
  */
 class FZ_PUBLIC_SYMBOL query_string final
 {
