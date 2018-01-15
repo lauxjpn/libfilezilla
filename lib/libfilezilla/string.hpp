@@ -345,12 +345,12 @@ String trimmed(String const& s, String const& chars = fzS(typename String::value
 }
 
 template<typename String>
-String ltrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t"), bool fromLeft = true, bool fromRight = true) {
+String ltrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
 	return trimmed(s, chars, true, false);
 }
 
 template<typename String>
-String rtrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t"), bool fromLeft = true, bool fromRight = true) {
+String rtrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
 	return trimmed(s, chars, false, true);
 }
 
