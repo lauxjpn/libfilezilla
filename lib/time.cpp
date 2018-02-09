@@ -1,5 +1,7 @@
 #include "libfilezilla/time.hpp"
 
+#include "libfilezilla/format.hpp"
+
 #ifndef FZ_WINDOWS
 #include <errno.h>
 #include <sys/time.h>
@@ -768,5 +770,92 @@ FILETIME datetime::get_filetime() const
 }
 
 #endif
+
+std::string datetime::get_rfc822() const
+{
+	if (empty()) {
+		return std::string();
+	}
+	tm const t = get_tm(datetime::zone::utc);
+	if (t.tm_wday < 0 || t.tm_wday > 6 || t.tm_mon < 0 || t.tm_mon > 11) {
+		return std::string();
+	}
+
+	static const char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	static const char* wdays[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+	return sprintf("%s, %02d %s %d %02d:%02d:%02d GMT", wdays[t.tm_wday], t.tm_mday, months[t.tm_mon], t.tm_year + 1900,
+		t.tm_hour, t.tm_min, t.tm_sec);
+}
+
+namespace {
+template<typename String>
+bool do_set_rfc822(datetime& dt, String const& str)
+{
+	auto tokens = strtok(str, fzS(typename String::value_type, ", :-"));
+	if (tokens.size() >= 7) {
+		auto getMonth = [](String const& m) {
+			if (m == fzS(typename String::value_type, "Jan")) return 1;
+			if (m == fzS(typename String::value_type, "Feb")) return 2;
+			if (m == fzS(typename String::value_type, "Mar")) return 3;
+			if (m == fzS(typename String::value_type, "Apr")) return 4;
+			if (m == fzS(typename String::value_type, "May")) return 5;
+			if (m == fzS(typename String::value_type, "Jun")) return 6;
+			if (m == fzS(typename String::value_type, "Jul")) return 7;
+			if (m == fzS(typename String::value_type, "Aug")) return 8;
+			if (m == fzS(typename String::value_type, "Sep")) return 9;
+			if (m == fzS(typename String::value_type, "Oct")) return 10;
+			if (m == fzS(typename String::value_type, "Nov")) return 11;
+			if (m == fzS(typename String::value_type, "Dec")) return 12;
+			return 0;
+		};
+
+		int day = to_integral<int>(tokens[1]);
+		int month;
+		if (!day) {
+			day = to_integral<int>(tokens[2]);
+			month = getMonth(tokens[1]);
+		}
+		else {
+			month = getMonth(tokens[2]);
+		}
+
+		int year = to_integral<int>(tokens[6]);
+		int hour;
+		int minute;
+		int second;
+		if (year < 1000) {
+			year = to_integral<int>(tokens[3]);
+			if (year < 1000) {
+				year += 1900;
+			}
+			hour = to_integral<int>(tokens[4]);
+			minute = to_integral<int>(tokens[5]);
+			second = to_integral<int>(tokens[6]);
+		}
+		else {
+			hour = to_integral<int>(tokens[3]);
+			minute = to_integral<int>(tokens[4]);
+			second = to_integral<int>(tokens[5]);
+		}
+
+		return dt.set(datetime::utc, year, month, day, hour, minute, second);
+	}
+	else {
+		dt.clear();
+		return false;
+	}
+}
+}
+
+bool datetime::set_rfc822(std::string const& str)
+{
+	return do_set_rfc822(*this, str);
+}
+
+bool datetime::set_rfc822(std::wstring const& str)
+{
+	return do_set_rfc822(*this, str);
+}
 
 }

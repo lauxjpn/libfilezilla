@@ -87,6 +87,10 @@ public:
 	/// \return \c true if no timestamp has been set
 	bool empty() const;
 
+	explicit operator bool() const {
+		return !empty();
+	}
+
 	/// Resulting timestamp is empty()
 	void clear();
 
@@ -187,6 +191,8 @@ public:
 	/** Format time as string
 	 *
 	 * \param format is a format string as understood by ::strftime
+	 *
+	 * Note that some format specifiers are locale-dependent.
 	 */
 	std::string format(std::string const& format, zone z) const;
 	std::wstring format(std::wstring const& format, zone z) const;
@@ -205,13 +211,40 @@ public:
 	/// Get timestamp as time_t, seconds since 1970-01-01 00:00:00
 	time_t get_time_t() const;
 
-	/// Get timestamp as struct tm
+	/** \brief Get timestamp as struct tm
+	 *
+	 * Undefined if datetime is empty.
+	 */
 	tm get_tm(zone z) const;
 
 #ifdef FZ_WINDOWS
 	/// Windows-only: Get timestamp as FILETIME
 	FILETIME get_filetime() const;
 #endif
+
+	/**
+	 * Returns date in the format specified in RFC 822, updated by RFC 1123.
+	 *
+	 * \example Sun, 06 Nov 1994 08:49:37 GMT
+	 */
+	std::string get_rfc822() const;
+
+	/**
+	 * Parses a date in the format specified in RFC 822, either original or updated by RFC 1123.
+	 * Also supports RFC 850 and ANSI C asctime formats.
+	 *
+	 * Used timezone is always UTC.
+	 *
+	 * On errors, object gets clears
+	 *
+	 * \return whether setting the timestamp succeeded. On failure object gets cleared.
+	 *
+	 * \example Sun, 06 Nov 1994 08:49:37 GMT // RFC 822, updated by RFC 1123
+	 * \example Sun, 06-Nov-94 08:49:37 GMT // obsolete RFC 850
+	 * \example Sun Nov 6 08:49:37 1994 // ANSI C asctime
+	 */
+	bool set_rfc822(std::string const& str);
+	bool set_rfc822(std::wstring const& str);
 
 private:
 	int FZ_PRIVATE_SYMBOL compare_slow(datetime const& op) const;
