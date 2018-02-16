@@ -1,3 +1,8 @@
+0.12.0 (2018-02-16)
+
++ Added fz::datetime::operator bool
++ Added fz::datetime::get_rfc822 and fz::datetime::set_rfc822
+
 0.11.2 (2018-01-05)
 
 + Added fz::starts_with and fz::ends_with
