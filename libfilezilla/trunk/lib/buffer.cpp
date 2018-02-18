@@ -53,7 +53,7 @@ unsigned char* buffer::get(size_t write_size)
 			pos_ = data;
 		}
 	}
-	return data_;
+	return pos_ + size_;
 }
 
 buffer& buffer::operator=(buffer const& buf)

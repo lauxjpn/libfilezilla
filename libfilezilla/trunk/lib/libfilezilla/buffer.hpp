@@ -15,6 +15,10 @@ namespace fz {
  *
  * This class is useful when buffering data for sending over the network, or for buffering data for further 
  * piecemeal processing after having received it.
+ *
+ * In general, copying/moving data around is expensive and allocations are even more expensive. Using this
+ * class helps to limit both to the bare minimum.
+ *
  */
 class FZ_PUBLIC_SYMBOL buffer final
 {
@@ -32,16 +36,31 @@ public:
 	buffer& operator=(buffer const& buf);
 	buffer& operator=(buffer && buf);
 
-	// Undefined if buffer is empty
+	/// Undefined if buffer is empty
+	unsigned char const* get() const { return pos_; }
 	unsigned char* get() { return pos_; }
 
 	/** \brief Returns a writable buffer guaranteed to be large enough for write_size bytes, call add when done.
 	 *
+	 * The returned pointer is pointing just after the data already stored in the buffer.
+
+	 * Calling this function does not does not affect size().
+
 	 * \sa append
+	 *
+	 * \par Example:
+	 * \code
+	 * fz::buffer buf;
+	 * size_t to_read = 44;
+	 * int read = recv(fd, buf.get(to_read), to_read, 0); // Read stuff from some socket
+	 * if (read > 0)
+	 *     buf.add(read); // Adjust size with the amount actually written into the buffer
+	 * \endcode
+	 *
 	 */
 	unsigned char* get(size_t write_size);
 
-	// Increase size by the passed amount. Call this after having obtained a writable buffer with get(size_t write_size)
+	/// Increase size by the passed amount. Call this after having obtained a writable buffer with get(size_t write_size)
 	void add(size_t added);
 
 	/** \brief Removes consumed bytes from the beginning of the buffer.
@@ -59,7 +78,7 @@ public:
 
 	/** \brief Appends the passed data to the buffer.
 	 *
-	 * The number of reallocations as result to repeated append are armortized O(1)
+	 * The number of reallocations as result to repeated append are amortized O(1)
 	 */
 	void append(unsigned char const* data, size_t len);
 	void append(std::string const& str);
