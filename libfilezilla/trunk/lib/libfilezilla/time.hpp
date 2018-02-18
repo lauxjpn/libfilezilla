@@ -225,7 +225,8 @@ public:
 	/**
 	 * Returns date in the format specified in RFC 822, updated by RFC 1123.
 	 *
-	 * \example Sun, 06 Nov 1994 08:49:37 GMT
+	 * \par Example:
+	 * \li Sun, 06 Nov 1994 08:49:37 GMT
 	 */
 	std::string get_rfc822() const;
 
@@ -239,9 +240,10 @@ public:
 	 *
 	 * \return whether setting the timestamp succeeded. On failure object gets cleared.
 	 *
-	 * \example Sun, 06 Nov 1994 08:49:37 GMT // RFC 822, updated by RFC 1123
-	 * \example Sun, 06-Nov-94 08:49:37 GMT // obsolete RFC 850
-	 * \example Sun Nov 6 08:49:37 1994 // ANSI C asctime
+	 * \par Examples:
+	 * Sun, 06 Nov 1994 08:49:37 GMT // RFC 822, updated by RFC 1123\n
+	 * Sun, 06-Nov-94 08:49:37 GMT // obsolete RFC 850\n
+	 * Sun Nov 6 08:49:37 1994 // ANSI C asctime\n
 	 */
 	bool set_rfc822(std::string const& str);
 	bool set_rfc822(std::wstring const& str);
