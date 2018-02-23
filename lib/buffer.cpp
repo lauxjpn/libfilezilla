@@ -150,4 +150,17 @@ void buffer::reserve(size_t capacity)
 	pos_ = data_;
 }
 
+bool buffer::operator==(buffer const& rhs) const
+{
+	if (size() != rhs.size()) {
+		return false;
+	}
+
+	if (!size()) {
+		return true;
+	}
+
+	return memcmp(get(), rhs.get(), size()) == 0;
+}
+
 }

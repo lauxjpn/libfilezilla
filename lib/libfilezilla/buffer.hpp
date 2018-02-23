@@ -93,6 +93,12 @@ public:
 	/// Gets element at offset i. Does not do bounds checking
 	unsigned char operator[](size_t i) const { return pos_[i]; }
 	unsigned char & operator[](size_t i) { return pos_[i]; }
+
+	bool operator==(buffer const& rhs) const;
+
+	bool operator!=(buffer const& rhs) const {
+		return !(*this == rhs);
+	}
 private:
 
 	// Invariants:

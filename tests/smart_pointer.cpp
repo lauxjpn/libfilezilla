@@ -4,7 +4,7 @@
 #include "test_utils.hpp"
 /*
  * This testsuite asserts the correctness of the
- * functions handling IP addresses
+ * smart pointer classes
  */
 
 class smart_pointer_test final : public CppUnit::TestFixture
