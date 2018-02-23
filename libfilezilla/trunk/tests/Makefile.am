@@ -4,6 +4,7 @@ TESTS = test
 check_PROGRAMS = $(TESTS)
 
 test_SOURCES =  test.cpp \
+		buffer.cpp \
 		dispatch.cpp \
 		eventloop.cpp \
 		format.cpp \
