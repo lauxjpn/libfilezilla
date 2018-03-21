@@ -128,7 +128,11 @@ struct FZ_PUBLIC_SYMBOL less_insensitive_ascii final
 {
 	template<typename T>
 	bool operator()(T const& lhs, T const& rhs) const {
-		return fz::str_tolower_ascii(lhs) < fz::str_tolower_ascii(rhs);
+		return std::lexicographical_compare(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(),
+		    [](typename T::value_type const& a, typename T::value_type const& b) {
+			    return tolower_ascii(a) < tolower_ascii(b);
+		    }
+		);
 	}
 };
 
