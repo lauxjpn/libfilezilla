@@ -126,7 +126,7 @@ char const* calc_wchar_t_encoding()
 	// Explicitly specify endianess, otherwise we'll get a BOM prefixed to everything
 	int const i = 1;
 	char const* p = reinterpret_cast<char const*>(&i);
-	bool little_endian = p[0] == 1;
+	bool const little_endian = p[0] == 1;
 
 	if (sizeof(wchar_t) == 4) {
 		if (little_endian && try_encoding("UTF-32LE")) {
@@ -155,6 +155,31 @@ char const* wchar_t_encoding()
 	static char const* const encoding = calc_wchar_t_encoding();
 	return encoding;
 }
+
+class iconv_t_holder
+{
+public:
+	iconv_t_holder(char const* to, char const* from)
+	{
+		cd = iconv_open(to, from);
+	}
+
+	~iconv_t_holder()
+	{
+		if (cd != reinterpret_cast<iconv_t>(-1)) {
+			iconv_close(cd);
+		}
+	}
+
+	explicit operator bool() const {
+		return cd != reinterpret_cast<iconv_t>(-1);
+	}
+
+	iconv_t_holder(iconv_t_holder const&) = delete;
+	iconv_t_holder& operator=(iconv_t_holder const&) = delete;
+
+	iconv_t cd{reinterpret_cast<iconv_t>(-1)};
+};
 }
 #endif
 
@@ -177,14 +202,15 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 			MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), out_p, out_len);
 		}
 #else
-		iconv_t cd = iconv_open(wchar_t_encoding(), "UTF-8");
-		if (cd != reinterpret_cast<iconv_t>(-1)) {
+		static thread_local iconv_t_holder holder(wchar_t_encoding(), "UTF-8");
+
+		if (holder && iconv(holder.cd, nullptr, nullptr, nullptr, nullptr) != static_cast<size_t>(-1)) {
 			auto in_p = const_cast<iconv_second_arg_type>(s);
 			size_t out_len = len * sizeof(wchar_t) * 2;
 			char* out_buf = new char[out_len];
 			char* out_p = out_buf;
 
-			size_t r = iconv(cd, &in_p, &len, &out_p, &out_len);
+			size_t r = iconv(holder.cd, &in_p, &len, &out_p, &out_len);
 
 			if (r != static_cast<size_t>(-1)) {
 				ret.assign(reinterpret_cast<wchar_t*>(out_buf), reinterpret_cast<wchar_t*>(out_p));
@@ -193,8 +219,6 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 			// Our buffer should big enough as well, so we can ignore errors such as E2BIG.
 
 			delete [] out_buf;
-
-			iconv_close(cd);
 		}
 #endif
 	}
@@ -239,8 +263,9 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
 			WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
 		}
 #else
-		iconv_t cd = iconv_open("UTF-8", wchar_t_encoding());
-		if (cd != reinterpret_cast<iconv_t>(-1)) {
+		static thread_local iconv_t_holder holder("UTF-8", wchar_t_encoding());
+
+		if (holder && iconv(holder.cd, nullptr, nullptr, nullptr, nullptr) != static_cast<size_t>(-1)) {
 			auto in_p = reinterpret_cast<iconv_second_arg_type>(const_cast<wchar_t*>(in.c_str()));
 			size_t in_len = in.size() * sizeof(wchar_t);
 
@@ -248,7 +273,7 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
 			char* out_buf = new char[out_len];
 			char* out_p = out_buf;
 
-			size_t r = iconv(cd, &in_p, &in_len, &out_p, &out_len);
+			size_t r = iconv(holder.cd, &in_p, &in_len, &out_p, &out_len);
 
 			if (r != static_cast<size_t>(-1)) {
 				ret.assign(out_buf, out_p);
@@ -257,8 +282,6 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
 			// Our buffer should big enough as well, so we can ignore errors such as E2BIG.
 
 			delete[] out_buf;
-
-			iconv_close(cd);
 		}
 #endif
 	}
