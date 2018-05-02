@@ -85,8 +85,13 @@ String hex_encode(InString const& data)
 	return ret;
 }
 
+enum class base64_type {
+	standard,
+	url
+};
+
 /// \brief Encodes raw input string to base64
-std::string FZ_PUBLIC_SYMBOL base64_encode(std::string const& in);
+std::string FZ_PUBLIC_SYMBOL base64_encode(std::string const& in, base64_type type = base64_type::standard, bool pad = true);
 
 /// \brief Decodes base64, ignores whitespace. Returns empty string on invalid input.
 std::string FZ_PUBLIC_SYMBOL base64_decode(std::string const& in);
