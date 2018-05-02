@@ -85,6 +85,12 @@ String hex_encode(InString const& data)
 	return ret;
 }
 
+/**
+ * \brief Alphabet variations for base64
+ *
+ * - standard: Alphabet with / and + as chars 62 and 63
+ * - url: - and _
+ */
 enum class base64_type {
 	standard,
 	url
@@ -93,7 +99,11 @@ enum class base64_type {
 /// \brief Encodes raw input string to base64
 std::string FZ_PUBLIC_SYMBOL base64_encode(std::string const& in, base64_type type = base64_type::standard, bool pad = true);
 
-/// \brief Decodes base64, ignores whitespace. Returns empty string on invalid input.
+/**
+ * \brief Decodes base64, ignores whitespace. Returns empty string on invalid input.
+ *
+ * Padding is optional, alphabet is auto-detected.
+ */
 std::string FZ_PUBLIC_SYMBOL base64_decode(std::string const& in);
 
 
