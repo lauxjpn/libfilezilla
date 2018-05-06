@@ -1,7 +1,7 @@
 0.12.2 (2018-05-05)
 
 + Added parameters to base64_encode to control alphabet and padding
-* Improved performance of less_insensitive_ascii
++ Improved performance of less_insensitive_ascii
 + *nix: Faster conversion between UTF-8 and wchar_t strings. 
 
 0.12.1 (2018-02-23)
