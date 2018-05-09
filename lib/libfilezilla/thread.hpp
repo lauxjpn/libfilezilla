@@ -3,6 +3,10 @@
 
 #include "libfilezilla.hpp"
 
+#ifndef FZ_WINDOWS
+#include <thread>
+#endif
+
 /** \file
  * \brief Declares \ref fz::thread "thread"
  */
@@ -25,6 +29,12 @@ namespace fz {
 class FZ_PUBLIC_SYMBOL thread
 {
 public:
+#ifdef FZ_WINDOWS
+	typedef uint32_t id;
+#else
+	typedef std::thread::id id;
+#endif
+
 	thread() = default;
 
 	/** \brief Calls \c std::abort if the thread has not been joined.
@@ -58,6 +68,9 @@ public:
 	 */
 	bool joinable() const;
 
+	/// Returns unique id of the thread calling the function
+	static id own_id();
+
 protected:
 	/// The thread's entry point, override in your derived class.
 	virtual void entry() = 0;
@@ -67,7 +80,6 @@ private:
 	friend class impl;
 	impl* impl_{};
 };
-
 }
 
 #endif

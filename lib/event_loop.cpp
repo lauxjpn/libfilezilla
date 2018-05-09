@@ -72,10 +72,14 @@ void event_loop::remove_handler(event_handler* handler)
 		deadline_ = monotonic_clock();
 	}
 
-	while (active_handler_ == handler) {
-		l.unlock();
-		sleep(duration::from_milliseconds(1));
-		l.lock();
+	if (active_handler_ == handler) {
+		if (fz::thread::own_id() != thread_id_) {
+			while (active_handler_ == handler) {
+				l.unlock();
+				sleep(duration::from_milliseconds(1));
+				l.lock();
+			}
+		}
 	}
 }
 
@@ -164,6 +168,8 @@ bool event_loop::process_event(scoped_lock & l)
 
 void event_loop::entry()
 {
+	thread_id_ = thread::own_id();
+
 	monotonic_clock now;
 
 	scoped_lock l(sync_);

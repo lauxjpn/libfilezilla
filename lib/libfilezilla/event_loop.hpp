@@ -102,6 +102,8 @@ private:
 	monotonic_clock deadline_;
 
 	timer_id next_timer_id_{};
+
+	thread::id thread_id_{};
 };
 
 }
