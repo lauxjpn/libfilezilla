@@ -67,20 +67,18 @@ public:
 	 * When function returns, handler is not in its callback anymore.
 	 *
 	 * \warning You _MUST_ call remove_handler no later than inside the destructor of the most derived class.
-	 *
-	 *  This may deadlock if a handler removes itself inside its own callback.
 	 */
 	void remove_handler();
 
 	/** \brief Called by the event loop in the worker thread with the event to process
 	 *
 	 * Override in your derived class.
-	 * 
+	 *
 	 * Consider using \ref dispatch inside your function.
 	 */
 	virtual void operator()(event_base const&) = 0;
 
-	/* \brief Sends the passed event asynchronously to the handler.
+	/** \brief Sends the passed event asynchronously to the handler.
 	 *
 	 * Can be called from any thread.
 	 *

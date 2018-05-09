@@ -105,6 +105,11 @@ void thread::join()
 	}
 }
 
+thread::id thread::own_id()
+{
+	return static_cast<id>(GetCurrentThreadId());
+}
+
 #else
 
 // Canonical implentation for everyone else
@@ -161,6 +166,11 @@ void thread::join()
 		delete impl_;
 		impl_ = nullptr;
 	}
+}
+
+thread::id thread::own_id()
+{
+	return std::this_thread::get_id();
 }
 
 #endif
