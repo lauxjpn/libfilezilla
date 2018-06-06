@@ -106,8 +106,9 @@ public:
 	void remove(std::string const& key);
 	std::string& operator[](std::string const& key);
 
-private:
+	std::map<std::string, std::string, fz::less_insensitive_ascii> const& pairs() const { return segments_; }
 
+private:
 	std::map<std::string, std::string, fz::less_insensitive_ascii> segments_;
 };
 
