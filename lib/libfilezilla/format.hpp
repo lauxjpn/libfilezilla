@@ -179,6 +179,20 @@ typename std::enable_if_t<!std::is_pointer<std::decay_t<Arg>>::value, String> po
 	return String();
 }
 
+template<typename String, typename Arg>
+typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value, String> char_to_string(Arg&& arg)
+{
+	return String({static_cast<typename String::value_type>(static_cast<unsigned char>(arg))});
+}
+
+
+template<typename String, typename Arg>
+typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value, String> char_to_string(Arg&&)
+{
+	assert(0);
+	return String();
+}
+
 
 template<typename String, typename... Args>
 String extract_arg(char, size_t, typename String::value_type, size_t)
@@ -226,6 +240,9 @@ String extract_arg(char flags, size_t width, typename String::value_type type, s
 		else if (type == 'p') {
 			ret = pointer_to_string<String>(std::forward<Arg>(arg));
 			pad_arg(ret, flags, width);
+		}
+		else if (type == 'c') {
+			ret = char_to_string<String>(std::forward<Arg>(arg));
 		}
 		else {
 			assert(0);

@@ -114,4 +114,7 @@ void format_test::test_sprintf()
 	CPPUNIT_ASSERT_EQUAL(std::string("    -77"), fz::sprintf("%+7d", -77));
 	CPPUNIT_ASSERT_EQUAL(std::string("+77    "), fz::sprintf("%+-7d", 77));
 	CPPUNIT_ASSERT_EQUAL(std::string("-77    "), fz::sprintf("%+-7d", -77));
+
+	CPPUNIT_ASSERT_EQUAL(std::string("x"), fz::sprintf("%c", char('x')));
+	CPPUNIT_ASSERT_EQUAL(std::string("x"), fz::sprintf("%c", int('x')));
 }
