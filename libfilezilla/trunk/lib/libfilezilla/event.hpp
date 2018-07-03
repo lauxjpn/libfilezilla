@@ -4,6 +4,7 @@
 #include "libfilezilla.hpp"
 
 #include <tuple>
+#include <typeinfo>
 
 /** \file
  * \brief Declares event_base and simple_event<>
@@ -42,8 +43,11 @@ public:
 	Best solution is to have your derived type return the address of a static data member of it, as
 	done in \ref fz::simple_event "simple_event".
 	*/
-	virtual void const* derived_type() const = 0;
+	virtual size_t derived_type() const = 0;
 };
+
+///\private
+size_t FZ_PUBLIC_SYMBOL get_unique_type_id(std::type_info const& id);
 
 /**
 \brief This is the recommended event class.
@@ -54,6 +58,7 @@ Keep the values simple, in particular avoid mutexes in your values.
 
 \see event_handler for usage example.
 */
+
 template<typename UniqueType, typename...Values>
 class simple_event final : public event_base
 {
@@ -72,14 +77,16 @@ public:
 	simple_event(simple_event const& op) = default;
 	simple_event& operator=(simple_event const& op) = default;
 
-	/// \brief Returns a unique pointer for the type such that can be used directly in derived_type.
-	static void const* type() {
-		static const char* f = nullptr;
-		return &f;
+	/// \brief Returns a unique id for the type such that can be used directly in derived_type.
+	inline static size_t type() {
+		// Exporting templates from DLLs is problematic to say the least. It breaks
+		// ODR, so we use this trick that goes over the type name.
+		static int const v = get_unique_type_id(typeid(UniqueType*));
+		return v;
 	}
 
 	/// \brief Simply returns \ref type()
-	virtual void const* derived_type() const {
+	virtual size_t derived_type() const {
 		return type();
 	}
 
@@ -108,10 +115,6 @@ struct timer_event_type{};
  * All timer events have one arguments of type \c timer_id which is the id of the timer that triggered.
  */
 typedef simple_event<timer_event_type, timer_id> timer_event;
-
-/// \private
-/// This instantiation must be a public symbol
-extern template class FZ_PUBLIC_SYMBOL simple_event<timer_event_type, timer_id>;
 
 }
 
