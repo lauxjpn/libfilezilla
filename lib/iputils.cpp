@@ -5,15 +5,18 @@
 
 namespace fz {
 template<typename String, typename Char = typename String::value_type>
-String do_get_ipv6_long_form(String short_address)
+String do_get_ipv6_long_form(String const& short_address)
 {
+	size_t start = 0;
+	size_t end = short_address.size();
+
 	if (!short_address.empty() && short_address[0] == '[') {
 		if (short_address.back() != ']') {
 			return String();
 		}
-		short_address = short_address.substr(1, short_address.size() - 2);
+		++start;
+		--end;
 	}
-	short_address = str_tolower_ascii(short_address);
 
 	Char buf[40] = { '0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
@@ -27,22 +30,21 @@ String do_get_ipv6_long_form(String short_address)
 
 	Char* out = buf;
 
-	const size_t len = short_address.size();
-	if (len > 39) {
+	if (end - start > 39) {
 		return String();
 	}
 
 	// First part, before possible ::
-	size_t i = 0;
+	size_t i;
 	size_t grouplength = 0;
 
 	Char const* s = short_address.c_str();
-	for (i = 0; i < len + 1; ++i) {
-		Char const& c = s[i];
-		if (c == ':' || !c) {
+	for (i = start; i <= end; ++i) {
+		Char const& c = tolower_ascii(s[i]);
+		if (i == end || c == ':' || !c) {
 			if (!grouplength) {
 				// Empty group length, not valid
-				if (!c || s[i + 1] != ':') {
+				if (i == end || !c || s[i + 1] != ':') {
 					return String();
 				}
 				++i;
@@ -51,10 +53,10 @@ String do_get_ipv6_long_form(String short_address)
 
 			out += 4 - grouplength;
 			for (size_t j = grouplength; j > 0; --j) {
-				*out++ = s[i - j];
+				*out++ = tolower_ascii(s[i - j]);
 			}
 			// End of string...
-			if (!c) {
+			if (i == end || !c) {
 				if (!*out) {
 					// ...on time
 					return buf;
@@ -85,8 +87,9 @@ String do_get_ipv6_long_form(String short_address)
 			return String();
 		}
 		// Too long group
-		if (++grouplength > 4)
+		if (++grouplength > 4) {
 			return String();
+		}
 	}
 
 	// Second half after ::
@@ -94,13 +97,13 @@ String do_get_ipv6_long_form(String short_address)
 	Char* end_first = out;
 	out = &buf[38];
 	size_t stop = i;
-	for (i = len - 1; i > stop; --i) {
+	for (i = end - 1; i > stop; --i) {
 		if (out < end_first) {
 			// Too long
 			return String();
 		}
 
-		Char const& c = s[i];
+		Char const& c = tolower_ascii(s[i]);
 		if (c == ':') {
 			if (!grouplength) {
 				// Empty group length, not valid
@@ -258,11 +261,13 @@ address_type do_get_address_type(String const& address)
 				return address_type::unknown;
 			}
 
-			if (segment > 255)
+			if (segment > 255) {
 				return address_type::unknown;
-			if (!dotcount && !segment)
+			}
+			if (!dotcount && !segment) {
 				return address_type::unknown;
-			dotcount++;
+			}
+			++dotcount;
 			segment = 0;
 		}
 		else if (c < '0' || c > '9') {
