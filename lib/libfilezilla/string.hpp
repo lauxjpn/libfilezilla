@@ -260,8 +260,8 @@ std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, std::str
 std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, std::wstring const& find, std::wstring const& replacement);
 
 /// Modifies \c in, replacing all occurrences of \c find with \c replacement
-void FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string const& find, std::string const& replacement);
-void FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string const& find, std::string const& replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement);
 
 /// Tokenizes string. Returns all non-empty substrings
 template<typename String, typename Delim, typename Container = std::vector<String>>
