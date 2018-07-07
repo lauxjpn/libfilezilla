@@ -291,13 +291,16 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
 
 namespace {
 template<typename String>
-inline void do_replace_substrings(String& in, String const& find, String const& replacement)
+inline bool do_replace_substrings(String& in, String const& find, String const& replacement)
 {
+	bool ret = false;
 	size_t pos = in.find(find);
 	while (pos != std::string::npos) {
 		in.replace(pos, find.size(), replacement);
 		pos = in.find(find, pos + replacement.size());
+		ret = true;
 	}
+	return ret;
 }
 }
 
@@ -315,14 +318,14 @@ std::wstring replaced_substrings(std::wstring const& in, std::wstring const& fin
 	return ret;
 }
 
-void replace_substrings(std::string& in, std::string const& find, std::string const& replacement)
+bool replace_substrings(std::string& in, std::string const& find, std::string const& replacement)
 {
-	do_replace_substrings(in, find, replacement);
+	return do_replace_substrings(in, find, replacement);
 }
 
-void replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement)
+bool replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement)
 {
-	do_replace_substrings(in, find, replacement);
+	return do_replace_substrings(in, find, replacement);
 }
 
 }
