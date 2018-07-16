@@ -1,3 +1,9 @@
+0.13.0 (2018-07-16)
+
++ Add bool return value to replace_substrings to indicate whether something has been replaced.
++ fz::sprintf: Added %c format specifier
+- MSW: Work around problematic DLL export of templates, timers now work if libfilezilla has been built as DLL
+
 0.12.3 (2018-06-08)
 
 + Event handlers can now removed themselves while inside a callback
