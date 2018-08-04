@@ -3,7 +3,7 @@
 
 #include "libfilezilla.hpp"
 
-#ifndef FZ_WINDOWS
+#if !defined(FZ_WINDOWS) || !(defined(__MINGW32__) || defined(__MINGW64__))
 #include <thread>
 #endif
 
@@ -29,7 +29,7 @@ namespace fz {
 class FZ_PUBLIC_SYMBOL thread
 {
 public:
-#ifdef FZ_WINDOWS
+#if defined(FZ_WINDOWS) && (defined(__MINGW32__) || defined(__MINGW64__))
 	typedef uint32_t id;
 #else
 	typedef std::thread::id id;
