@@ -69,20 +69,20 @@ typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is
 			if (lead) {
 				ret += lead;
 			}
-			if (end - p < static_cast<ptrdiff_t>(width)) {
+			if (static_cast<size_t>(end - p) < width) {
 				ret.append(width - (end - p), '0');
 			}
 			ret.append(p, end);
 		}
 		else {
-			if (end - p < static_cast<ptrdiff_t>(width) && !(flags & left_align)) {
+			if (static_cast<size_t>(end - p) < width && !(flags & left_align)) {
 				ret.append(width - (end - p), ' ');
 			}
 			if (lead) {
 				ret += lead;
 			}
 			ret.append(p, end);
-			if (end - p < static_cast<ptrdiff_t>(width) && flags & left_align) {
+			if (static_cast<size_t>(end - p) < width && flags & left_align) {
 				ret.append(width - (end - p), ' ');
 			}
 		}
