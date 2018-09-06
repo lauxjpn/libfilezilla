@@ -81,7 +81,7 @@ public:
 	inline static size_t type() {
 		// Exporting templates from DLLs is problematic to say the least. It breaks
 		// ODR, so we use this trick that goes over the type name.
-		static int const v = get_unique_type_id(typeid(UniqueType*));
+		static size_t const v = get_unique_type_id(typeid(UniqueType*));
 		return v;
 	}
 
