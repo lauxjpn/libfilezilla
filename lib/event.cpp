@@ -1,7 +1,7 @@
 #include "libfilezilla/event.hpp"
+#include "libfilezilla/mutex.hpp"
 
 #include <map>
-#include <libfilezilla/mutex.hpp>
 
 namespace fz {
 

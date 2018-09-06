@@ -123,7 +123,7 @@ template<typename T, bool Init> T& shared_optional<T, Init>::get()
 	if (!Init && !data_) {
 		data_ = std::make_shared<T>();
 	}
-	if (!data_.unique()) {
+	if (data_.use_count() > 1) {
 		data_ = std::make_shared<T>(*data_);
 	}
 
@@ -132,8 +132,9 @@ template<typename T, bool Init> T& shared_optional<T, Init>::get()
 
 template<typename T, bool Init> bool shared_optional<T, Init>::operator<(shared_optional<T, Init> const& cmp) const
 {
-	if (data_ == cmp.data_)
+	if (data_ == cmp.data_) {
 		return false;
+	}
 	else if (!Init && !data_) {
 		return static_cast<bool>(cmp.data_);
 	}
@@ -156,7 +157,7 @@ template<typename T, bool Init> void shared_optional<T, Init>::clear()
 	if (!Init) {
 		data_.reset();
 	}
-	else if (data_.unique()) {
+	else if (data_.use_count()) {
 		*data_ = T();
 	}
 	else {
