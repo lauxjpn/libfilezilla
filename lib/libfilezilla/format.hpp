@@ -29,7 +29,7 @@ enum : char {
 // Converts integral type to desired string type...
 // ... basic case: simple unsigned value
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char flags, int width, Arg && arg)
+typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char flags, size_t width, Arg && arg)
 {
 	std::decay_t<Arg> v = arg;
 
@@ -69,20 +69,20 @@ typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is
 			if (lead) {
 				ret += lead;
 			}
-			if (end - p < width) {
+			if (end - p < static_cast<ptrdiff_t>(width)) {
 				ret.append(width - (end - p), '0');
 			}
 			ret.append(p, end);
 		}
 		else {
-			if (end - p < width && !(flags & left_align)) {
+			if (end - p < static_cast<ptrdiff_t>(width) && !(flags & left_align)) {
 				ret.append(width - (end - p), ' ');
 			}
 			if (lead) {
 				ret += lead;
 			}
 			ret.append(p, end);
-			if (end - p < width && flags & left_align) {
+			if (end - p < static_cast<ptrdiff_t>(width) && flags & left_align) {
 				ret.append(width - (end - p), ' ');
 			}
 		}
@@ -99,14 +99,14 @@ typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is
 
 // ... for strongly typed enums
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char flags, int width, Arg && arg)
+typename std::enable_if_t<std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char flags, size_t width, Arg && arg)
 {
 	return integral_to_string<String, Unsigned>(flags, width, static_cast<std::underlying_type_t<std::decay_t<Arg>>>(arg));
 }
 
 // ... assert otherwise
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char, int, Arg &&)
+typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(char, size_t, Arg &&)
 {
 	assert(0);
 	return String();

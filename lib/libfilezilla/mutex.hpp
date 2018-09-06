@@ -86,6 +86,25 @@ public:
 	scoped_lock(scoped_lock const&) = delete;
 	scoped_lock& operator=(scoped_lock const&) = delete;
 
+	scoped_lock(scoped_lock && op)
+	{
+		m_ = op.m_;
+		op.m_ = 0;
+		locked_ = op.locked_;
+		op.locked_ = false;
+	}
+
+	scoped_lock& operator=(scoped_lock && op)
+	{
+		if (this != &op) {
+			m_ = op.m_;
+			op.m_ = 0;
+			locked_ = op.locked_;
+			op.locked_ = false;
+		}
+		return *this;
+	}
+
 	/** \brief Obtains the mutex.
 	 *
 	 * Locking an already locked scoped_lock results in undefined behavior.
@@ -118,9 +137,9 @@ private:
 	friend class condition;
 
 #ifdef FZ_WINDOWS
-	CRITICAL_SECTION * const m_;
+	CRITICAL_SECTION * m_;
 #else
-	pthread_mutex_t * const m_;
+	pthread_mutex_t * m_;
 #endif
 	bool locked_{true};
 };
