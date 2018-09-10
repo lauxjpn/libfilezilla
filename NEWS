@@ -1,3 +1,8 @@
+0.13.1 (2018-09-10)
+
++ Made fz::scoped_lock movable
+- Fix a few compiler warnings
+
 0.13.0 (2018-07-16)
 
 + Add bool return value to replace_substrings to indicate whether something has been replaced.
