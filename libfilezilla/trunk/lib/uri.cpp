@@ -56,7 +56,7 @@ bool uri::parse(std::string in)
 			in = in.substr(auth_delim);
 		}
 		else {
-			authority = in;
+			authority = in.substr(2);
 			in.clear();
 		}
 		if (!parse_authority(std::move(authority))) {
