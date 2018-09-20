@@ -157,7 +157,7 @@ template<typename T, bool Init> void shared_optional<T, Init>::clear()
 	if (!Init) {
 		data_.reset();
 	}
-	else if (data_.use_count()) {
+	else if (data_.use_count() <= 1) {
 		*data_ = T();
 	}
 	else {
