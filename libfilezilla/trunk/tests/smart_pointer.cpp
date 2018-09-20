@@ -98,4 +98,19 @@ void smart_pointer_test::test_shared()
 	fz::shared_value<int> v;
 	CPPUNIT_ASSERT(static_cast<bool>(v));
 	CPPUNIT_ASSERT(v == int());
+
+	{
+		fz::shared_optional<int> a(7);
+		fz::shared_optional<int> b = a;
+		b.clear();
+		CPPUNIT_ASSERT_EQUAL(7, *a);
+	}
+
+	{
+		fz::shared_value<int> a(7);
+		fz::shared_value<int> b = a;
+		b.clear();
+		CPPUNIT_ASSERT_EQUAL(7, *a);
+	}
+
 }
