@@ -1,3 +1,8 @@
+0.13.2 (2018-09-21)
+
+- Fix regression in fz::shared_value::clear
+- Fix parsing of URIs without path
+
 0.13.1 (2018-09-10)
 
 + Made fz::scoped_lock movable
