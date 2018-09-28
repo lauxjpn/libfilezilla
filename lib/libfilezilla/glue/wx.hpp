@@ -6,9 +6,9 @@
 #include "../format.hpp"
 #include "../string.hpp"
 
+namespace fz {
 inline std::wstring to_wstring(wxString const& s) { return s.ToStdWstring(); }
 
-namespace fz {
 template<>
 inline wxString str_tolower_ascii(wxString const& s)
 {
