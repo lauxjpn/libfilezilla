@@ -49,7 +49,7 @@ native_string FZ_PUBLIC_SYMBOL to_native(std::wstring const& in);
 
 /** \brief Locale-sensitive stricmp
  *
- * Like std::string::strcmp but case-insensitive, respecting locale.
+ * Like std::string::compare but case-insensitive, respecting locale.
  *
  * \note does not handle embedded null
  */
@@ -135,6 +135,20 @@ struct FZ_PUBLIC_SYMBOL less_insensitive_ascii final
 		);
 	}
 };
+
+/** \brief Locale-insensitive stricmp
+ *
+ * Equivalent to str_tolower_ascii(a).compare(str_tolower_ascii(b));
+ */
+template<typename String>
+bool equal_insensitive_ascii(String const& a, String const& b)
+{
+	return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend(),
+	    [](typename String::value_type const& a, typename String::value_type const& b) {
+		    return tolower_ascii(a) == tolower_ascii(b);
+	    }
+	);
+}
 
 /** \brief Converts from std::string in system encoding into std::wstring
  *
@@ -374,24 +388,45 @@ void rtrim(String & s, String const& chars = fzS(typename String::value_type, " 
 	s = trimmed(s, chars, false, true);
 }
 
-// Remove once C++20 is minimum required standard to build libfilezilla
-template<typename String>
+/** \brief Tests whether the first string starts with the second string
+ *
+ * \param insensitive_ascii If true, comparison is case-insensitive
+ */
+template<bool insensitive_ascii = false, typename String>
 bool starts_with(String const& s, String const& beginning)
 {
 	if (beginning.size() > s.size()) {
 		return false;
 	}
-	return std::equal(beginning.begin(), beginning.end(), s.begin());
+	if (insensitive_ascii) {
+		return std::equal(beginning.begin(), beginning.end(), s.begin(), [](typename String::value_type const& a, typename String::value_type const& b) {
+			return tolower_ascii(a) == tolower_ascii(b);
+		});
+	}
+	else {
+		return std::equal(beginning.begin(), beginning.end(), s.begin());
+	}
 }
 
-// Remove once C++20 is minimum required standard to build libfilezilla
-template<typename String>
+/** \brief Tests whether the first string ends with the second string
+ *
+ * \param insensitive_ascii If true, comparison is case-insensitive
+ */
+template<bool insensitive_ascii = false, typename String>
 bool ends_with(String const& s, String const& ending)
 {
 	if (ending.size() > s.size()) {
 		return false;
 	}
-	return std::equal(ending.rbegin(), ending.rend(), s.rbegin());
+
+	if (insensitive_ascii) {
+		return std::equal(ending.rbegin(), ending.rend(), s.rbegin(), [](typename String::value_type const& a, typename String::value_type const& b) {
+			return tolower_ascii(a) == tolower_ascii(b);
+		});
+	}
+	else {
+		return std::equal(ending.rbegin(), ending.rend(), s.rbegin());
+	}
 }
 
 }
