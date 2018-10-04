@@ -1,3 +1,9 @@
+0.14.0 (2018-10-04)
+
++ Added fz::equal_insensitive_ascii
++ Added insensitive_ascii parameter to fz::starts_with and fz::ends_with
+- Fixed namespace of to_wstring in wx glue
+
 0.13.2 (2018-09-21)
 
 - Fix regression in fz::shared_value::clear
