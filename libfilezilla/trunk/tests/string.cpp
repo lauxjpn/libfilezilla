@@ -16,6 +16,7 @@ class string_test final : public CppUnit::TestFixture
 	CPPUNIT_TEST(test_base64);
 	CPPUNIT_TEST(test_trim);
 	CPPUNIT_TEST(test_strtok);
+	CPPUNIT_TEST(test_startsendswith);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -28,6 +29,7 @@ public:
 	void test_base64();
 	void test_trim();
 	void test_strtok();
+	void test_startsendswith();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(string_test);
@@ -160,4 +162,27 @@ void string_test::test_strtok()
 	CPPUNIT_ASSERT_EQUAL(std::string("a"), tokens[0]);
 	CPPUNIT_ASSERT_EQUAL(std::string("b"), tokens[1]);
 	CPPUNIT_ASSERT_EQUAL(std::string("c"), tokens[2]);
+}
+
+void string_test::test_startsendswith()
+{
+	CPPUNIT_ASSERT_EQUAL(false, fz::starts_with(std::string("hello"), std::string("world")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::starts_with(std::string("hello"), std::string("hell")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::starts_with(std::string("hell"), std::string("hello")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::starts_with(std::string("hello"), std::string("HELL")));
+
+	CPPUNIT_ASSERT_EQUAL(false, fz::starts_with<true>(std::string("hello"), std::string("world")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::starts_with<true>(std::string("hello"), std::string("hell")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::starts_with<true>(std::string("hell"), std::string("hello")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::starts_with<true>(std::string("hello"), std::string("HELL")));
+
+	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with(std::string("hello"), std::string("world")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::ends_with(std::string("hello"), std::string("ello")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with(std::string("ello"), std::string("HELLO")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with(std::string("hello"), std::string("ELLO")));
+
+	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with<true>(std::string("hello"), std::string("world")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::ends_with<true>(std::string("hello"), std::string("ello")));
+	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with<true>(std::string("ello"), std::string("HELLO")));
+	CPPUNIT_ASSERT_EQUAL(true, fz::ends_with<true>(std::string("hello"), std::string("ELLO")));
 }
