@@ -142,6 +142,10 @@ private:
 #endif
 };
 
+/** \brief remove the specified file.
+ *
+ * \return true iff the file has been removed or did not exist to begin with.
+ */
 bool FZ_PUBLIC_SYMBOL remove_file(native_string const& name);
 
 }

@@ -126,7 +126,12 @@ bool file::opened() const
 
 bool remove_file(fz::native_string const& name)
 {
-	return DeleteFileW(name.c_str()) != 0;
+	bool ret = DeleteFileW(name.c_str()) != 0;
+	if (!ret && GetLastError() == ERROR_FILE_NOT_FOUND) {
+		ret = true;
+	}
+
+	return ret;
 }
 
 bool file::fsync()
@@ -242,7 +247,11 @@ bool file::opened() const
 
 bool remove_file(fz::native_string const& name)
 {
-	return unlink(name.c_str()) == 0;
+	bool ret = unlink(name.c_str()) == 0;
+	if (!ret && errno == ENOENT) {
+		ret = true;
+	}
+	return ret;
 }
 
 bool file::fsync()
