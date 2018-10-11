@@ -7,6 +7,7 @@ libfilezilla_la_SOURCES = \
 	event_handler.cpp \
 	event_loop.cpp \
 	file.cpp \
+	hash.cpp \
 	iputils.cpp \
 	local_filesys.cpp \
 	mutex.cpp \
@@ -29,6 +30,7 @@ nobase_include_HEADERS = \
 	libfilezilla/event_loop.hpp \
 	libfilezilla/file.hpp \
 	libfilezilla/format.hpp \
+	libfilezilla/hash.hpp \
 	libfilezilla/iputils.hpp \
 	libfilezilla/libfilezilla.hpp \
 	libfilezilla/local_filesys.hpp \
@@ -51,6 +53,7 @@ nobase_include_HEADERS = \
 
 libfilezilla_la_CPPFLAGS = $(AM_CPPFLAGS)
 libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
+libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS)
 
 # Needed for version.hpp in out-of-tree builds
 libfilezilla_la_CPPFLAGS += -I$(srcdir)/libfilezilla
@@ -61,6 +64,8 @@ libfilezilla_la_CXXFLAGS += -fvisibility=hidden
 libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
 libfilezilla_la_LDFLAGS += -no-undefined
 libfilezilla_la_LIBADD = $(libdeps)
+
+libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libfilezilla.pc

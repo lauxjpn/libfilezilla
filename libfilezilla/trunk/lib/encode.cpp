@@ -1,8 +1,13 @@
 #include "libfilezilla/encode.hpp"
 
 namespace fz {
-std::string base64_encode(std::string const& in, base64_type type, bool pad)
+
+namespace {
+template<typename DataContainer>
+std::string base64_encode_impl(DataContainer const& in, base64_type type, bool pad)
 {
+	static_assert(sizeof(typename DataContainer::value_type) == 1, "Bad container type");
+
 	std::string::value_type const* const base64_chars =
 		 (type == base64_type::standard)
 			? "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -46,6 +51,17 @@ std::string base64_encode(std::string const& in, base64_type type, bool pad)
 	}
 
 	return ret;
+}
+}
+
+std::string base64_encode(std::string const& in, base64_type type, bool pad)
+{
+	return base64_encode_impl(in, type, pad);
+}
+
+std::string base64_encode(std::vector<uint8_t> const& in, base64_type type, bool pad)
+{
+	return base64_encode_impl(in, type, pad);
 }
 
 std::string base64_decode(std::string const& in)
