@@ -99,9 +99,9 @@ void string_test::test_base64()
 	CPPUNIT_ASSERT_EQUAL(std::string("Zm9vbA"), fz::base64_encode("fool", fz::base64_type::standard, false));
 	CPPUNIT_ASSERT_EQUAL(std::string("Zm9vbHM"), fz::base64_encode("fools", fz::base64_type::standard, false));
 
-	CPPUNIT_ASSERT_EQUAL(std::string("AAECA/3+/w=="), fz::base64_encode({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}));
+	CPPUNIT_ASSERT_EQUAL(std::string("AAECA/3+/w=="), fz::base64_encode(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'})));
 
-	CPPUNIT_ASSERT_EQUAL(std::string("AAECA_3-_w=="), fz::base64_encode({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}, fz::base64_type::url));
+	CPPUNIT_ASSERT_EQUAL(std::string("AAECA_3-_w=="), fz::base64_encode(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_type::url));
 
 	// decode
 	CPPUNIT_ASSERT_EQUAL(std::string(""),      fz::base64_decode(""));
