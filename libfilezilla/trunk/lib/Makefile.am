@@ -3,6 +3,7 @@ lib_LTLIBRARIES = libfilezilla.la
 libfilezilla_la_SOURCES = \
 	buffer.cpp \
 	encode.cpp \
+	encryption.cpp \
 	event.cpp \
 	event_handler.cpp \
 	event_loop.cpp \
@@ -25,6 +26,7 @@ nobase_include_HEADERS = \
 	libfilezilla/apply.hpp \
 	libfilezilla/buffer.hpp \
 	libfilezilla/encode.hpp \
+	libfilezilla/encryption.hpp \
 	libfilezilla/event.hpp \
 	libfilezilla/event_handler.hpp \
 	libfilezilla/event_loop.hpp \

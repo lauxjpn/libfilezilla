@@ -5,6 +5,7 @@ check_PROGRAMS = $(TESTS)
 
 test_SOURCES =  test.cpp \
 		buffer.cpp \
+		crypto.cpp \
 		dispatch.cpp \
 		eventloop.cpp \
 		format.cpp \
