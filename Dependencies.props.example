@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+
+    <!-- EDIT THE LINES BELOW -->
+
+    <nettle_include>x:\xample\nettle-3.4\include</nettle_include>
+    <nettle_lib>x:\xample\nettle-3.4\bin</nettle_lib>
+
+    <!-- EDIT THE LINES ABOVE -->
+
+  </PropertyGroup>
+  <PropertyGroup>
+    <IncludePath>$(nettle_include);$(IncludePath)</IncludePath>
+    <LibraryPath>$(nettle_lib);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup />
+  <ItemGroup>
+    <BuildMacro Include="nettle_include">
+      <Value>$(nettle_include)</Value>
+    </BuildMacro>
+    <BuildMacro Include="nettle_lib">
+      <Value>$(nettle_lib)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

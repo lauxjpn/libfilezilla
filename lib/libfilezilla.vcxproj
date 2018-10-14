@@ -66,6 +66,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\Dependencies.props" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <OutDir>$(ProjectDir)$(Platform)_$(Configuration)\</OutDir>
@@ -81,7 +84,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -137,7 +140,6 @@
       <OmitFramePointers>true</OmitFramePointers>
       <PreprocessorDefinitions>BUILDING_LIBFILEZILLA;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -188,10 +190,12 @@
   <ItemGroup>
     <ClCompile Include="buffer.cpp" />
     <ClCompile Include="encode.cpp" />
+    <ClCompile Include="encryption.cpp" />
     <ClCompile Include="event.cpp" />
     <ClCompile Include="event_handler.cpp" />
     <ClCompile Include="event_loop.cpp" />
     <ClCompile Include="file.cpp" />
+    <ClCompile Include="hash.cpp" />
     <ClCompile Include="iputils.cpp" />
     <ClCompile Include="local_filesys.cpp" />
     <ClCompile Include="mutex.cpp" />
@@ -209,11 +213,13 @@
     <ClInclude Include="libfilezilla\apply.hpp" />
     <ClInclude Include="libfilezilla\buffer.hpp" />
     <ClInclude Include="libfilezilla\encode.hpp" />
+    <ClInclude Include="libfilezilla\encryption.hpp" />
     <ClInclude Include="libfilezilla\event.hpp" />
     <ClInclude Include="libfilezilla\event_handler.hpp" />
     <ClInclude Include="libfilezilla\event_loop.hpp" />
     <ClInclude Include="libfilezilla\file.hpp" />
     <ClInclude Include="libfilezilla\format.hpp" />
+    <ClInclude Include="libfilezilla\hash.hpp" />
     <ClInclude Include="libfilezilla\iputils.hpp" />
     <ClInclude Include="libfilezilla\libfilezilla.hpp" />
     <ClInclude Include="libfilezilla\local_filesys.hpp" />
