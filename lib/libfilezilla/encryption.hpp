@@ -3,9 +3,8 @@
 
 /** \file
  * \brief Assymetric encryption scheme using X25519
-	// Very simple structure to represent a X25519 private key with associated salt.
-	// See RFC 7748 for the X22519 specs.
-
+ *
+ * See RFC 7748 for the X22519 specs.
  */
 
 #include "libfilezilla.hpp"
@@ -63,9 +62,6 @@ public:
 		key_size = 32,
 		salt_size = 32
 	};
-
-	private_key() = default;
-	private_key(private_key const&) = default;
 
 	/// Generates a random private key
 	static private_key generate();
