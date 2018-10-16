@@ -1,6 +1,7 @@
 #include "libfilezilla/encryption.hpp"
 
 #include "libfilezilla/encode.hpp"
+#include "libfilezilla/hash.hpp"
 #include "libfilezilla/util.hpp"
 
 #include <cstring>
@@ -128,48 +129,6 @@ std::vector<uint8_t> private_key::shared_secret(public_key const& pub) const
 	return ret;
 }
 
-namespace {
-	class sha256 final
-	{
-	public:
-		sha256()
-		{
-			nettle_sha256_init(&ctx_);
-		}
-
-		sha256(sha256 const&) = delete;
-		sha256& operator=(sha256 const&) = delete;
-
-		operator std::vector<uint8_t>()
-		{
-			std::vector<uint8_t> ret;
-			ret.resize(32);
-
-			nettle_sha256_digest(&ctx_, 32, &ret[0]);
-
-			return ret;
-		}
-
-		sha256& operator<<(uint8_t in)
-		{
-			nettle_sha256_update(&ctx_, 1, &in);
-			return *this;
-		}
-
-		sha256& operator<<(std::vector<uint8_t> in)
-		{
-			if (!in.empty()) {
-				nettle_sha256_update(&ctx_, in.size(), &in[0]);
-			}
-			return *this;
-		}
-
-	private:
-		sha256_ctx ctx_;
-	};
-
-}
-
 std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const& pub, bool authenticated)
 {
 	std::vector<uint8_t> ret;
@@ -182,10 +141,10 @@ std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const
 		std::vector<uint8_t> secret = ephemeral.shared_secret(pub);
 
 		// Derive AES2556 key and CTR nonce from shared secret
-		std::vector<uint8_t> const aes_key = sha256() << ephemeral_pub.salt_ << 0 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+		std::vector<uint8_t> const aes_key = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 0 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 		if (authenticated) {
-			std::vector<uint8_t> iv = sha256() << ephemeral_pub.salt_ << 2 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+			std::vector<uint8_t> iv = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 2 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 			static_assert(SHA256_DIGEST_SIZE >= GCM_IV_SIZE, "iv too small");
 			iv.resize(GCM_IV_SIZE);
 
@@ -205,7 +164,7 @@ std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const
 			nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, &ret[public_key::key_size + public_key::salt_size + size]);
 		}
 		else {
-			std::vector<uint8_t> ctr = sha256() << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+			std::vector<uint8_t> ctr = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 			aes256_ctx ctx;
 			nettle_aes256_set_encrypt_key(&ctx, &aes_key[0]);
@@ -255,11 +214,11 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 		std::vector<uint8_t> const secret = priv.shared_secret(ephemeral_pub);
 
 		public_key const pub = priv.pubkey();
-		std::vector<uint8_t> const aes_key = sha256() << ephemeral_pub.salt_ << 0 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+		std::vector<uint8_t> const aes_key = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 0 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 		if (authenticated) {
 			// Derive AES2556 key and GCM IV from shared secret
-			std::vector<uint8_t> iv = sha256() << ephemeral_pub.salt_ << 2 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+			std::vector<uint8_t> iv = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 2 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 			static_assert(SHA256_DIGEST_SIZE >= GCM_IV_SIZE, "iv too small");
 			iv.resize(GCM_IV_SIZE);
 
@@ -282,7 +241,7 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 		}
 		else {
 			// Derive AES2556 key and CTR nonce from shared secret
-			std::vector<uint8_t> ctr = sha256() << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
+			std::vector<uint8_t> ctr = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 			aes256_ctx ctx;
 			nettle_aes256_set_encrypt_key(&ctx, &aes_key[0]);
