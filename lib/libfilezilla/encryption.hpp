@@ -87,6 +87,9 @@ public:
 	/// Calculates a shared secret using Elliptic Curve Diffie-Hellman on Curve25519 (X25519)
 	std::vector<uint8_t> shared_secret(public_key const& pub) const;
 
+	std::string to_base64() const;
+	static private_key from_base64(std::string const& base64);
+
 private:
 	std::vector<uint8_t> key_;
 	std::vector<uint8_t> salt_;
