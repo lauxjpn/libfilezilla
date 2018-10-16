@@ -90,6 +90,31 @@ private_key private_key::from_password(std::vector<uint8_t> const& password, std
 	return ret;
 }
 
+std::string private_key::to_base64() const
+{
+	auto raw = std::string(key_.cbegin(), key_.cend());
+	raw += std::string(salt_.cbegin(), salt_.cend());
+	return fz::base64_encode(raw);
+}
+
+private_key private_key::from_base64(std::string const& base64)
+{
+	private_key ret;
+
+	auto raw = fz::base64_decode(base64);
+	if (raw.size() == key_size + salt_size) {
+		auto p = reinterpret_cast<uint8_t const*>(&raw[0]);
+		ret.key_.assign(p, p + key_size);
+		ret.key_[0] &= 248;
+		ret.key_[31] &= 127;
+		ret.key_[31] |= 64;
+		ret.salt_.assign(p + key_size, p + key_size + salt_size);
+	}
+
+	return ret;
+}
+
+
 std::vector<uint8_t> private_key::shared_secret(public_key const& pub) const
 {
 	std::vector<uint8_t> ret;
