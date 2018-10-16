@@ -99,7 +99,7 @@ bool verify(uint8_t const* message, size_t const size, public_verification_key c
 	if (!message || size < signature_size) {
 		return false;
 	}
-	return nettle_ed25519_sha512_verify(pub.key_.data(), size, message, message + size - signature_size) == 1;
+	return nettle_ed25519_sha512_verify(pub.key_.data(), size - signature_size, message, message + size - signature_size) == 1;
 }
 
 bool verify(std::vector<uint8_t> const& message, public_verification_key const& pub)
