@@ -8,6 +8,7 @@ Installation instructions
 To compile libfilezilla, the following tools need to be installed:
 - A C++14 compiler, e.g. a recent GCC or Clang
 - GNU make
+- Nettle >= 3.1
 
 Optional tools:
 - recent automake, autoconf, libtool if you plan to change configure.in or 

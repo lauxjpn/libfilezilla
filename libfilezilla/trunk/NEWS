@@ -1,3 +1,13 @@
+0.15.0 (2018-10-19)
+
++ libfilezilla now depends on Nettle >= 3.1
++ Added fz::sha512, fz::sha256, fz::sha1 and fz::md5 hash functions
++ Added fz::hash_accumulator
++ Added fz::hmac_sha256 HMAC function
++ Added asymmetric encryption scheme using X25519
++ Added signature scheme using Ed25519
+- Changed and documented semantics of the return value of fz::remove_file, removing a non-existing file is not an error
+
 0.14.0 (2018-10-04)
 
 + Added fz::equal_insensitive_ascii
