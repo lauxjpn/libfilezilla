@@ -2,7 +2,7 @@
 #define LIBFILEZILLA_ENCRYPTION_HEADER
 
 /** \file
- * \brief Assymetric encryption scheme using X25519
+ * \brief Asymmetric encryption scheme using X25519
  *
  * See RFC 7748 for the X22519 specs.
  */
