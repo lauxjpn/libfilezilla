@@ -46,9 +46,7 @@ unsigned char* buffer::get(size_t write_size)
 			if (size_) {
 				memcpy(data, pos_, size_);
 			}
-			else {
-				delete[] data_;
-			}
+			delete[] data_;
 			data_ = data;
 			pos_ = data;
 		}
@@ -143,9 +141,7 @@ void buffer::reserve(size_t capacity)
 	if (size_) {
 		memcpy(data, pos_, size_);
 	}
-	else {
-		delete[] data_;
-	}
+	delete[] data_;
 	data_ = data;
 	pos_ = data_;
 }
