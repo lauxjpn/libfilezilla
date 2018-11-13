@@ -277,9 +277,14 @@ std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, std::w
 bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string const& find, std::string const& replacement);
 bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement);
 
-/// Tokenizes string. Returns all non-empty substrings
+/**
+ * \brief Tokenizes string.
+ *
+ * \param delims the delimiters to look for
+ * \param ignore_empty If true, empty tokens are omitted in the output
+ */
 template<typename String, typename Delim, typename Container = std::vector<String>>
-Container strtok(String const& s, Delim const& delims)
+Container strtok(String const& s, Delim const& delims, bool const ignore_empty = true)
 {
 	Container ret;
 
@@ -293,7 +298,7 @@ Container strtok(String const& s, Delim const& delims)
 				ret.emplace_back(s.substr(start));
 			}
 		}
-		else if (pos > start) {
+		else if (pos > start || !ignore_empty) {
 			// Non-empty substring
 			ret.emplace_back(s.substr(start, pos - start));
 		}
