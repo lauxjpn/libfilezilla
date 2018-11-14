@@ -10,9 +10,13 @@
 #include <nettle/ctr.h>
 #include <nettle/curve25519.h>
 #include <nettle/gcm.h>
-#include <nettle/memops.h>
 #include <nettle/pbkdf2.h>
 #include <nettle/sha2.h>
+#include <nettle/version.h>
+
+#if NETTLE_VERSION_MAJOR > 3 || (NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 3)
+#include <nettle/memops.h>
+#endif
 
 namespace fz {
 
@@ -235,7 +239,11 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 			// Last but not least, verify the tag
 			uint8_t tag[GCM_DIGEST_SIZE];
 			nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, tag);
+#if NETTLE_VERSION_MAJOR > 3 || (NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 3)
 			if (!nettle_memeql_sec(tag, cipher + size - GCM_DIGEST_SIZE, GCM_DIGEST_SIZE)) {
+#else
+			if (memcmp(tag, cipher + size - GCM_DIGEST_SIZE, GCM_DIGEST_SIZE)) {
+#endif
 				ret.clear();
 			}
 		}
