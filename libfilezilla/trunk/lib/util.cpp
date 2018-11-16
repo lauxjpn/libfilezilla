@@ -81,8 +81,9 @@ typedef std::random_device working_random_device;
 int64_t random_number(int64_t min, int64_t max)
 {
 	assert(min <= max);
-	if (min >= max)
+	if (min >= max) {
 		return min;
+	}
 
 	std::uniform_int_distribution<int64_t> dist(min, max);
 	working_random_device rd;
@@ -94,7 +95,7 @@ std::vector<uint8_t> random_bytes(size_t size)
 	std::vector<uint8_t> ret;
 	ret.resize(size);
 
-	std::random_device rd;
+	working_random_device rd;
 
 	ret.resize(size);
 	size_t i;
