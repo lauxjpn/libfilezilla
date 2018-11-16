@@ -12,7 +12,8 @@ test_SOURCES =  test.cpp \
 		iputils.cpp \
 		smart_pointer.cpp \
 		string.cpp \
-		time.cpp
+		time.cpp \
+		util.cpp
 
 test_CPPFLAGS = $(AM_CPPFLAGS)
 test_CPPFLAGS += -I$(top_srcdir)/lib
