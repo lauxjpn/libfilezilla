@@ -15,8 +15,7 @@ public:
 	void setUp() {}
 	void tearDown() {}
 
-	void test_encryption();
-	void test_encryption_with_password();
+	void test_random();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(util_test);
