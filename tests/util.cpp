@@ -1,4 +1,4 @@
-#include "libfilezilla/encryption.hpp"
+#include "libfilezilla/encode.hpp"
 #include "libfilezilla/util.hpp"
 
 #include "test_utils.hpp"
@@ -22,7 +22,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION(util_test);
 
 void util_test::test_random()
 {
-	auto const first = fz::hex_encode<std::string>(fz::random_bytes(64);
+	auto const first = fz::hex_encode<std::string>(fz::random_bytes(64));
 	auto const second = fz::hex_encode<std::string>(fz::random_bytes(64));
 
 	CPPUNIT_ASSERT(!first.empty());
