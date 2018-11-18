@@ -26,5 +26,5 @@ void util_test::test_random()
 	auto const second = fz::hex_encode<std::string>(fz::random_bytes(64));
 
 	CPPUNIT_ASSERT(!first.empty());
-	CPPNNIT_ASSERT(first != second);
+	CPPUNIT_ASSERT(first != second);
 }
