@@ -1,3 +1,10 @@
+0.15.1 (2018-11-22)
+
++ Add argument to fz::strtok to return empty tokens
+- Fix compatibility issue with Nettle < 3.3
+- Fix fz::random_bytes on MinGW
+- Fix memory leak in fz::buffer
+
 0.15.0 (2018-10-19)
 
 + libfilezilla now depends on Nettle >= 3.1
