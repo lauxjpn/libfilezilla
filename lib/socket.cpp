@@ -289,6 +289,27 @@ int do_set_buffer_sizes(socket::socket_t fd, int size_read, int size_write)
 	return ret;
 }
 
+#ifdef FZ_WINDOWS
+class winsock_initializer final
+{
+public:
+	winsock_initializer()
+	{
+		WSADATA d{};
+		initialized_ = WSAStartup((2 << 8) | 8, &d) == 0;
+	}
+
+	~winsock_initializer()
+	{
+		if (initialized_) {
+			WSACleanup();
+		}
+	}
+
+private:
+	bool initialized_{};
+};
+#endif
 }
 
 class socket_thread final
@@ -302,6 +323,7 @@ public:
 		, mutex_(false)
 	{
 #ifdef FZ_WINDOWS
+		static winsock_initializer init;
 		sync_event_ = WSA_INVALID_EVENT;
 #else
 		pipe_[0] = -1;
