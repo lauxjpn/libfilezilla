@@ -25,6 +25,7 @@
   #if !defined(MSG_NOSIGNAL) && !defined(SO_NOSIGPIPE)
 	#include <signal.h>
   #endif
+  #include <poll.h>
   #undef mutex
 #endif
 
@@ -47,7 +48,7 @@
 #define WAIT_ACCEPT  0x08
 #define WAIT_EVENTCOUNT 4
 
-//#define HAVE_POLL 1
+#define HAVE_POLL 1
 
 namespace fz {
 
@@ -769,6 +770,87 @@ protected:
 			if (triggered_ || !waiting_) {
 				return true;
 			}
+#elif defined(HAVE_POLL)
+			pollfd fds[2]{};
+			fds[0].fd = pipe_[0];
+			fds[0].events = POLLIN;
+			fds[1].fd = socket_->fd_;
+			fds[1].events = 0;
+
+			if (waiting_ & (WAIT_READ|WAIT_ACCEPT)) {
+				fds[1].events |= POLLIN;
+			}
+			if (waiting_ & (WAIT_WRITE | WAIT_CONNECT)) {
+				fds[1].events |= POLLOUT;
+			}
+
+			l.unlock();
+
+			int res = poll(fds, 2, -1);
+
+			l.lock();
+
+			if (res > 0 && fds[0].revents) {
+				char buffer[100];
+				int damn_spurious_warning = read(pipe_[0], buffer, 100);
+				(void)damn_spurious_warning; // We do not care about return value and this is definitely correct!
+			}
+
+			if (quit_ || !socket_ || socket_->fd_ == -1) {
+				return false;
+			}
+
+			if (!res) {
+				continue;
+			}
+			if (res == -1) {
+				res = errno;
+
+				if (res == EINTR) {
+					continue;
+				}
+
+				return false;
+			}
+
+			int const revents = fds[1].revents;
+			if (waiting_ & WAIT_CONNECT) {
+				if (revents & (POLLOUT|POLLERR|POLLHUP)) {
+					int error;
+					socklen_t len = sizeof(error);
+					int getsockopt_res = getsockopt(socket_->fd_, SOL_SOCKET, SO_ERROR, &error, &len);
+					if (getsockopt_res) {
+						error = errno;
+					}
+					triggered_ |= WAIT_CONNECT;
+					triggered_errors_[0] = error;
+					waiting_ &= ~WAIT_CONNECT;
+				}
+			}
+			else if (waiting_ & WAIT_ACCEPT) {
+				if (revents & POLLIN) {
+					triggered_ |= WAIT_ACCEPT;
+					waiting_ &= ~WAIT_ACCEPT;
+				}
+			}
+			else {
+				if (waiting_ & WAIT_READ) {
+					if (revents & (POLLIN|POLLHUP|POLLERR)) {
+						triggered_ |= WAIT_READ;
+						waiting_ &= ~WAIT_READ;
+					}
+				}
+				if (waiting_ & WAIT_WRITE) {
+					if (revents & (POLLOUT|POLLERR|POLLHUP)) {
+						triggered_ |= WAIT_WRITE;
+						waiting_ &= ~WAIT_WRITE;
+					}
+				}
+			}
+
+			if (triggered_ || !waiting_) {
+				return true;
+			}
 #else
 			fd_set readfds;
 			fd_set writefds;
@@ -776,10 +858,10 @@ protected:
 			FD_ZERO(&writefds);
 
 			FD_SET(pipe_[0], &readfds);
-			if (!(waiting_ & WAIT_CONNECT)) {
+
+			if (waiting_ & (WAIT_READ | WAIT_ACCEPT)) {
 				FD_SET(socket_->fd_, &readfds);
 			}
-
 			if (waiting_ & (WAIT_WRITE | WAIT_CONNECT)) {
 				FD_SET(socket_->fd_, &writefds);
 			}
@@ -834,16 +916,18 @@ protected:
 					waiting_ &= ~WAIT_ACCEPT;
 				}
 			}
-			else if (waiting_ & WAIT_READ) {
-				if (FD_ISSET(socket_->fd_, &readfds)) {
-					triggered_ |= WAIT_READ;
-					waiting_ &= ~WAIT_READ;
+			else {
+				if (waiting_ & WAIT_READ) {
+					if (FD_ISSET(socket_->fd_, &readfds)) {
+						triggered_ |= WAIT_READ;
+						waiting_ &= ~WAIT_READ;
+					}
 				}
-			}
-			if (waiting_ & WAIT_WRITE) {
-				if (FD_ISSET(socket_->fd_, &writefds)) {
-					triggered_ |= WAIT_WRITE;
-					waiting_ &= ~WAIT_WRITE;
+				if (waiting_ & WAIT_WRITE) {
+					if (FD_ISSET(socket_->fd_, &writefds)) {
+						triggered_ |= WAIT_WRITE;
+						waiting_ &= ~WAIT_WRITE;
+					}
 				}
 			}
 
