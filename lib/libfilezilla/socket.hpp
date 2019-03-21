@@ -134,7 +134,7 @@ public:
 	*
 	* \return -1 on error
 	*/
-	int local_port(int& error);
+	int local_port(int& error) const;
 
 	static std::string address_to_string(sockaddr const* addr, int addr_len, bool with_port = true, bool strip_zone_index = false);
 	static std::string address_to_string(char const* buf, int buf_len);
@@ -223,7 +223,7 @@ public:
 	/// Accepts incoming connection. If no socket is returned, error contains the reason
 	std::unique_ptr<socket> accept(int& error);
 
-	listen_socket_state get_state();
+	listen_socket_state get_state() const;
 
 	void set_event_handler(event_handler* pEvtHandler) {
 		do_set_event_handler(pEvtHandler);
