@@ -11,6 +11,7 @@ test_SOURCES =  test.cpp \
 		format.cpp \
 		iputils.cpp \
 		smart_pointer.cpp \
+		socket.cpp \
 		string.cpp \
 		time.cpp \
 		util.cpp

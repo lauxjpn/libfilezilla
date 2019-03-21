@@ -15,6 +15,7 @@ libfilezilla_la_SOURCES = \
 	process.cpp \
 	recursive_remove.cpp \
 	signature.cpp \
+	socket.cpp \
 	string.cpp \
 	thread.cpp \
 	thread_pool.cpp \
@@ -43,6 +44,7 @@ nobase_include_HEADERS = \
 	libfilezilla/recursive_remove.hpp \
 	libfilezilla/shared.hpp \
 	libfilezilla/signature.hpp \
+	libfilezilla/socket.hpp \
 	libfilezilla/string.hpp \
 	libfilezilla/thread.hpp \
 	libfilezilla/thread_pool.hpp \
