@@ -74,7 +74,7 @@ else
 fi
 
 if test "$windows" = "1"; then
-  libdeps=
+  libdeps=-lws2_32
 else
   libdeps=-lpthread
   CHECK_ICONV([libdeps="$libdeps -liconv"])

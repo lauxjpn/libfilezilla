@@ -152,7 +152,9 @@ struct server final : public base
 	server(fz::event_loop & loop)
 		: base(loop)
 	{
-		CPPUNIT_ASSERT(!l_.listen(fz::address_type::unknown));
+		if (!l_.listen(fz::address_type::unknown)) {
+			fail();
+		}
 	}
 
 	virtual ~server() {

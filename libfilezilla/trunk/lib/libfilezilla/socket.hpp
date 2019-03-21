@@ -6,6 +6,8 @@
 #include "event_handler.hpp"
 #include "iputils.hpp"
 
+#include <memory>
+
 #include <errno.h>
 
 /// \private
