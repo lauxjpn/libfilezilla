@@ -1115,7 +1115,7 @@ address_type socket_base::address_family() const
 	}
 }
 
-int socket_base::local_port(int& error)
+int socket_base::local_port(int& error) const
 {
 	sockaddr_u addr;
 	socklen_t addr_len = sizeof(addr);
@@ -1317,7 +1317,7 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 	return std::unique_ptr<socket>(pSocket);
 }
 
-listen_socket_state listen_socket::get_state()
+listen_socket_state listen_socket::get_state() const
 {
 	if (!socket_thread_) {
 		return listen_socket_state::none;
