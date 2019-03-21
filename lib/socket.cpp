@@ -23,7 +23,7 @@
   #include <netinet/in.h>
   #include <netinet/tcp.h>
   #if !defined(MSG_NOSIGNAL) && !defined(SO_NOSIGPIPE)
-    #include <signal.h>
+	#include <signal.h>
   #endif
   #undef mutex
 #endif
@@ -46,6 +46,8 @@
 #define WAIT_WRITE	 0x04
 #define WAIT_ACCEPT  0x08
 #define WAIT_EVENTCOUNT 4
+
+//#define HAVE_POLL 1
 
 namespace fz {
 
@@ -409,6 +411,17 @@ public:
 			if (pipe(pipe_)) {
 				return errno;
 			}
+
+#ifndef HAVE_POLL
+			if (pipe_[0] >= FD_SETSIZE) {
+				::close(pipe_[0]);
+				::close(pipe_[1]);
+				pipe_[0] = -1;
+				pipe_[1] = -1;
+
+				return EMFILE;
+			}
+#endif
 		}
 #endif
 
@@ -459,6 +472,14 @@ protected:
 		{
 			fd = ::socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
 		}
+
+#if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
+		if (fd >= FD_SETSIZE) {
+			close(fd);
+			errno = EMFILE;
+			return -1;
+		}
+#endif
 
 		if (fd != -1) {
 #if defined(SO_NOSIGPIPE) && !defined(MSG_NOSIGNAL)
@@ -1166,7 +1187,7 @@ int socket_base::set_buffer_sizes(int size_receive, int size_send)
 		return ENOTCONN;
 	}
 
-	
+
 	scoped_lock l(socket_thread_->mutex_);
 
 	buffer_sizes_[0] = size_receive;
@@ -1306,6 +1327,14 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 
 		// TODO: accept4 for SOCK_CLOEXEC
 		fd = ::accept(fd_, nullptr, nullptr);
+
+#if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
+		if (fd >= FD_SETSIZE) {
+			::close(fd);
+			error = EMFILE;
+			return nullptr;
+		}
+#endif
 	}
 
 	if (fd == -1) {
@@ -1361,7 +1390,7 @@ socket::socket(thread_pool & pool, event_handler* evt_handler)
 socket::~socket()
 {
 	close();
-	
+
 	scoped_lock l(socket_thread_->mutex_);
 	detach_thread(l);
 }
@@ -1575,7 +1604,7 @@ void socket::retrigger(socket_event_flag event)
 	if (event != socket_event_flag::read && event != socket_event_flag::write) {
 		return;
 	}
-	
+
 	scoped_lock l(socket_thread_->mutex_);
 
 	auto s = state_;
