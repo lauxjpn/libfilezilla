@@ -30,11 +30,17 @@ struct base : public fz::event_handler
 	{
 	}
 
-	void fail()
+	void fail(int line, int error = 0)
 	{
 		fz::scoped_lock l(m_);
 		s_.reset();
-		failed_ = true;
+		if (failed_.empty()) {
+			failed_ = fz::to_string(line);
+			if (error) {
+				failed_ += ' ';
+				failed_ += fz::to_string(error);
+			}
+		}
 		cond_.signal(l);
 	}
 
@@ -50,7 +56,7 @@ struct base : public fz::event_handler
 	void on_socket_event_base(fz::socket_event_source * source, fz::socket_event_flag type, int error)
 	{
 		if (error) {
-			fail();
+			fail(__LINE__, error);
 		}
 		else if (type == fz::socket_event_flag::read) {
 			for (int i = 0; i < fz::random_number(1, 20); ++i) {
@@ -65,7 +71,7 @@ struct base : public fz::event_handler
 				}
 				else if (r == -1) {
 					if (error != EAGAIN) {
-						fail();
+						fail(__LINE__, error);
 					}
 					return;
 				}
@@ -80,7 +86,7 @@ struct base : public fz::event_handler
 			if (sent_ > 1024 * 1024 * 10 && (fz::monotonic_clock::now() - start_) > fz::duration::from_seconds(5)) {
 				int res = s_->shutdown();
 				if (res && res != EAGAIN) {
-					fail();
+					fail(__LINE__, res);
 				}
 				else if (!res) {
 					shut_ = true;
@@ -95,7 +101,7 @@ struct base : public fz::event_handler
 				int sent = s_->write(buf.data(), buf.size(), error);
 				if (sent <= 0) {
 					if (error != EAGAIN) {
-						fail();
+						fail(__LINE__, error);
 					}
 					return;
 				}
@@ -118,7 +124,7 @@ struct base : public fz::event_handler
 
 	std::unique_ptr<fz::socket> s_;
 
-	bool failed_{};
+	std::string failed_;
 	bool eof_{};
 	bool shut_{};
 	int64_t sent_{};
@@ -152,8 +158,10 @@ struct server final : public base
 	server(fz::event_loop & loop)
 		: base(loop)
 	{
-		if (!l_.listen(fz::address_type::unknown)) {
-			fail();
+		l_.bind("127.0.0.1");
+		int res = l_.listen(fz::address_type::ipv4);
+		if (res) {
+			fail(__LINE__, res);
 		}
 	}
 
@@ -169,16 +177,16 @@ struct server final : public base
 	{
 		if (source == &l_) {
 			if (s_) {
-				fail();
+				fail(__LINE__);
 			}
 			else if (error) {
-				fail();
+				fail(__LINE__, error);
 			}
 			else {
 				int error;
 				s_ = l_.accept(error);
 				if (!s_) {
-					fail();
+					fail(__LINE__, error);
 				}
 				s_->set_event_handler(this);
 			}
@@ -219,8 +227,8 @@ void socket_test::test_duplex()
 		c.cond_.wait(l);
 	}
 
-	CPPUNIT_ASSERT(!c.failed_);
-	CPPUNIT_ASSERT(!s.failed_);
+	ASSERT_EQUAL(std::string(), c.failed_);
+	ASSERT_EQUAL(std::string(), s.failed_);
 
 	CPPUNIT_ASSERT(c.sent_hash_.digest() == s.received_hash_.digest());
 	CPPUNIT_ASSERT(s.sent_hash_.digest() == c.received_hash_.digest());
