@@ -55,6 +55,8 @@ AC_CHECK_DECLS([CLOCK_MONOTONIC], [], [], [[#include <time.h>]])
 # Some platforms, e.g. OS X, lack posix_fadvise
 AC_CHECK_FUNCS(posix_fadvise)
 
+AC_CHECK_FUNCS(poll pipe2 accept4)
+
 # Some platforms have no d_type entry in their dirent structure
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
