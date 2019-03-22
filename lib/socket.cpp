@@ -1418,7 +1418,9 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 #endif
 		{
 			fd = ::accept(fd_, nullptr, nullptr);
+#if !defined(FZ_WINDOWS)
 			set_cloexec(fd);
+#endif
 		}
 
 #if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
