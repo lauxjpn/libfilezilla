@@ -246,6 +246,8 @@ private:
 
 #else
 
+#include "libfilezilla/glue/unix.hpp"
+
 #include <errno.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -284,7 +286,7 @@ public:
 		reset();
 
 		int fds[2];
-		if (::pipe(fds) != 0) {
+		if (!create_pipe(fds)) {
 			return false;
 		}
 

@@ -223,6 +223,8 @@ DX_INIT_DOXYGEN(libfilezilla, Doxyfile)
 
 AM_CONDITIONAL(USE_RESOURCEFILE, test "$use_resourcefile" = "true")
 
+AM_CONDITIONAL(FZ_WINDOWS, test "$windows" = "1")
+
 AC_CONFIG_FILES(
   Makefile
   lib/Makefile

@@ -1,7 +1,7 @@
 #include "libfilezilla/libfilezilla.hpp"
 
 #ifdef FZ_WINDOWS
-  #include <libfilezilla/private/windows.hpp>
+  #include "libfilezilla/private/windows.hpp"
   #include <winsock2.h>
   #include <ws2tcpip.h>
   #include <mstcpip.h>
@@ -9,10 +9,12 @@
 
 #include "libfilezilla/socket.hpp"
 
-#include <libfilezilla/mutex.hpp>
-#include <libfilezilla/thread_pool.hpp>
+#include "libfilezilla/mutex.hpp"
+#include "libfilezilla/thread_pool.hpp"
 
 #ifndef FZ_WINDOWS
+  #include "libfilezilla/glue/unix.hpp"
+
   #define mutex mutex_override // Sadly on some platforms system headers include conflicting names
   #include <sys/types.h>
   #include <sys/socket.h>
@@ -231,19 +233,6 @@ int set_nonblocking(socket::socket_t fd)
 #endif
 }
 
-#if !defined(FZ_WINDOWS)
-void set_cloexec(int fd)
-{
-#ifdef FD_CLOEXEC
-	if (fd != -1) {
-		int flags = fcntl(fd, F_GETFD);
-		if (flags >= 0) {
-			fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
-		}
-	}
-#endif
-}
-
 int do_set_flags(socket::socket_t fd, int flags, int flags_mask, duration const& keepalive_interval)
 {
 	if (flags_mask & socket::flag_nodelay) {
@@ -419,17 +408,8 @@ public:
 		}
 #else
 		if (pipe_[0] == -1) {
-#if HAVE_PIPE2
-			int res = pipe2(pipe_, O_CLOEXEC);
-			if (res != 0 && errno == ENOSYS)
-#endif
-			{
-				if (pipe(pipe_)) {
-					return errno;
-				}
-
-				set_cloexec(pipe_[0]);
-				set_cloexec(pipe_[1]);
+			if (!create_pipe(pipe_)) {
+				return errno;
 			}
 
 #ifndef HAVE_POLL
@@ -1439,7 +1419,6 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 		{
 			fd = ::accept(fd_, nullptr, nullptr);
 			set_cloexec(fd);
-#endif
 		}
 
 #if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)

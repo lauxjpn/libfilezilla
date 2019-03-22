@@ -57,6 +57,14 @@ nobase_include_HEADERS = \
 	libfilezilla/private/windows.hpp \
 	libfilezilla/glue/wx.hpp
 
+if !FZ_WINDOWS
+libfilezilla_la_SOURCES += \
+	glue/unix.cpp
+
+nobase_include_HEADERS += \
+	libfilezilla/glue/unix.hpp
+endif
+
 libfilezilla_la_CPPFLAGS = $(AM_CPPFLAGS)
 libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
 libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS)
