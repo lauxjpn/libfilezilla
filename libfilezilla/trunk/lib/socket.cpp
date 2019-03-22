@@ -48,8 +48,6 @@
 #define WAIT_ACCEPT  0x08
 #define WAIT_EVENTCOUNT 4
 
-#define HAVE_POLL 1
-
 namespace fz {
 
 namespace {
@@ -233,6 +231,19 @@ int set_nonblocking(socket::socket_t fd)
 #endif
 }
 
+#if !defined(FZ_WINDOWS)
+void set_cloexec(int fd)
+{
+#ifdef FD_CLOEXEC
+	if (fd != -1) {
+		int flags = fcntl(fd, F_GETFD);
+		if (flags >= 0) {
+			fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+		}
+	}
+#endif
+}
+
 int do_set_flags(socket::socket_t fd, int flags, int flags_mask, duration const& keepalive_interval)
 {
 	if (flags_mask & socket::flag_nodelay) {
@@ -408,9 +419,17 @@ public:
 		}
 #else
 		if (pipe_[0] == -1) {
-			// FIXME: Use pipe2 with O_CLOEXEC
-			if (pipe(pipe_)) {
-				return errno;
+#if HAVE_PIPE2
+			int res = pipe2(pipe_, O_CLOEXEC);
+			if (res != 0 && errno == ENOSYS)
+#endif
+			{
+				if (pipe(pipe_)) {
+					return errno;
+				}
+
+				set_cloexec(pipe_[0]);
+				set_cloexec(pipe_[1]);
 			}
 
 #ifndef HAVE_POLL
@@ -472,6 +491,10 @@ protected:
 #endif
 		{
 			fd = ::socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
+
+#if !defined(FZ_WINDOWS)
+			set_cloexec(fd);
+#endif
 		}
 
 #if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
@@ -1409,8 +1432,15 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 		socket_thread_->waiting_ |= WAIT_ACCEPT;
 		socket_thread_->wakeup_thread(l);
 
-		// TODO: accept4 for SOCK_CLOEXEC
-		fd = ::accept(fd_, nullptr, nullptr);
+#if HAVE_ACCEPT4
+		fd = ::accept4(fd_, nullptr, nullptr, SOCK_CLOEXEC);
+		if (fd == -1 && errno == ENOSYS)
+#endif
+		{
+			fd = ::accept(fd_, nullptr, nullptr);
+			set_cloexec(fd);
+#endif
+		}
 
 #if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
 		if (fd >= FD_SETSIZE) {
