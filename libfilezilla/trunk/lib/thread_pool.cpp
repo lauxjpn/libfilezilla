@@ -5,7 +5,7 @@
 
 namespace fz {
 
-class pooled_thread_impl final : public thread
+class pooled_thread_impl final
 {
 public:
 	pooled_thread_impl(thread_pool & pool)
@@ -15,7 +15,12 @@ public:
 
 	virtual ~pooled_thread_impl()
 	{
-		join();
+		thread_.join();
+	}
+
+	bool run()
+	{
+		return thread_.run([this] { entry(); });
 	}
 
 	virtual void entry() {
@@ -44,6 +49,7 @@ public:
 		thread_cond_.signal(l);
 	}
 
+	fz::thread thread_;
 	std::function<void()> f_{};
 	mutex & m_;
 	condition thread_cond_;

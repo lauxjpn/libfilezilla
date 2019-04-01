@@ -19,14 +19,12 @@ namespace fz {
  * on all MinGW flavors. Most notably, MinGW as shipped by Debian Jessie does not
  * have std::thread.
  *
- * This class only supports joinable threads (see remark). You _MUST_ join threads
- * in the destructor of the outermost derived class. ~thread() calls std::abort()
- * if \c join has not previously been called.
+ * This class only supports joinable threads.
  *
  * \remark Detached threads aren't implemented since they essentially race conditions
  * by design. You cannot use a detached thread and shutdown your program cleanly.
  */
-class FZ_PUBLIC_SYMBOL thread
+class FZ_PUBLIC_SYMBOL thread final
 {
 public:
 #if defined(FZ_WINDOWS) && (defined(__MINGW32__) || defined(__MINGW64__))
@@ -37,18 +35,15 @@ public:
 
 	thread() = default;
 
-	/** \brief Calls \c std::abort if the thread has not been joined.
-	 *
-	 * To avoid race conditions, all threads need to be joined no later than
-	 * in the destructor of the most derived class.
+	/** \brief Implicitly calls join()
 	 */
-	virtual ~thread();
+	~thread();
 
 	/** \brief Start the thread.
 	 *
 	 * If a thread has already been started and not yet joined, this function fails.
 	 */
-	bool run();
+	bool run(std::function<void()> && f);
 
 	/** \brief Join the thread
 	 *
@@ -70,10 +65,6 @@ public:
 
 	/// Returns unique id of the thread calling the function
 	static id own_id();
-
-protected:
-	/// The thread's entry point, override in your derived class.
-	virtual void entry() = 0;
 
 private:
 	class impl;

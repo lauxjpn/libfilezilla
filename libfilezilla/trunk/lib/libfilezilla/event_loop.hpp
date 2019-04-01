@@ -17,7 +17,9 @@
 
 namespace fz {
 
+class async_task;
 class event_handler;
+class thread_pool;
 
 /** \brief A threaded event loop that supports sending events and timers
  *
@@ -27,7 +29,7 @@ class event_handler;
  *
  * \sa event_handler for a complete usage example.
  */
-class FZ_PUBLIC_SYMBOL event_loop final : private thread
+class FZ_PUBLIC_SYMBOL event_loop final
 {
 public:
 	typedef std::deque<std::pair<event_handler*, event_base*>> Events;
@@ -35,8 +37,17 @@ public:
 	/// Spawns a thread and starts the loop
 	event_loop();
 
+	/// Takes a thread from the pool and starts the loop
+	explicit event_loop(thread_pool & pool);
+
+	enum loop_option
+	{
+		threadless
+	};
+	explicit event_loop(loop_option);
+
 	/// Stops the thread
-	virtual ~event_loop();
+	~event_loop();
 
 	event_loop(event_loop const&) = delete;
 	event_loop& operator=(event_loop const&) = delete;
@@ -57,8 +68,13 @@ public:
 	/** \brief Stops the loop
 	 *
 	 * Stops the event loop. It is automatically called by the destructor.
+	 *
+	 * Does not wait for the loop if the join argument isn't set.
 	 */
-	void stop();
+	void stop(bool join = false);
+
+	 /// Starts the loop in the caller's thread.
+	void run();
 
 private:
 	friend class event_handler;
@@ -76,7 +92,7 @@ private:
 	// Process timers. Returns true if a timer has been triggered
 	bool FZ_PRIVATE_SYMBOL process_timers(scoped_lock & l, monotonic_clock& now);
 
-	virtual void FZ_PRIVATE_SYMBOL entry();
+	void FZ_PRIVATE_SYMBOL entry();
 
 	struct timer_data final
 	{
@@ -98,12 +114,14 @@ private:
 
 	event_handler * active_handler_{};
 
-
 	monotonic_clock deadline_;
 
 	timer_id next_timer_id_{};
 
 	thread::id thread_id_{};
+
+	std::unique_ptr<thread> thread_;
+	std::unique_ptr<async_task> task_;
 };
 
 }
