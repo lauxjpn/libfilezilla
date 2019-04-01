@@ -9,6 +9,7 @@
 
 #include <deque>
 #include <functional>
+#include <memory>
 #include <vector>
 
 /** \file
