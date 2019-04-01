@@ -3,6 +3,8 @@
 
 #include "libfilezilla.hpp"
 
+#include <functional>
+
 #if !defined(FZ_WINDOWS) || !(defined(__MINGW32__) || defined(__MINGW64__))
 #include <thread>
 #endif
