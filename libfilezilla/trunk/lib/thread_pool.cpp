@@ -5,6 +5,13 @@
 
 namespace fz {
 
+class pooled_thread_impl;
+class async_task_impl final
+{
+public:
+	pooled_thread_impl * thread_{};
+};
+
 class pooled_thread_impl final
 {
 public:
@@ -32,11 +39,11 @@ public:
 				l.unlock();
 				f_();
 				l.lock();
-				if (detached_) {
-					f_ = std::function<void()>();
-					pool_.idle_.push_back(this);
-				}
-				else {
+				task_ = nullptr;
+				f_ = std::function<void()>();
+				pool_.idle_.push_back(this);
+				if (task_waiting_) {
+					task_waiting_ = false;
 					task_cond_.signal(l);
 				}
 			}
@@ -49,14 +56,16 @@ public:
 		thread_cond_.signal(l);
 	}
 
-	fz::thread thread_;
+	thread thread_;
+	async_task_impl* task_{};
 	std::function<void()> f_{};
 	mutex & m_;
 	condition thread_cond_;
-	condition task_cond_;
-	thread_pool& pool_;
 
-	bool detached_{};
+	bool task_waiting_{};
+	condition task_cond_;
+
+	thread_pool& pool_;
 private:
 	bool quit_{};
 };
@@ -81,10 +90,12 @@ async_task::~async_task()
 void async_task::join()
 {
 	if (impl_) {
-		scoped_lock l(impl_->m_);
-		impl_->task_cond_.wait(l);
-		impl_->f_ = std::function<void()>();
-		impl_->pool_.idle_.push_back(impl_);
+		scoped_lock l(impl_->thread_->m_);
+		if (impl_->thread_->task_ == impl_) {
+			impl_->thread_->task_waiting_ = true;
+			impl_->thread_->task_cond_.wait(l);
+		}
+		delete impl_;
 		impl_ = nullptr;
 	}
 }
@@ -92,14 +103,12 @@ void async_task::join()
 void async_task::detach()
 {
 	if (impl_) {
-		scoped_lock l(impl_->m_);
-		if (impl_->task_cond_.signalled(l)) {
-			join();
+		scoped_lock l(impl_->thread_->m_);
+		if (impl_->thread_->task_ == impl_) {
+			impl_->thread_->task_ = nullptr;
 		}
-		else {
-			impl_->detached_ = true;
-			impl_ = nullptr;
-		}
+		delete impl_;
+		impl_ = nullptr;
 	}
 }
 
@@ -127,26 +136,29 @@ async_task thread_pool::spawn(std::function<void()> const& f)
 {
 	async_task ret;
 
-	scoped_lock l(m_);
+	if (f) {
+		scoped_lock l(m_);
 
-	pooled_thread_impl *t{};
-	if (idle_.empty()) {
-		t = new pooled_thread_impl(*this);
-		if (!t->run()) {
-			delete t;
-			return ret;
+		pooled_thread_impl *t{};
+		if (idle_.empty()) {
+			t = new pooled_thread_impl(*this);
+			if (!t->run()) {
+				delete t;
+				return ret;
+			}
+			threads_.push_back(t);
 		}
-		threads_.push_back(t);
-	}
-	else {
-		t = idle_.back();
-		idle_.pop_back();
-	}
+		else {
+			t = idle_.back();
+			idle_.pop_back();
+		}
 
-	ret.impl_ = t;
-	t->f_ = f;
-	t->detached_ = false;
-	t->thread_cond_.signal(l);
+		ret.impl_ = new async_task_impl;
+		ret.impl_->thread_ = t;
+		t->task_ = ret.impl_;
+		t->f_ = f;
+		t->thread_cond_.signal(l);
+	}
 
 	return ret;
 }
