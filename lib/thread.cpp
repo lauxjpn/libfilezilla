@@ -1,11 +1,11 @@
 #include "libfilezilla/thread.hpp"
-#include "libfilezilla/mutex.hpp"
 
 #include <cstdlib>
 #include <thread>
 
 #if defined(FZ_WINDOWS) && (defined(__MINGW32__) || defined(__MINGW64__))
 #define USE_CUSTOM_THREADS 1
+#include "libfilezilla/private/windows.hpp"
 #include <process.h>
 #endif
 
@@ -13,7 +13,7 @@ namespace fz {
 
 bool thread::joinable() const
 {
-	return impl_ == nullptr;
+	return impl_ != nullptr;
 }
 
 #ifdef USE_CUSTOM_THREADS
@@ -25,64 +25,35 @@ class entry_dispatch
 public:
 	virtual ~entry_dispatch() {}
 
-	static void call_entry(entry_dispatch & e)
-	{
-		e.entry();
-	}
-
-	virtual void entry() = 0;
+	std::function<void()> f_;
 };
 
 static unsigned __stdcall thread_proc(void* arg)
 {
 	entry_dispatch* e = static_cast<entry_dispatch*>(arg);
-	if (e) {
-		entry_dispatch::call_entry(*e);
+	if (e && e->f_) {
+		e->f_();
+		e->f_ = nullptr;
 	}
 	return 0;
 }
 }
 
-class thread::impl final : entry_dispatch
+class thread::impl final : public entry_dispatch
 {
 public:
-	impl(thread& t);
-
-	thread& t_;
-
 	HANDLE handle_{INVALID_HANDLE_VALUE};
-
-	mutex m_{false};
-
-	virtual void entry();
 };
 
-thread::impl::impl(thread& t)
-	: t_(t)
-{
-}
-
-void thread::impl::entry()
-{
-	{
-		// Obtain mutex once. Once we have it, handle_ is assigned.
-		scoped_lock l(m_);
-	}
-	t_.entry();
-}
-
-bool thread::run()
+bool thread::run(std::function<void()> && f)
 {
 	if (impl_) {
 		return false;
 	}
 
-	impl_ = new impl(*this);
-
-	{
-		scoped_lock l(impl_->m_);
-		impl_->handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, thread_proc, impl_, 0, nullptr));
-	}
+	impl_ = new impl();
+	impl_->f_ = std::move(f);
+	impl_->handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, thread_proc, impl_, 0, nullptr));
 
 	// _beginthreadex returns 0 on error, whereas _beginthread returns -1
 	// According to MSDN, _beginthreadex can also return -1 if invalid parameters are passed to it,
@@ -117,39 +88,17 @@ class thread::impl final
 {
 public:
 	std::thread t_;
-
-	mutex m_{false};
-
-	static void entry(thread & t);
 };
 
-
-void thread::impl::entry(thread& t)
-{
-	if (!t.impl_) {
-		return;
-	}
-
-	{
-		// Obtain mutex once. Once we have it, t.impl_->t_ is assigned.
-		scoped_lock l(t.impl_->m_);
-	}
-
-	t.entry();
-}
-
-bool thread::run()
+bool thread::run(std::function<void()> && f)
 {
 	if (impl_) {
 		return false;
 	}
-	
+
 	try {
 		impl_ = new impl;
-		
-		scoped_lock l(impl_->m_);
-		std::thread t(impl::entry, std::ref(*this));
-		impl_->t_ = std::move(t);
+		impl_->t_ = std::thread(std::move(f));
 	}
 	catch (std::exception const&) {
 		delete impl_;
@@ -177,9 +126,7 @@ thread::id thread::own_id()
 
 thread::~thread()
 {
-	if (!joinable()) {
-		std::abort();
-	}
+	join();
 	delete impl_;
 }
 

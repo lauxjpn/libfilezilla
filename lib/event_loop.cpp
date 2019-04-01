@@ -1,6 +1,6 @@
 #include "libfilezilla/event_loop.hpp"
 #include "libfilezilla/event_handler.hpp"
-
+#include "libfilezilla/thread_pool.hpp"
 #include "libfilezilla/util.hpp"
 
 #include <algorithm>
@@ -10,20 +10,25 @@ namespace fz {
 
 event_loop::event_loop()
 	: sync_(false)
+	, thread_(std::make_unique<thread>())
 {
-	run();
+	thread_->run([this] { entry(); });
+}
+
+event_loop::event_loop(thread_pool & pool)
+	: sync_(false)
+{
+	task_ = std::make_unique<async_task>(pool.spawn([this] { entry(); }));
+}
+
+event_loop::event_loop(event_loop::loop_option)
+	: sync_(false)
+{
 }
 
 event_loop::~event_loop()
 {
-	stop();
-
-	join();
-
-	scoped_lock lock(sync_);
-	for (auto & v : pending_events_) {
-		delete v.second;
-	}
+	stop(true);
 }
 
 void event_loop::send_event(event_handler* handler, event_base* evt)
@@ -73,7 +78,7 @@ void event_loop::remove_handler(event_handler* handler)
 	}
 
 	if (active_handler_ == handler) {
-		if (fz::thread::own_id() != thread_id_) {
+		if (thread::own_id() != thread_id_) {
 			while (active_handler_ == handler) {
 				l.unlock();
 				sleep(duration::from_milliseconds(1));
@@ -164,6 +169,15 @@ bool event_loop::process_event(scoped_lock & l)
 	active_handler_ = nullptr;
 
 	return true;
+}
+
+void event_loop::run()
+{
+	if (task_ || thread_ || thread_id_ != thread::id()) {
+		return;
+	}
+
+	entry();
 }
 
 void event_loop::entry()
@@ -257,11 +271,26 @@ bool event_loop::process_timers(scoped_lock & l, monotonic_clock & now)
 	return false;
 }
 
-void event_loop::stop()
+void event_loop::stop(bool join)
 {
-	scoped_lock l(sync_);
-	quit_ = true;
-	cond_.signal(l);
+	{
+		scoped_lock l(sync_);
+		quit_ = true;
+		cond_.signal(l);
+	}
+
+	if (join) {
+		thread_.reset();
+		task_.reset();
+
+		scoped_lock lock(sync_);
+		for (auto & v : pending_events_) {
+			delete v.second;
+		}
+
+		timers_.clear();
+		deadline_ = monotonic_clock();
+	}
 }
 
 }
