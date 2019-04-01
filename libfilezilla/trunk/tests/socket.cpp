@@ -55,7 +55,7 @@ struct base : public fz::event_handler
 
 	void on_socket_event_base(fz::socket_event_source * source, fz::socket_event_flag type, int error)
 	{
-		if (error) {
+		if (error || source != s_.get()) {
 			fail(__LINE__, error);
 		}
 		else if (type == fz::socket_event_flag::read) {
