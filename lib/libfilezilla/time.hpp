@@ -314,6 +314,11 @@ public:
 		return ms_ != 0;
 	}
 
+	duration& operator*=(int64_t op) {
+		ms_ *= op;
+		return *this;
+	}
+
 	bool operator<(duration const& op) const { return ms_ < op.ms_; }
 	bool operator<=(duration const& op) const { return ms_ <= op.ms_; }
 	bool operator>(duration const& op) const { return ms_ > op.ms_; }
