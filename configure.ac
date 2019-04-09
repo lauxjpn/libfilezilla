@@ -2,7 +2,7 @@ AC_INIT([libfilezilla],[0.15.1],[tim.kosse@filezilla-project.org],[],[https://li
 AC_CONFIG_HEADERS([lib/libfilezilla/private/config.hpp])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
-AM_INIT_AUTOMAKE([dist-bzip2])
+AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip subdir-objects])
 
 AC_CANONICAL_HOST
 
