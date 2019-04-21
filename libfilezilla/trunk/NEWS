@@ -1,3 +1,11 @@
+0.16.0 (2019-04-21)
+
++ Add fz::socket
++ Add operator*= to fz::duration
++ fz::event_loop can now also be created using fz::thread_pool or threadless.
+- fz::async_task now releases the thread back to the pool immediately when the task has completed without waiting for the join
+- *nix: Fix file descriptor leaks on exec()
+
 0.15.1 (2018-11-22)
 
 + Add argument to fz::strtok to return empty tokens
