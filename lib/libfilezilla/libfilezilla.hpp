@@ -42,7 +42,7 @@
  * \li A \ref fz::datetime "datetime" class that not only tracks timestamp but also their accuracy, which simplifies dealing with timestamps originating from different sources
  * \li Simple \ref fz::process "process" handling for spawning child processes with redirected I/O
  *
- * libfilezilla works on most modern platforms that have a C++14 compiler, including, but not limited to, Linux, *BSD, OS X and Windows.
+ * libfilezilla works on most modern platforms that have a C++17 compiler, including, but not limited to, Linux, *BSD, OS X and Windows.
  *
  * \section License
  *
@@ -54,7 +54,7 @@
  *
  * To use libfilezilla in your project, you can use <a href="http://www.freedesktop.org/wiki/Software/pkg-config/">pkg-config</a> to add the required compiler and linker flags.
  *
- * If your compiler does not enable C++14 (or higher) by default, you may need to add -std=c++14 or similar to your compiler flags. Check your compiler's manual for details.
+ * If your compiler does not enable C++17 (or higher) by default, you may need to add -std=c++17 or similar to your compiler flags. Check your compiler's manual for details.
  *
  * \subsection using_vs Using libfilezilla with Visual Studio
  *

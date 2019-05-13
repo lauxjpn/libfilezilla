@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /** \file
@@ -153,10 +154,8 @@ bool equal_insensitive_ascii(String const& a, String const& b)
 /** \brief Converts from std::string in system encoding into std::wstring
  *
  * \return the converted string on success. On failure an empty string is returned.
- *
- * \note Does not handle embedded nulls
  */
-std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::string const& in);
+std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::string_view const& in);
 
 /// Returns identity, that way to_wstring can be called with native_string.
 inline std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::wstring const& in) { return in; }
@@ -179,10 +178,8 @@ std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(char const* s, size_t len);
 /** \brief Converts from std::wstring into std::string in system encoding
  *
  * \return the converted string on success. On failure an empty string is returned.
- *
- * \note Does not handle embedded nulls
  */
-std::string FZ_PUBLIC_SYMBOL to_string(std::wstring const& in);
+std::string FZ_PUBLIC_SYMBOL to_string(std::wstring_view const& in);
 
 /// Returns identity, that way to_string can be called with native_string.
 inline std::string FZ_PUBLIC_SYMBOL to_string(std::string const& in) { return in; }
@@ -208,7 +205,7 @@ size_t strlen(Char const* str) {
  *
  * \note Does not handle embedded nulls
  */
-std::string FZ_PUBLIC_SYMBOL to_utf8(std::string const& in);
+std::string FZ_PUBLIC_SYMBOL to_utf8(std::string_view const& in);
 
 /** \brief Converts from std::wstring in native encoding into std::string in UTF-8
  *
@@ -216,7 +213,7 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::string const& in);
  *
  * \note Does not handle embedded nulls
  */
-std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in);
+std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in);
 
 /// Calls either fz::to_string or fz::to_wstring depending on the passed template argument
 template<typename String, typename Arg>
@@ -283,29 +280,30 @@ bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring const& f
  * \param delims the delimiters to look for
  * \param ignore_empty If true, empty tokens are omitted in the output
  */
-template<typename String, typename Delim, typename Container = std::vector<String>>
-Container strtok(String const& s, Delim const& delims, bool const ignore_empty = true)
-{
-	Container ret;
+std::vector<std::string> FZ_PUBLIC_SYMBOL strtok(std::string_view const& tokens, std::string_view const& delims, bool const ignore_empty = true);
+std::vector<std::wstring> FZ_PUBLIC_SYMBOL strtok(std::wstring_view const& tokens, std::wstring_view const& delims, bool const ignore_empty = true);
+inline auto FZ_PUBLIC_SYMBOL strtok(std::string_view const& tokens, char const delim, bool const ignore_empty = true) {
+	return strtok(tokens, std::string_view(&delim, 1), ignore_empty);
+}
+inline auto FZ_PUBLIC_SYMBOL strtok(std::wstring_view const& tokens, wchar_t const delim, bool const ignore_empty = true) {
+	return strtok(tokens, std::wstring_view(&delim, 1), ignore_empty);
+}
 
-	typename String::size_type start{}, pos{};
-	do {
-		pos = s.find_first_of(delims, start);
-
-		// Not found, we're at ends;
-		if (pos == String::npos) {
-			if (start < s.size()) {
-				ret.emplace_back(s.substr(start));
-			}
-		}
-		else if (pos > start || !ignore_empty) {
-			// Non-empty substring
-			ret.emplace_back(s.substr(start, pos - start));
-		}
-		start = pos + 1;
-	} while (pos != String::npos);
-
-	return ret;
+/**
+ * \brief Tokenizes string.
+ *
+ * \warning This function returns string_views, mind the lifetime of the string passed in tokens.
+ *
+ * \param delims the delimiters to look for
+ * \param ignore_empty If true, empty tokens are omitted in the output
+ */
+std::vector<std::string_view> FZ_PUBLIC_SYMBOL strtok_view(std::string_view const& tokens, std::string_view const& delims, bool const ignore_empty = true);
+std::vector<std::wstring_view> FZ_PUBLIC_SYMBOL strtok_view(std::wstring_view const& tokens, std::wstring_view const& delims, bool const ignore_empty = true);
+inline auto FZ_PUBLIC_SYMBOL strtok_view(std::string_view const& tokens, char const delim, bool const ignore_empty = true) {
+	return strtok_view(tokens, std::string_view(&delim, 1), ignore_empty);
+}
+inline auto FZ_PUBLIC_SYMBOL strtok_view(std::wstring_view const& tokens, wchar_t const delim, bool const ignore_empty = true) {
+	return strtok_view(tokens, std::wstring_view(&delim, 1), ignore_empty);
 }
 
 // Converts string to integral type T. If string is not convertible, T() is returned.

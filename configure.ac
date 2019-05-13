@@ -37,7 +37,7 @@ AX_CHECK_LINK_FLAG([-Wl,-no_weak_imports], [
 ])
 
 # Check for C++14 support
-CXX_COMPILE_STDCXX_14([],[mandatory])
+AX_CXX_COMPILE_STDCXX_17([noext],[mandatory])
 CHECK_LIBCXX
 
 # To make sure stat.st_size is a 64bit (or larger) value

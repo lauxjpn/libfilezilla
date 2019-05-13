@@ -244,7 +244,7 @@ bool query_string::set(std::string const& raw)
 {
 	segments_.clear();
 
-	auto const tokens = fz::strtok(raw, "&");
+	auto const tokens = fz::strtok_view(raw, "&");
 	for (auto const& token : tokens) {
 		size_t pos = token.find('=');
 		if (!pos) {

@@ -788,13 +788,15 @@ std::string datetime::get_rfc822() const
 		t.tm_hour, t.tm_min, t.tm_sec);
 }
 
+using namespace std::literals;
+
 namespace {
 template<typename String>
 bool do_set_rfc822(datetime& dt, String const& str)
 {
-	auto tokens = strtok(str, fzS(typename String::value_type, ", :-"));
+	auto tokens = strtok_view(str, fzS(typename String::value_type, ", :-"));
 	if (tokens.size() >= 7) {
-		auto getMonth = [](String const& m) {
+		auto getMonth = [](auto const& m) {
 			if (m == fzS(typename String::value_type, "Jan")) return 1;
 			if (m == fzS(typename String::value_type, "Feb")) return 2;
 			if (m == fzS(typename String::value_type, "Mar")) return 3;

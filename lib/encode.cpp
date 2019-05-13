@@ -64,7 +64,7 @@ std::string base64_encode(std::vector<uint8_t> const& in, base64_type type, bool
 	return base64_encode_impl(in, type, pad);
 }
 
-std::string base64_decode(std::string const& in)
+std::string base64_decode(std::string_view const& in)
 {
 	unsigned char const chars[256] =
 	{
@@ -149,7 +149,7 @@ std::string base64_decode(std::string const& in)
 }
 
 
-std::string percent_encode(std::string const& s, bool keep_slashes)
+std::string percent_encode(std::string_view const& s, bool keep_slashes)
 {
 	std::string ret;
 	ret.reserve(s.size());
@@ -178,23 +178,23 @@ std::string percent_encode(std::string const& s, bool keep_slashes)
 	return ret;
 }
 
-std::string percent_encode(std::wstring const& s, bool keep_slashes)
+std::string percent_encode(std::wstring_view const& s, bool keep_slashes)
 {
 	return percent_encode(to_utf8(s), keep_slashes);
 }
 
-std::wstring percent_encode_w(std::wstring const& s, bool keep_slashes)
+std::wstring percent_encode_w(std::wstring_view const& s, bool keep_slashes)
 {
 	return to_wstring(percent_encode(s, keep_slashes));
 }
 
-std::string percent_decode(std::string const& s)
+std::string percent_decode(std::string_view const& s, bool allow_embedded_null)
 {
 	std::string ret;
 	ret.reserve(s.size());
 
-	char const* c = s.c_str();
-	while (*c) {
+	char const* c = s.data();
+	while (c < s.cend()) {
 		if (*c == '%') {
 			int high = hex_char_to_int(*(++c));
 			if (high == -1) {
@@ -205,13 +205,15 @@ std::string percent_decode(std::string const& s)
 				return std::string();
 			}
 
-			// Special feature: Disallow
-			if (!high && !low) {
+			if (!high && !low && !allow_embedded_null) {
 				return std::string();
 			}
 			ret.push_back(static_cast<char>(static_cast<uint8_t>((high << 4) + low)));
 		}
 		else {
+			if (!*c && !allow_embedded_null) {
+				return std::string();
+			}
 			ret.push_back(*c);
 		}
 		++c;

@@ -13,6 +13,7 @@ class string_test final : public CppUnit::TestFixture
 	CPPUNIT_TEST(test_conversion);
 	CPPUNIT_TEST(test_conversion2);
 	CPPUNIT_TEST(test_conversion_utf8);
+	CPPUNIT_TEST(test_conversion_null);
 	CPPUNIT_TEST(test_base64);
 	CPPUNIT_TEST(test_trim);
 	CPPUNIT_TEST(test_strtok);
@@ -26,6 +27,7 @@ public:
 	void test_conversion();
 	void test_conversion2();
 	void test_conversion_utf8();
+	void test_conversion_null();
 	void test_base64();
 	void test_trim();
 	void test_strtok();
@@ -83,6 +85,36 @@ void string_test::test_conversion_utf8()
 	std::wstring const w2 = fz::to_wstring_from_utf8(s);
 
 	ASSERT_EQUAL(w, w2);
+}
+
+void string_test::test_conversion_null()
+{
+	wchar_t const w[7] = {'A', 0, 'B', 0, 0, 'C', 0};
+	unsigned char const n[7] = {'A', 0, 'B', 0, 0, 'C', 0};
+	{
+		std::wstring const in(w, w + 7);
+
+		std::string const ref(n, n + 7);
+		std::string const out = fz::to_string(in);
+		CPPUNIT_ASSERT(out.size() >= in.size());
+		ASSERT_EQUAL(ref, out);
+
+		std::wstring const out2 = fz::to_wstring(out);
+		CPPUNIT_ASSERT(out2.size() <= out.size());
+		ASSERT_EQUAL(in, out2);
+	}
+	{
+		std::wstring const in(w, w + 7);
+
+		std::string const ref(n, n + 7);
+		std::string const out = fz::to_utf8(in);
+		CPPUNIT_ASSERT(out.size() >= in.size());
+		ASSERT_EQUAL(ref, out);
+
+		std::wstring const out2 = fz::to_wstring_from_utf8(out);
+		CPPUNIT_ASSERT(out2.size() <= out.size());
+		ASSERT_EQUAL(in, out2);
+	}
 }
 
 void string_test::test_base64()
@@ -145,19 +177,19 @@ void string_test::test_trim()
 
 void string_test::test_strtok()
 {
-	auto tokens = fz::strtok<std::string>("hello world", ' ');
+	auto tokens = fz::strtok("hello world", ' ');
 	CPPUNIT_ASSERT_EQUAL(size_t(2), tokens.size());
 	CPPUNIT_ASSERT_EQUAL(std::string("hello"), tokens[0]);
 	CPPUNIT_ASSERT_EQUAL(std::string("world"), tokens[1]);
 
-	tokens = fz::strtok<std::string>(" hello   world  ", " eo");
+	tokens = fz::strtok(" hello   world  ", " eo");
 	CPPUNIT_ASSERT_EQUAL(size_t(4), tokens.size());
 	CPPUNIT_ASSERT_EQUAL(std::string("h"), tokens[0]);
 	CPPUNIT_ASSERT_EQUAL(std::string("ll"), tokens[1]);
 	CPPUNIT_ASSERT_EQUAL(std::string("w"), tokens[2]);
 	CPPUNIT_ASSERT_EQUAL(std::string("rld"), tokens[3]);
 
-	tokens = fz::strtok<std::string>("a b c", ' ');
+	tokens = fz::strtok("a b c", ' ');
 	CPPUNIT_ASSERT_EQUAL(size_t(3), tokens.size());
 	CPPUNIT_ASSERT_EQUAL(std::string("a"), tokens[0]);
 	CPPUNIT_ASSERT_EQUAL(std::string("b"), tokens[1]);

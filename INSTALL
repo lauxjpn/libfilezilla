@@ -6,7 +6,7 @@ Installation instructions
 ---------------
 
 To compile libfilezilla, the following tools need to be installed:
-- A C++14 compiler, e.g. a recent GCC or Clang
+- A C++17 compiler, e.g. a recent GCC or Clang
 - GNU make
 - Nettle >= 3.1
 
@@ -40,8 +40,8 @@ call ../configure --help
 To use libfilezilla in your project, you can use pkg-config to add the
 required compiler and linker flags.
 
-If your compiler does not enable C++14 (or higher) by default, you may need
-to add -std=c++14 or similar to your compiler flags. Check your compiler's
+If your compiler does not enable C++17 (or higher) by default, you may need
+to add -std=c++17 or similar to your compiler flags. Check your compiler's
 manual for details.
  
 
