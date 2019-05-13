@@ -90,8 +90,9 @@ std::wstring to_wstring(std::string_view const& in)
 
 	if (!in.empty()) {
 #if FZ_WINDOWS
-		char const* const in_p = s;
-		int out_len = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
+		char const* const in_p = in.data();
+		size_t const len = in.size();
+		int const out_len = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
 		if (out_len > 0) {
 			ret.resize(out_len);
 			wchar_t* out_p = &ret[0];
@@ -236,7 +237,7 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 	if (len != 0) {
 #if FZ_WINDOWS
 		char const* const in_p = s;
-		int out_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
+		int const out_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
 		if (out_len > 0) {
 			ret.resize(out_len);
 			wchar_t* out_p = &ret[0];
@@ -274,11 +275,12 @@ std::string to_string(std::wstring_view const& in)
 	if (!in.empty()) {
 #if FZ_WINDOWS
 		wchar_t const* const in_p = in.data();
-		int len = WideCharToMultiByte(CP_ACP, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
-		if (len > 0) {
+		BOOL usedDefault = FALSE;
+		int const len = WideCharToMultiByte(CP_ACP, 0, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, &usedDefault);
+		if (len > 0 && !usedDefault) {
 			ret.resize(len);
 			char* out_p = &ret[0];
-			WideCharToMultiByte(CP_ACP, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
+			WideCharToMultiByte(CP_ACP, 0, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
 		}
 #else
 		size_t start = 0;
@@ -338,7 +340,7 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in)
 	if (!in.empty()) {
 #if FZ_WINDOWS
 		wchar_t const* const in_p = in.data();
-		int len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
+		int const len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
 		if (len > 0) {
 			ret.resize(len);
 			char* out_p = &ret[0];
