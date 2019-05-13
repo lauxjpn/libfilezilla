@@ -1,6 +1,13 @@
 #ifndef LIBFILEZILLA_SOCKET_HEADER
 #define LIBFILEZILLA_SOCKET_HEADER
 
+/** \file
+ * \brief Socket classes for networking
+ *
+ * Declares the \ref fz::socket and \ref fz::listen_socket classes,
+ * alongside supporting classes to handle socket events.
+ */
+
 #include "libfilezilla.hpp"
 
 #include "event_handler.hpp"
