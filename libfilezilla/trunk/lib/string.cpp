@@ -84,19 +84,60 @@ std::wstring::value_type toupper_ascii(std::wstring::value_type c)
 	return c;
 }
 
-std::wstring to_wstring(std::string const& in)
+std::wstring to_wstring(std::string_view const& in)
 {
-	std::mbstate_t ps{};
 	std::wstring ret;
 
-	char const* in_p = in.c_str();
-	size_t len = std::mbsrtowcs(nullptr, &in_p, 0, &ps);
-	if (len != static_cast<size_t>(-1)) {
-		ret.resize(len);
-		wchar_t* out_p = &ret[0];
+	if (!in.empty()) {
+#if FZ_WINDOWS
+		char const* const in_p = s;
+		int out_len = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
+		if (out_len > 0) {
+			ret.resize(out_len);
+			wchar_t* out_p = &ret[0];
+			MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), out_p, out_len);
+		}
+#else
+		size_t start = 0;
+		while (start < in.size()) {
+			// Run in a loop to handle embedded null chars
+			size_t pos = in.find(char{}, start);
+			size_t inlen;
+			if (pos == std::string::npos) {
+				inlen = in.size() - start;
+			}
+			else {
+				inlen = pos - start;
+			}
 
-		in_p = in.c_str(); // Some implementations of mbsrtowcs change src even on null dst
-		std::mbsrtowcs(out_p, &in_p, len + 1, &ps);
+			std::mbstate_t ps{};
+			char const* in_p = in.data() + start;
+			size_t len = mbsnrtowcs(nullptr, &in_p, inlen, 0, &ps);
+			if (len != static_cast<size_t>(-1)) {
+				size_t old = ret.size();
+				if (start) {
+					++old;
+				}
+				ret.resize(old + len);
+				wchar_t* out_p = &ret[old];
+
+				in_p = in.data() + start; // Some implementations of wcsrtombs change src even on null dst
+				mbsnrtowcs(out_p, &in_p, inlen, len, &ps);
+			}
+			else {
+				ret.clear();
+				break;
+			}
+
+			start += inlen + 1;
+			if (start >= in.size()) {
+				if (pos != std::string::npos) {
+					ret += wchar_t{};
+				}
+				break;
+			}
+		}
+#endif
 	}
 
 	return ret;
@@ -226,36 +267,77 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 	return ret;
 }
 
-std::string to_string(std::wstring const& in)
-{
-	std::mbstate_t ps{};
-	std::string ret;
-
-	wchar_t const* in_p = in.c_str();
-	size_t len = std::wcsrtombs(nullptr, &in_p, 0, &ps);
-	if (len != static_cast<size_t>(-1)) {
-		ret.resize(len);
-		char* out_p = &ret[0];
-
-		in_p = in.c_str(); // Some implementations of wcsrtombs change src even on null dst
-		std::wcsrtombs(out_p, &in_p, len + 1, &ps);
-	}
-
-	return ret;
-}
-
-std::string FZ_PUBLIC_SYMBOL to_utf8(std::string const& in)
-{
-	return to_utf8(to_wstring(in));
-}
-
-std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
+std::string to_string(std::wstring_view const& in)
 {
 	std::string ret;
 
 	if (!in.empty()) {
 #if FZ_WINDOWS
-		wchar_t const* const in_p = in.c_str();
+		wchar_t const* const in_p = in.data();
+		int len = WideCharToMultiByte(CP_ACP, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
+		if (len > 0) {
+			ret.resize(len);
+			char* out_p = &ret[0];
+			WideCharToMultiByte(CP_ACP, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
+		}
+#else
+		size_t start = 0;
+		while (true) {
+			// Run in a loop to handle embedded null chars
+			size_t pos = in.find(wchar_t{}, start);
+			size_t inlen;
+			if (pos == std::wstring::npos) {
+				inlen = in.size() - start;
+			}
+			else {
+				inlen = pos - start;
+			}
+
+			std::mbstate_t ps{};
+			wchar_t const* in_p = in.data() + start;
+			size_t len = wcsnrtombs(nullptr, &in_p, inlen, 0, &ps);
+			if (len != static_cast<size_t>(-1)) {
+				size_t old = ret.size();
+				if (start) {
+					++old;
+				}
+				ret.resize(old + len);
+				char* out_p = &ret[old];
+
+				in_p = in.data() + start; // Some implementations of wcsrtombs change src even on null dst
+				wcsnrtombs(out_p, &in_p, inlen, len, &ps);
+			}
+			else {
+				ret.clear();
+				break;
+			}
+
+			start += inlen + 1;
+			if (start >= in.size()) {
+				if (pos != std::wstring::npos) {
+					ret += char{};
+				}
+				break;
+			}
+		}
+#endif
+	}
+
+	return ret;
+}
+
+std::string FZ_PUBLIC_SYMBOL to_utf8(std::string_view const& in)
+{
+	return to_utf8(to_wstring(in));
+}
+
+std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in)
+{
+	std::string ret;
+
+	if (!in.empty()) {
+#if FZ_WINDOWS
+		wchar_t const* const in_p = in.data();
 		int len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
 		if (len > 0) {
 			ret.resize(len);
@@ -266,7 +348,7 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring const& in)
 		static thread_local iconv_t_holder holder("UTF-8", wchar_t_encoding());
 
 		if (holder && iconv(holder.cd, nullptr, nullptr, nullptr, nullptr) != static_cast<size_t>(-1)) {
-			auto in_p = reinterpret_cast<iconv_second_arg_type>(const_cast<wchar_t*>(in.c_str()));
+			auto in_p = reinterpret_cast<iconv_second_arg_type>(const_cast<wchar_t*>(in.data()));
 			size_t in_len = in.size() * sizeof(wchar_t);
 
 			size_t out_len = in.size() * 4;
@@ -326,6 +408,54 @@ bool replace_substrings(std::string& in, std::string const& find, std::string co
 bool replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement)
 {
 	return do_replace_substrings(in, find, replacement);
+}
+
+namespace {
+template<typename Ret, typename String>
+std::vector<Ret> strtok_impl(String && s, String && delims, bool const ignore_empty)
+{
+	std::vector<Ret> ret;
+
+	typename std::decay_t<String>::size_type start{}, pos{};
+
+	do {
+		pos = s.find_first_of(delims, start);
+
+		// Not found, we're at ends;
+		if (pos == std::decay_t<String>::npos) {
+			if (start < s.size()) {
+				ret.emplace_back(s.substr(start));
+			}
+		}
+		else if (pos > start || !ignore_empty) {
+			// Non-empty substring
+			ret.emplace_back(s.substr(start, pos - start));
+		}
+		start = pos + 1;
+	} while (pos != std::decay_t<String>::npos);
+
+	return ret;
+}
+}
+
+std::vector<std::string> strtok(std::string_view const& tokens, std::string_view const& delims, bool const ignore_empty)
+{
+	return strtok_impl<std::string>(tokens, delims, ignore_empty);
+}
+
+std::vector<std::wstring> strtok(std::wstring_view const& tokens, std::wstring_view const& delims, bool const ignore_empty)
+{
+	return strtok_impl<std::wstring>(tokens, delims, ignore_empty);
+}
+
+std::vector<std::string_view> strtok_view(std::string_view const& tokens, std::string_view const& delims, bool const ignore_empty)
+{
+	return strtok_impl<std::string_view>(tokens, delims, ignore_empty);
+}
+
+std::vector<std::wstring_view> strtok_view(std::wstring_view const& tokens, std::wstring_view const& delims, bool const ignore_empty)
+{
+	return strtok_impl<std::wstring_view>(tokens, delims, ignore_empty);
 }
 
 }

@@ -105,7 +105,7 @@ std::string FZ_PUBLIC_SYMBOL base64_encode(std::vector<uint8_t> const& in, base6
  *
  * Padding is optional, alphabet is auto-detected.
  */
-std::string FZ_PUBLIC_SYMBOL base64_decode(std::string const& in);
+std::string FZ_PUBLIC_SYMBOL base64_decode(std::string_view const& in);
 
 
 /**
@@ -116,22 +116,22 @@ std::string FZ_PUBLIC_SYMBOL base64_decode(std::string const& in);
  *
  * \param keep_slashes If set, slashes are not encoded.
  */
-std::string FZ_PUBLIC_SYMBOL percent_encode(std::string const& s, bool keep_slashes = false);
-std::string FZ_PUBLIC_SYMBOL percent_encode(std::wstring const& s, bool keep_slashes = false);
+std::string FZ_PUBLIC_SYMBOL percent_encode(std::string_view const& s, bool keep_slashes = false);
+std::string FZ_PUBLIC_SYMBOL percent_encode(std::wstring_view const& s, bool keep_slashes = false);
 
 /**
  * \brief Percent-enodes wide-character. Non-ASCII characters are converted to UTF-8 befor they are encoded.
  *
  * \sa \ref fz::percent-encode
  */
-std::wstring FZ_PUBLIC_SYMBOL percent_encode_w(std::wstring const& s, bool keep_slashes = false);
+std::wstring FZ_PUBLIC_SYMBOL percent_encode_w(std::wstring_view const& s, bool keep_slashes = false);
 
 /**
  * \brief Percent-decodes string.
  *
  * If the string cannot be decoded, an empty string is returned.
  */
-std::string FZ_PUBLIC_SYMBOL percent_decode(std::string const& s);
+std::string FZ_PUBLIC_SYMBOL percent_decode(std::string_view const& s, bool allow_embedded_null = false);
 
 }
 
