@@ -194,13 +194,20 @@ std::string percent_decode(std::string_view const& s, bool allow_embedded_null)
 	ret.reserve(s.size());
 
 	char const* c = s.data();
-	while (c < s.cend()) {
+	char const* const end = c + s.size();
+	while (c < end) {
 		if (*c == '%') {
-			int high = hex_char_to_int(*(++c));
+			if (++c == end) {
+				return std::string();
+			}
+			int const high = hex_char_to_int(*c);
 			if (high == -1) {
 				return std::string();
 			}
-			int low = hex_char_to_int(*(++c));
+			if (++c == end) {
+				return std::string();
+			}
+			int const low = hex_char_to_int(*c);
 			if (low == -1) {
 				return std::string();
 			}
