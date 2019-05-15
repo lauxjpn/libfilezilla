@@ -29,12 +29,12 @@ public:
 	explicit buffer(size_t capacity);
 
 	buffer(buffer const& buf);
-	buffer(buffer && buf);
+	buffer(buffer && buf) noexcept;
 
 	~buffer() { delete[] data_; }
 
 	buffer& operator=(buffer const& buf);
-	buffer& operator=(buffer && buf);
+	buffer& operator=(buffer && buf) noexcept;
 
 	/// Undefined if buffer is empty
 	unsigned char const* get() const { return pos_; }
