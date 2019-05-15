@@ -86,7 +86,7 @@ public:
 	scoped_lock(scoped_lock const&) = delete;
 	scoped_lock& operator=(scoped_lock const&) = delete;
 
-	scoped_lock(scoped_lock && op)
+	scoped_lock(scoped_lock && op) noexcept
 	{
 		m_ = op.m_;
 		op.m_ = 0;
@@ -94,7 +94,7 @@ public:
 		op.locked_ = false;
 	}
 
-	scoped_lock& operator=(scoped_lock && op)
+	scoped_lock& operator=(scoped_lock && op) noexcept
 	{
 		if (this != &op) {
 			m_ = op.m_;
