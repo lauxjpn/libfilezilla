@@ -84,6 +84,44 @@ std::wstring::value_type toupper_ascii(std::wstring::value_type c)
 	return c;
 }
 
+namespace {
+template<typename Out, bool lower, typename String>
+Out str_case_ascii_impl(String const& s)
+{
+	Out ret;
+	ret.resize(s.size());
+	for (auto& c : ret) {
+		if constexpr (lower) {
+			c = tolower_ascii(c);
+		}
+		else {
+			c = toupper_ascii(c);
+		}
+	}
+	return ret;
+}
+}
+
+std::string str_tolower_ascii(std::string_view const& s)
+{
+	return str_case_ascii_impl<std::string, true>(s);
+}
+
+std::wstring str_tolower_ascii(std::wstring_view const& s)
+{
+	return str_case_ascii_impl<std::wstring, true>(s);
+}
+
+std::string str_toupper_ascii(std::string_view const& s)
+{
+	return str_case_ascii_impl<std::string, false>(s);
+}
+
+std::wstring str_toupper_ascii(std::wstring_view const& s)
+{
+	return str_case_ascii_impl<std::wstring, false>(s);
+}
+
 std::wstring to_wstring(std::string_view const& in)
 {
 	std::wstring ret;

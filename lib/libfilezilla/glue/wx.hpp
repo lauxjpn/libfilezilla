@@ -12,17 +12,6 @@ inline std::wstring to_wstring(T const& s) {
 	return s.ToStdWstring();
 }
 
-template<>
-inline wxString str_tolower_ascii(wxString const& s)
-{
-	wxString ret = s;
-	// wxString is just broken, can't even use range-based for loops with it.
-	for (auto it = ret.begin(); it != ret.end(); ++it) {
-		*it = tolower_ascii(static_cast<wxChar>(*it));
-	}
-	return ret;
-}
-
 template<typename T, typename = std::enable_if_t<std::is_same_v<wxString, typename std::decay_t<T>>>>
 inline native_string to_native(T const& in)
 {
