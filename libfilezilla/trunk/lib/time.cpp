@@ -794,7 +794,7 @@ namespace {
 template<typename String>
 bool do_set_rfc822(datetime& dt, String const& str)
 {
-	auto tokens = strtok_view(str, fzS(typename String::value_type, ", :-"));
+	auto const tokens = strtok_view(str, fzS(typename String::value_type, ", :-"));
 	if (tokens.size() >= 7) {
 		auto getMonth = [](auto const& m) {
 			if (m == fzS(typename String::value_type, "Jan")) return 1;

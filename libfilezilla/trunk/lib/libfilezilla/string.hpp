@@ -100,25 +100,11 @@ std::wstring::value_type FZ_PUBLIC_SYMBOL toupper_ascii(std::wstring::value_type
 /** \brief tr_tolower_ascii does for strings what tolower_ascii does for individual characters
  */
  // Note: For UTF-8 strings it works on individual octets!
-template<typename String>
-String str_tolower_ascii(String const& s)
-{
-	String ret = s;
-	for (auto& c : ret) {
-		c = tolower_ascii(c);
-	}
-	return ret;
-}
+std::string FZ_PUBLIC_SYMBOL str_tolower_ascii(std::string_view const& s);
+std::wstring FZ_PUBLIC_SYMBOL str_tolower_ascii(std::wstring_view const& s);
 
-template<typename String>
-String str_toupper_ascii(String const& s)
-{
-	String ret = s;
-	for (auto& c : ret) {
-		c = toupper_ascii(c);
-	}
-	return ret;
-}
+std::string FZ_PUBLIC_SYMBOL str_toupper_ascii(std::string_view const& s);
+std::wstring FZ_PUBLIC_SYMBOL str_toupper_ascii(std::wstring_view const& s);
 
 /** \brief Comparator to be used for std::map for case-insentitive keys
  *
