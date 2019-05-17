@@ -288,7 +288,7 @@ std::vector<uint8_t> sha512(std::string_view const& data)
 	return sha512_impl(data);
 }
 
-std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::string const& data)
+std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::string_view const& data)
 {
 	return hmac_sha256_impl(key, data);
 }
@@ -298,7 +298,7 @@ std::vector<uint8_t> hmac_sha256(std::vector<uint8_t> const& key, std::vector<ui
 	return hmac_sha256_impl(key, data);
 }
 
-std::vector<uint8_t> hmac_sha256(std::vector<uint8_t> const& key, std::string const& data)
+std::vector<uint8_t> hmac_sha256(std::vector<uint8_t> const& key, std::string_view const& data)
 {
 	return hmac_sha256_impl(key, data);
 }
