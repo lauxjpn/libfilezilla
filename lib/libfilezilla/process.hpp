@@ -67,8 +67,8 @@ public:
 	 */
 	bool write(char const* buffer, unsigned int len);
 
-	inline bool write(std::string const& s) {
-		return write(s.c_str(), static_cast<unsigned int>(s.size()));
+	inline bool write(std::string_view const& s) {
+		return write(s.data(), static_cast<unsigned int>(s.size()));
 	}
 
 private:

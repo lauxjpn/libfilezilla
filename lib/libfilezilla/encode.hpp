@@ -97,7 +97,7 @@ enum class base64_type {
 };
 
 /// \brief Encodes raw input string to base64
-std::string FZ_PUBLIC_SYMBOL base64_encode(std::string const& in, base64_type type = base64_type::standard, bool pad = true);
+std::string FZ_PUBLIC_SYMBOL base64_encode(std::string_view const& in, base64_type type = base64_type::standard, bool pad = true);
 std::string FZ_PUBLIC_SYMBOL base64_encode(std::vector<uint8_t> const& in, base64_type type = base64_type::standard, bool pad = true);
 
 /**

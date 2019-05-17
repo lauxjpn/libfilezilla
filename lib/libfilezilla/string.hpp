@@ -31,22 +31,30 @@ namespace fz {
 
 #ifdef FZ_WINDOWS
 typedef std::wstring native_string;
+typedef std::wstring_view native_string_view;
 #endif
 #if defined(FZ_UNIX) || defined(FZ_MAC)
 typedef std::string native_string;
+typedef std::string_view native_string_view;
 #endif
 
 /** \brief Converts std::string to native_string.
  *
  * \return the converted string on success. On failure an empty string is returned.
  */
-native_string FZ_PUBLIC_SYMBOL to_native(std::string const& in);
+native_string FZ_PUBLIC_SYMBOL to_native(std::string_view const& in);
 
 /** \brief Convert std::wstring to native_string.
  *
  * \return the converted string on success. On failure an empty string is returned.
  */
-native_string FZ_PUBLIC_SYMBOL to_native(std::wstring const& in);
+native_string FZ_PUBLIC_SYMBOL to_native(std::wstring_view const& in);
+
+/// Avoid converting native_string to native_string_view and back to string_view
+template<typename T, typename std::enable_if_t<std::is_same_v<native_string, typename std::decay_t<T>>, int> = 0>
+inline native_string to_native(T const& in) {
+	return in;
+}
 
 /** \brief Locale-sensitive stricmp
  *

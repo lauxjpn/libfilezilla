@@ -27,13 +27,13 @@ std::string public_key::to_base64() const
 	return fz::base64_encode(raw);
 }
 
-public_key public_key::from_base64(std::string const& base64)
+public_key public_key::from_base64(std::string_view const& base64)
 {
 	public_key ret;
 
 	auto raw = fz::base64_decode(base64);
 	if (raw.size() == key_size + salt_size) {
-		auto p = reinterpret_cast<uint8_t const*>(&raw[0]);
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
 		ret.salt_.assign(p + key_size, p + key_size + salt_size);
 	}
@@ -67,7 +67,7 @@ public_key private_key::pubkey() const
 			0, 0, 0, 0, 0, 0, 0, 0 };
 
 		ret.key_.resize(32);
-		nettle_curve25519_mul(&ret.key_[0], &key_[0], nine);
+		nettle_curve25519_mul(ret.key_.data(), key_.data(), nine);
 
 		ret.salt_ = salt_;
 	}
@@ -83,7 +83,7 @@ private_key private_key::from_password(std::vector<uint8_t> const& password, std
 
 		std::vector<uint8_t> key;
 		key.resize(key_size);
-		nettle_pbkdf2_hmac_sha256(password.size(), &password[0], 100000, salt_size, &salt[0], 32, &key[0]);
+		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), 100000, salt_size, salt.data(), 32, key.data());
 		key[0] &= 248;
 		key[31] &= 127;
 		key[31] |= 64;
@@ -102,13 +102,13 @@ std::string private_key::to_base64() const
 	return fz::base64_encode(raw);
 }
 
-private_key private_key::from_base64(std::string const& base64)
+private_key private_key::from_base64(std::string_view const& base64)
 {
 	private_key ret;
 
 	auto raw = fz::base64_decode(base64);
 	if (raw.size() == key_size + salt_size) {
-		auto p = reinterpret_cast<uint8_t const*>(&raw[0]);
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
 		ret.key_[0] &= 248;
 		ret.key_[31] &= 127;
@@ -127,7 +127,7 @@ std::vector<uint8_t> private_key::shared_secret(public_key const& pub) const
 	if (*this && pub) {
 		ret.resize(32);
 
-		nettle_curve25519_mul(&ret[0], &key_[0], &pub.key_[0]);
+		nettle_curve25519_mul(ret.data(), key_.data(), pub.key_.data());
 	}
 
 	return ret;
@@ -153,35 +153,35 @@ std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const
 			iv.resize(GCM_IV_SIZE);
 
 			gcm_aes256_ctx ctx;
-			nettle_gcm_aes256_set_key(&ctx, &aes_key[0]);
-			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, &iv[0]);
+			nettle_gcm_aes256_set_key(&ctx, aes_key.data());
+			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
 
 			// Encrypt plaintext with AES256-GCM
 			ret.resize(public_key::key_size + public_key::salt_size + size + GCM_DIGEST_SIZE);
 			if (size) {
-				nettle_gcm_aes256_encrypt(&ctx, size, &ret[public_key::key_size + public_key::salt_size], plain);
+				nettle_gcm_aes256_encrypt(&ctx, size, ret.data() + public_key::key_size + public_key::salt_size, plain);
 			}
 
 			// Return ephemeral_pub.key_||ephemeral_pub.salt_||ciphertext||tag
-			memcpy(&ret[0], &ephemeral_pub.key_[0], public_key::key_size);
-			memcpy(&ret[public_key::key_size], &ephemeral_pub.salt_[0], public_key::salt_size);
-			nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, &ret[public_key::key_size + public_key::salt_size + size]);
+			memcpy(ret.data(), ephemeral_pub.key_.data(), public_key::key_size);
+			memcpy(ret.data() + public_key::key_size, ephemeral_pub.salt_.data(), public_key::salt_size);
+			nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, ret.data() + public_key::key_size + public_key::salt_size + size);
 		}
 		else {
 			std::vector<uint8_t> ctr = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 			aes256_ctx ctx;
-			nettle_aes256_set_encrypt_key(&ctx, &aes_key[0]);
+			nettle_aes256_set_encrypt_key(&ctx, aes_key.data());
 
 			// Encrypt plaintext with AES256-CTR
 			ret.resize(public_key::key_size + public_key::salt_size + size);
 			if (size) {
-				nettle_ctr_crypt(&ctx, reinterpret_cast<nettle_cipher_func*>(nettle_aes256_encrypt), 16, &ctr[0], size, &ret[public_key::key_size + public_key::salt_size], plain);
+				nettle_ctr_crypt(&ctx, reinterpret_cast<nettle_cipher_func*>(nettle_aes256_encrypt), 16, ctr.data(), size, ret.data() + public_key::key_size + public_key::salt_size, plain);
 			}
 
 			// Return ephemeral_pub.key_||ephemeral_pub.salt_||ciphertext
-			memcpy(&ret[0], &ephemeral_pub.key_[0], public_key::key_size);
-			memcpy(&ret[public_key::key_size], &ephemeral_pub.salt_[0], public_key::salt_size);
+			memcpy(ret.data(), ephemeral_pub.key_.data(), public_key::key_size);
+			memcpy(ret.data() + public_key::key_size, ephemeral_pub.salt_.data(), public_key::salt_size);
 		}
 	}
 
@@ -193,9 +193,9 @@ std::vector<uint8_t> encrypt(std::vector<uint8_t> const& plain, public_key const
 	return encrypt(plain.data(), plain.size(), pub, authenticated);
 }
 
-std::vector<uint8_t> encrypt(std::string const& plain, public_key const& pub, bool authenticated)
+std::vector<uint8_t> encrypt(std::string_view const& plain, public_key const& pub, bool authenticated)
 {
-	return encrypt(reinterpret_cast<uint8_t const*>(plain.c_str()), plain.size(), pub, authenticated);
+	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), pub, authenticated);
 }
 
 std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key const& priv, bool authenticated)
@@ -211,8 +211,8 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 		public_key ephemeral_pub;
 		ephemeral_pub.key_.resize(public_key::key_size);
 		ephemeral_pub.salt_.resize(public_key::salt_size);
-		memcpy(&ephemeral_pub.key_[0], cipher, public_key::key_size);
-		memcpy(&ephemeral_pub.salt_[0], cipher + public_key::key_size, public_key::salt_size);
+		memcpy(ephemeral_pub.key_.data(), cipher, public_key::key_size);
+		memcpy(ephemeral_pub.salt_.data(), cipher + public_key::key_size, public_key::salt_size);
 
 		// Generate shared secret from ephemeral_pub and priv
 		std::vector<uint8_t> const secret = priv.shared_secret(ephemeral_pub);
@@ -227,13 +227,13 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 			iv.resize(GCM_IV_SIZE);
 
 			gcm_aes256_ctx ctx;
-			nettle_gcm_aes256_set_key(&ctx, &aes_key[0]);
-			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, &iv[0]);
+			nettle_gcm_aes256_set_key(&ctx, aes_key.data());
+			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
 
 			// Decrypt ciphertext with AES256-GCM
 			ret.resize(message_size);
 			if (message_size) {
-				nettle_gcm_aes256_decrypt(&ctx, message_size, &ret[0], cipher +public_key::key_size + public_key::salt_size);
+				nettle_gcm_aes256_decrypt(&ctx, message_size, ret.data(), cipher + public_key::key_size + public_key::salt_size);
 			}
 
 			// Last but not least, verify the tag
@@ -252,12 +252,12 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 			std::vector<uint8_t> ctr = hash_accumulator(hash_algorithm::sha256) << ephemeral_pub.salt_ << 1 << secret << ephemeral_pub.key_ << pub.key_ << pub.salt_;
 
 			aes256_ctx ctx;
-			nettle_aes256_set_encrypt_key(&ctx, &aes_key[0]);
+			nettle_aes256_set_encrypt_key(&ctx, aes_key.data());
 
 			// Decrypt ciphertext with AES256-CTR
 			ret.resize(message_size);
 			if (message_size) {
-				nettle_ctr_crypt(&ctx, reinterpret_cast<nettle_cipher_func*>(nettle_aes256_encrypt), 16, &ctr[0], ret.size(), &ret[0], &cipher[public_key::key_size + public_key::salt_size]);
+				nettle_ctr_crypt(&ctx, reinterpret_cast<nettle_cipher_func*>(nettle_aes256_encrypt), 16, ctr.data(), ret.size(), ret.data(), cipher + public_key::key_size + public_key::salt_size);
 			}
 		}
 	}
@@ -271,9 +271,9 @@ std::vector<uint8_t> decrypt(std::vector<uint8_t> const& cipher, private_key con
 	return decrypt(cipher.data(), cipher.size(), priv, authenticated);
 }
 
-std::vector<uint8_t> decrypt(std::string const& cipher, private_key const& priv, bool authenticated)
+std::vector<uint8_t> decrypt(std::string_view const& cipher, private_key const& priv, bool authenticated)
 {
-	return decrypt(reinterpret_cast<uint8_t const*>(cipher.c_str()), cipher.size(), priv, authenticated);
+	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), priv, authenticated);
 }
 
 }

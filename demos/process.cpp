@@ -8,7 +8,7 @@ namespace {
 // demos can be run independent of the current working directory.
 fz::native_string get_program_dir(int argc, char ** argv)
 {
-	std::string path;
+	std::string_view path;
 	if (argc > 0) {
 		path = argv[0];
 #ifdef FZ_WINDOWS
@@ -17,7 +17,7 @@ fz::native_string get_program_dir(int argc, char ** argv)
 		auto delim = path.find_last_of("/");
 #endif
 		if (delim == std::string::npos) {
-			path.clear();
+			path = std::string_view();
 		}
 		else {
 			path = path.substr(0, delim + 1);

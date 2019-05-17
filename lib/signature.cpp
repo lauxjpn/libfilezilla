@@ -13,13 +13,13 @@ std::string public_verification_key::to_base64() const
 	return fz::base64_encode(raw);
 }
 
-public_verification_key public_verification_key::from_base64(std::string const& base64)
+public_verification_key public_verification_key::from_base64(std::string_view const& base64)
 {
 	public_verification_key ret;
 
 	auto raw = fz::base64_decode(base64);
 	if (raw.size() == key_size) {
-		auto p = reinterpret_cast<uint8_t const*>(&raw[0]);
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
 	}
 
@@ -40,13 +40,13 @@ std::string private_signing_key::to_base64() const
 	return fz::base64_encode(raw);
 }
 
-private_signing_key private_signing_key::from_base64(std::string const& base64)
+private_signing_key private_signing_key::from_base64(std::string_view const& base64)
 {
 	private_signing_key ret;
 
 	auto raw = fz::base64_decode(base64);
 	if (raw.size() == key_size) {
-		auto p = reinterpret_cast<uint8_t const*>(&raw[0]);
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
 	}
 
@@ -87,9 +87,9 @@ std::vector<uint8_t> sign(std::vector<uint8_t> const& message, private_signing_k
 	return sign(message.data(), message.size(), priv);
 }
 
-std::vector<uint8_t> sign(std::string const& message, private_signing_key const& priv)
+std::vector<uint8_t> sign(std::string_view const& message, private_signing_key const& priv)
 {
-	return sign(reinterpret_cast<uint8_t const*>(message.c_str()), message.size(), priv);
+	return sign(reinterpret_cast<uint8_t const*>(message.data()), message.size(), priv);
 }
 
 
@@ -107,9 +107,9 @@ bool verify(std::vector<uint8_t> const& message, public_verification_key const& 
 	return verify(message.data(), message.size(), pub);
 }
 
-bool verify(std::string const& message, public_verification_key const& pub)
+bool verify(std::string_view const& message, public_verification_key const& pub)
 {
-	return verify(reinterpret_cast<uint8_t const*>(message.c_str()), message.size(), pub);
+	return verify(reinterpret_cast<uint8_t const*>(message.data()), message.size(), pub);
 }
 
 }

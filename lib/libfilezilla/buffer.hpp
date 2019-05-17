@@ -81,7 +81,7 @@ public:
 	 * The number of reallocations as result to repeated append are amortized O(1)
 	 */
 	void append(unsigned char const* data, size_t len);
-	void append(std::string const& str);
+	void append(std::string_view const& str);
 
 	bool empty() const { return size_ == 0; }
 	explicit operator bool() const {
