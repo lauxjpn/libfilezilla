@@ -127,9 +127,9 @@ void buffer::append(unsigned char const* data, size_t len)
 	size_ += len;
 }
 
-void buffer::append(std::string const& str)
+void buffer::append(std::string_view const& str)
 {
-	append(reinterpret_cast<unsigned char const*>(str.c_str()), str.size());
+	append(reinterpret_cast<unsigned char const*>(str.data()), str.size());
 }
 
 void buffer::reserve(size_t capacity)

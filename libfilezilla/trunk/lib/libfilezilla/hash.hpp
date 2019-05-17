@@ -34,7 +34,7 @@ public:
 
 	void reinit();
 
-	void update(std::string const& data);
+	void update(std::string_view const& data);
 	void update(std::vector<uint8_t> const& data);
 	void update(uint8_t const* data, size_t size);
 	void update(uint8_t in) {
@@ -63,18 +63,18 @@ private:
  *
  * Insecure, avoid using this
  */
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL md5(std::string const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL md5(std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL md5(std::vector<uint8_t> const& data);
 
 /// \brief Standard SHA256
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sha256(std::string const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sha256(std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sha256(std::vector<uint8_t> const& data);
 
 /// \brief Standard HMAC using SHA256
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string const& key, std::string const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string_view const& key, std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& key, std::vector<uint8_t> const& data);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& key, std::string const& data);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string const& key, std::vector<uint8_t> const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& key, std::string_view const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string_view const& key, std::vector<uint8_t> const& data);
 
 }
 

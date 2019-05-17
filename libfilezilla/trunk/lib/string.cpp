@@ -21,22 +21,23 @@ static_assert('A' < 'a', "We only support systems running with an ASCII-based ch
 namespace fz {
 
 #ifdef FZ_WINDOWS
-native_string to_native(std::string const& in)
+native_string to_native(std::string_view const& in)
 {
 	return to_wstring(in);
 }
 
-native_string to_native(std::wstring const& in)
+native_string to_native(std::wstring_view const& in)
 {
-	return in;
-}
-#else
-native_string to_native(std::string const& in)
-{
-	return in;
+	return std::wstring(in);
 }
 
-native_string to_native(std::wstring const& in)
+#else
+native_string to_native(std::string_view const& in)
+{
+	return std::string(in);
+}
+
+native_string to_native(std::wstring_view const& in)
 {
 	return to_string(in);
 }
@@ -90,12 +91,12 @@ Out str_case_ascii_impl(String const& s)
 {
 	Out ret;
 	ret.resize(s.size());
-	for (auto& c : ret) {
+	for (size_t i = 0; i < s.size(); ++i) {
 		if constexpr (lower) {
-			c = tolower_ascii(c);
+			ret[i] = tolower_ascii(s[i]);
 		}
 		else {
-			c = toupper_ascii(c);
+			ret[i] = toupper_ascii(s[i]);
 		}
 	}
 	return ret;
@@ -133,7 +134,7 @@ std::wstring to_wstring(std::string_view const& in)
 		int const out_len = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
 		if (out_len > 0) {
 			ret.resize(out_len);
-			wchar_t* out_p = &ret[0];
+			wchar_t* out_p = ret.data();
 			MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), out_p, out_len);
 		}
 #else
@@ -278,7 +279,7 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 		int const out_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), nullptr, 0);
 		if (out_len > 0) {
 			ret.resize(out_len);
-			wchar_t* out_p = &ret[0];
+			wchar_t* out_p = ret.data();
 			MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, in_p, static_cast<int>(len), out_p, out_len);
 		}
 #else
@@ -317,7 +318,7 @@ std::string to_string(std::wstring_view const& in)
 		int const len = WideCharToMultiByte(CP_ACP, 0, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, &usedDefault);
 		if (len > 0 && !usedDefault) {
 			ret.resize(len);
-			char* out_p = &ret[0];
+			char* out_p = ret.data();
 			WideCharToMultiByte(CP_ACP, 0, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
 		}
 #else
@@ -381,7 +382,7 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in)
 		int const len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), nullptr, 0, nullptr, nullptr);
 		if (len > 0) {
 			ret.resize(len);
-			char* out_p = &ret[0];
+			char* out_p = ret.data();
 			WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, in_p, static_cast<int>(in.size()), out_p, len, nullptr, nullptr);
 		}
 #else

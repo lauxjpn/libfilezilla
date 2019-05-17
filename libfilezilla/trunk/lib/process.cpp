@@ -121,7 +121,7 @@ public:
 
 		PROCESS_INFORMATION pi{};
 
-		auto cmdline_buf = &cmdline[0];
+		auto cmdline_buf = cmdline.data();
 
 		DWORD const flags = CREATE_UNICODE_ENVIRONMENT | CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW;
 		BOOL res = CreateProcess(cmd.c_str(), cmdline_buf, nullptr, nullptr, TRUE, flags, nullptr, nullptr, &si, &pi);

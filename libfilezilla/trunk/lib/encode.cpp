@@ -54,7 +54,7 @@ std::string base64_encode_impl(DataContainer const& in, base64_type type, bool p
 }
 }
 
-std::string base64_encode(std::string const& in, base64_type type, bool pad)
+std::string base64_encode(std::string_view const& in, base64_type type, bool pad)
 {
 	return base64_encode_impl(in, type, pad);
 }

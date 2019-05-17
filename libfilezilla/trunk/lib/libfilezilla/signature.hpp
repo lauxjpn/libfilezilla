@@ -42,7 +42,7 @@ public:
 	}
 
 	std::string to_base64() const;
-	static public_verification_key from_base64(std::string const& base64);
+	static public_verification_key from_base64(std::string_view const& base64);
 
 	std::vector<uint8_t> key_;
 };
@@ -73,7 +73,7 @@ public:
 	}
 
 	std::string to_base64() const; // Keep secret!
-	static private_signing_key from_base64(std::string const& base64);
+	static private_signing_key from_base64(std::string_view const& base64);
 
 private:
 	std::vector<uint8_t> key_;
@@ -85,12 +85,12 @@ enum {
 
 /// Returns the message with the signature appended, created using the passed private key
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::vector<uint8_t> const& message, private_signing_key const& priv);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::string const& message, private_signing_key const& priv);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::string_view const& message, private_signing_key const& priv);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(uint8_t const& message, size_t const size, private_signing_key const& priv);
 
 /// Verify the message. Returns true iff it has been signed by the private key corresponding to the passed public key
 bool FZ_PUBLIC_SYMBOL verify(std::vector<uint8_t> const& message, public_verification_key const& pub);
-bool FZ_PUBLIC_SYMBOL verify(std::string const& message, public_verification_key const& pub);
+bool FZ_PUBLIC_SYMBOL verify(std::string_view const& message, public_verification_key const& pub);
 bool FZ_PUBLIC_SYMBOL verify(uint8_t const* message, size_t const size, public_verification_key const& pub);
 
 }

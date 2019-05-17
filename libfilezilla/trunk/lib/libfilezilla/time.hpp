@@ -69,10 +69,10 @@ public:
 
 	/**
 	 * \brief Construct from string, looks for \c YYYYmmDD[[[[HH]MM]SS]sss]
-	 * \see bool set(std::string const& str, zone z)
+	 * \see bool set(std::string_view const& str, zone z)
 	 */
-	explicit datetime(std::string const& s, zone z);
-	explicit datetime(std::wstring const& s, zone z);
+	explicit datetime(std::string_view const& s, zone z);
+	explicit datetime(std::wstring_view const& s, zone z);
 
 #ifdef FZ_WINDOWS
 	/// Windows-only: Construct from FILETIME
@@ -161,8 +161,8 @@ public:
 	 *
 	 * \return whether setting the timestamp succeeded. On failure object gets cleared
 	 */
-	bool set(std::string const& str, zone z);
-	bool set(std::wstring const& str, zone z);
+	bool set(std::string_view const& str, zone z);
+	bool set(std::wstring_view const& str, zone z);
 
 #ifdef FZ_WINDOWS
 	/// Windows-only: Set timestamp from FILETIME
@@ -245,8 +245,8 @@ public:
 	 * Sun, 06-Nov-94 08:49:37 GMT // obsolete RFC 850\n
 	 * Sun Nov 6 08:49:37 1994 // ANSI C asctime\n
 	 */
-	bool set_rfc822(std::string const& str);
-	bool set_rfc822(std::wstring const& str);
+	bool set_rfc822(std::string_view const& str);
+	bool set_rfc822(std::wstring_view const& str);
 
 private:
 	int FZ_PRIVATE_SYMBOL compare_slow(datetime const& op) const;

@@ -66,7 +66,12 @@ bool parse(C const*& it, C const* end, int count, T & v, int offset)
 template<typename String>
 bool do_set(datetime& dt, String const& str, datetime::zone z)
 {
-	auto const* it = str.c_str();
+	if (str.empty()) {
+		dt.clear();
+		return false;
+	}
+
+	auto const* it = str.data();
 	auto const* end = it + str.size();
 
 #ifdef FZ_WINDOWS
@@ -126,12 +131,12 @@ bool do_set(datetime& dt, String const& str, datetime::zone z)
 }
 }
 
-datetime::datetime(std::string const& str, zone z)
+datetime::datetime(std::string_view const& str, zone z)
 {
 	do_set(*this, str, z);
 }
 
-datetime::datetime(std::wstring const& str, zone z)
+datetime::datetime(std::wstring_view const& str, zone z)
 {
 	do_set(*this, str, z);
 }
@@ -410,12 +415,12 @@ bool datetime::set(zone z, int year, int month, int day, int hour, int minute, i
 #endif
 }
 
-bool datetime::set(std::string const& str, zone z)
+bool datetime::set(std::string_view const& str, zone z)
 {
 	return do_set(*this, str, z);
 }
 
-bool datetime::set(std::wstring const& str, zone z)
+bool datetime::set(std::wstring_view const& str, zone z)
 {
 	return do_set(*this, str, z);
 }
@@ -850,12 +855,12 @@ bool do_set_rfc822(datetime& dt, String const& str)
 }
 }
 
-bool datetime::set_rfc822(std::string const& str)
+bool datetime::set_rfc822(std::string_view const& str)
 {
 	return do_set_rfc822(*this, str);
 }
 
-bool datetime::set_rfc822(std::wstring const& str)
+bool datetime::set_rfc822(std::wstring_view const& str)
 {
 	return do_set_rfc822(*this, str);
 }

@@ -35,7 +35,7 @@ public:
 	{
 		std::vector<uint8_t> ret;
 		ret.resize(MD5_DIGEST_SIZE);
-		nettle_md5_digest(&ctx_, ret.size(), &ret[0]);
+		nettle_md5_digest(&ctx_, ret.size(), ret.data());
 		return ret;
 	}
 
@@ -60,7 +60,7 @@ public:
 	{
 		std::vector<uint8_t> ret;
 		ret.resize(SHA1_DIGEST_SIZE);
-		nettle_sha1_digest(&ctx_, ret.size(), &ret[0]);
+		nettle_sha1_digest(&ctx_, ret.size(), ret.data());
 		return ret;
 	}
 
@@ -85,7 +85,7 @@ public:
 	{
 		std::vector<uint8_t> ret;
 		ret.resize(SHA256_DIGEST_SIZE);
-		nettle_sha256_digest(&ctx_, ret.size(), &ret[0]);
+		nettle_sha256_digest(&ctx_, ret.size(), ret.data());
 		return ret;
 	}
 
@@ -110,7 +110,7 @@ public:
 	{
 		std::vector<uint8_t> ret;
 		ret.resize(SHA512_DIGEST_SIZE);
-		nettle_sha512_digest(&ctx_, ret.size(), &ret[0]);
+		nettle_sha512_digest(&ctx_, ret.size(), ret.data());
 		return ret;
 	}
 
@@ -148,17 +148,17 @@ void hash_accumulator::reinit()
 	impl_->reinit();
 }
 
-void hash_accumulator::update(std::string const& data)
+void hash_accumulator::update(std::string_view const& data)
 {
 	if (!data.empty()) {
-		impl_->update(reinterpret_cast<uint8_t const*>(&data[0]), data.size());
+		impl_->update(reinterpret_cast<uint8_t const*>(data.data()), data.size());
 	}
 }
 
 void hash_accumulator::update(std::vector<uint8_t> const& data)
 {
 	if (!data.empty()) {
-		impl_->update(&data[0], data.size());
+		impl_->update(data.data(), data.size());
 	}
 }
 
@@ -182,7 +182,7 @@ std::vector<uint8_t> md5_impl(DataContainer const& in)
 	hash_accumulator_md5 acc;
 	acc.reinit();
 	if (!in.empty()) {
-		acc.update(reinterpret_cast<uint8_t const*>(&in[0]), in.size());
+		acc.update(reinterpret_cast<uint8_t const*>(in.data()), in.size());
 	}
 	return acc.digest();
 }
@@ -195,7 +195,7 @@ std::vector<uint8_t> sha1_impl(DataContainer const& in)
 	hash_accumulator_sha1 acc;
 	acc.reinit();
 	if (!in.empty()) {
-		acc.update(reinterpret_cast<uint8_t const*>(&in[0]), in.size());
+		acc.update(reinterpret_cast<uint8_t const*>(in.data()), in.size());
 	}
 	return acc.digest();
 }
@@ -208,7 +208,7 @@ std::vector<uint8_t> sha256_impl(DataContainer const& in)
 	hash_accumulator_sha256 acc;
 	acc.reinit();
 	if (!in.empty()) {
-		acc.update(reinterpret_cast<uint8_t const*>(&in[0]), in.size());
+		acc.update(reinterpret_cast<uint8_t const*>(in.data()), in.size());
 	}
 	return acc.digest();
 }
@@ -221,7 +221,7 @@ std::vector<uint8_t> sha512_impl(DataContainer const& in)
 	hash_accumulator_sha512 acc;
 	acc.reinit();
 	if (!in.empty()) {
-		acc.update(reinterpret_cast<uint8_t const*>(&in[0]), in.size());
+		acc.update(reinterpret_cast<uint8_t const*>(in.data()), in.size());
 	}
 	return acc.digest();
 }
@@ -235,14 +235,14 @@ std::vector<uint8_t> hmac_sha256_impl(KeyContainer const& key, DataContainer con
 	std::vector<uint8_t> ret;
 
 	hmac_sha256_ctx ctx;
-	nettle_hmac_sha256_set_key(&ctx, key.size(), key.empty() ? nullptr : reinterpret_cast<uint8_t const*>(&key[0]));
+	nettle_hmac_sha256_set_key(&ctx, key.size(), key.empty() ? nullptr : reinterpret_cast<uint8_t const*>(key.data()));
 
 	if (!data.empty()) {
-		nettle_hmac_sha256_update(&ctx, data.size(), reinterpret_cast<uint8_t const*>(&data[0]));
+		nettle_hmac_sha256_update(&ctx, data.size(), reinterpret_cast<uint8_t const*>(data.data()));
 	}
 
 	ret.resize(SHA256_DIGEST_SIZE);
-	nettle_hmac_sha256_digest(&ctx, ret.size(), &ret[0]);
+	nettle_hmac_sha256_digest(&ctx, ret.size(), ret.data());
 
 	return ret;
 }
@@ -253,7 +253,7 @@ std::vector<uint8_t> md5(std::vector<uint8_t> const& data)
 	return md5_impl(data);
 }
 
-std::vector<uint8_t> md5(std::string const& data)
+std::vector<uint8_t> md5(std::string_view const& data)
 {
 	return md5_impl(data);
 }
@@ -263,7 +263,7 @@ std::vector<uint8_t> sha1(std::vector<uint8_t> const& data)
 	return sha1_impl(data);
 }
 
-std::vector<uint8_t> sha1(std::string const& data)
+std::vector<uint8_t> sha1(std::string_view const& data)
 {
 	return sha1_impl(data);
 }
@@ -273,7 +273,7 @@ std::vector<uint8_t> sha256(std::vector<uint8_t> const& data)
 	return sha256_impl(data);
 }
 
-std::vector<uint8_t> sha256(std::string const& data)
+std::vector<uint8_t> sha256(std::string_view const& data)
 {
 	return sha256_impl(data);
 }
@@ -283,12 +283,12 @@ std::vector<uint8_t> sha512(std::vector<uint8_t> const& data)
 	return sha512_impl(data);
 }
 
-std::vector<uint8_t> sha512(std::string const& data)
+std::vector<uint8_t> sha512(std::string_view const& data)
 {
 	return sha512_impl(data);
 }
 
-std::vector<uint8_t> hmac_sha256(std::string const& key, std::string const& data)
+std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::string const& data)
 {
 	return hmac_sha256_impl(key, data);
 }
@@ -303,7 +303,7 @@ std::vector<uint8_t> hmac_sha256(std::vector<uint8_t> const& key, std::string co
 	return hmac_sha256_impl(key, data);
 }
 
-std::vector<uint8_t> hmac_sha256(std::string const& key, std::vector<uint8_t> const& data)
+std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::vector<uint8_t> const& data)
 {
 	return hmac_sha256_impl(key, data);
 }

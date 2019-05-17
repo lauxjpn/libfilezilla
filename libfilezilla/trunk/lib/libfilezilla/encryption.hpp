@@ -44,7 +44,7 @@ public:
 	}
 
 	std::string to_base64() const;
-	static public_key from_base64(std::string const& base64);
+	static public_key from_base64(std::string_view const& base64);
 
 	std::vector<uint8_t> key_;
 	std::vector<uint8_t> salt_;
@@ -68,7 +68,7 @@ public:
 
 	/// Derives a private key using PKBDF2-SHA256 from the given password and salt
 	static private_key from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt);
-	static private_key from_password(std::string const& password, std::vector<uint8_t> const& salt)
+	static private_key from_password(std::string_view const& password, std::vector<uint8_t> const& salt)
 	{
 		return from_password(std::vector<uint8_t>(password.begin(), password.end()), salt);
 	}
@@ -88,7 +88,7 @@ public:
 	std::vector<uint8_t> shared_secret(public_key const& pub) const;
 
 	std::string to_base64() const;
-	static private_key from_base64(std::string const& base64);
+	static private_key from_base64(std::string_view const& base64);
 
 private:
 	std::vector<uint8_t> key_;
@@ -117,7 +117,7 @@ private:
  *     <tt>C := E_pub || S_e || C' || T</tt>
  */
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::vector<uint8_t> const& plain, public_key const& pub, bool authenticated = true);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string const& plain, public_key const& pub, bool authenticated = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string_view const& plain, public_key const& pub, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size, public_key const& pub, bool authenticated = true);
 
 /** \brief Decrypt the ciphertext using the given private key.
@@ -146,7 +146,7 @@ std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size,
  * - If the calculated \e T' matches \e T, then \e P is returned, otherwise decryption has failed and nothing is returned.
  */
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::vector<uint8_t> const& chiper, private_key const& priv, bool authenticated = true);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string const& chiper, private_key const& priv, bool authenticated = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string_view const& chiper, private_key const& priv, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(uint8_t const* cipher, size_t size, private_key const& priv, bool authenticated = true);
 
 }
