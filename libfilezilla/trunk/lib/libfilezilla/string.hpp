@@ -344,45 +344,98 @@ bool str_is_ascii(String const& s) {
 	return true;
 }
 
-/// \brief Return passed string with all leading and trailing whitespace removed
-template<typename String>
-String trimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t"), bool fromLeft = true, bool fromRight = true) {
+/// \private
+template<typename String, typename Chars>
+void trim_impl(String & s, Chars const& chars, bool fromLeft, bool fromRight) {
 	size_t const first = fromLeft ? s.find_first_not_of(chars) : 0;
 	if (first == String::npos) {
-		return String();
+		s = String();
+		return;
 	}
 
 	size_t const last = fromRight ? s.find_last_not_of(chars) : s.size();
 	if (last == String::npos) {
-		return String();
+		s = String();
+		return;
 	}
-	return s.substr(first, last - first + 1);
+
+	// Invariant: If first exists, then last >= first
+	s = s.substr(first, last - first + 1);
 }
 
-template<typename String>
-String ltrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
-	return trimmed(s, chars, true, false);
+/// \brief Return passed string with all leading and trailing whitespace removed
+inline std::string FZ_PUBLIC_SYMBOL trimmed(std::string_view s, std::string_view const& chars = " \r\n\t", bool fromLeft = true, bool fromRight = true)
+{
+	trim_impl(s, chars, fromLeft, fromRight);
+	return std::string(s);
 }
 
-template<typename String>
-String rtrimmed(String const& s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
-	return trimmed(s, chars, false, true);
+inline std::wstring FZ_PUBLIC_SYMBOL trimmed(std::wstring_view s, std::wstring_view const& chars = L" \r\n\t", bool fromLeft = true, bool fromRight = true)
+{
+	trim_impl(s, chars, fromLeft, fromRight);
+	return std::wstring(s);
 }
+
+inline std::string FZ_PUBLIC_SYMBOL ltrimmed(std::string_view s, std::string_view const& chars = " \r\n\t")
+{
+	trim_impl(s, chars, true, false);
+	return std::string(s);
+}
+
+inline std::wstring FZ_PUBLIC_SYMBOL ltrimmed(std::wstring_view s, std::wstring_view const& chars = L" \r\n\t")
+{
+	trim_impl(s, chars, true, false);
+	return std::wstring(s);
+}
+
+inline std::string FZ_PUBLIC_SYMBOL rtrimmed(std::string_view s, std::string_view const& chars = " \r\n\t")
+{
+	trim_impl(s, chars, false, true);
+	return std::string(s);
+}
+
+inline std::wstring FZ_PUBLIC_SYMBOL rtrimmed(std::wstring_view s, std::wstring_view const& chars = L" \r\n\t")
+{
+	trim_impl(s, chars, false, true);
+	return std::wstring(s);
+}
+
 
 /// \brief Remove all leading and trailing whitespace from string
-template<typename String>
-void trim(String & s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
-	s = trimmed(s, chars);
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, char>, int> = 0>
+inline void trim(String & s, std::string_view const& chars = " \r\n\t", bool fromLeft = true, bool fromRight = true)
+{
+	trim_impl(s, chars, fromLeft, fromRight);
 }
 
-template<typename String>
-void ltrim(String & s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
-	s = trimmed(s, chars, true, false);
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, wchar_t>, int> = 0>
+inline void trim(String & s, std::wstring_view const& chars = L" \r\n\t", bool fromLeft = true, bool fromRight = true)
+{
+	trim_impl(s, chars, fromLeft, fromRight);
 }
 
-template<typename String>
-void rtrim(String & s, String const& chars = fzS(typename String::value_type, " \r\n\t")) {
-	s = trimmed(s, chars, false, true);
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, char>, int> = 0>
+inline void ltrim(String& s, std::string_view const& chars = " \r\n\t")
+{
+	trim_impl(s, chars, true, false);
+}
+
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, wchar_t>, int> = 0>
+inline void ltrim(String& s, std::wstring_view  const& chars = L" \r\n\t")
+{
+	trim_impl(s, chars, true, false);
+}
+
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, char>, int> = 0>
+inline void rtrim(String& s, std::string_view const& chars = " \r\n\t")
+{
+	trim_impl(s, chars, false, true);
+}
+
+template<typename String, typename std::enable_if_t<std::is_same_v<typename String::value_type, wchar_t>, int> = 0>
+inline void rtrim(String & s, std::wstring_view const& chars = L" \r\n\t")
+{
+	trim_impl(s, chars, false, true);
 }
 
 /** \brief Tests whether the first string starts with the second string
