@@ -43,22 +43,40 @@ native_string to_native(std::wstring_view const& in)
 }
 #endif
 
-int stricmp(std::string const& a, std::string const& b)
+int stricmp(std::string_view const& a, std::string_view const& b)
 {
 #ifdef FZ_WINDOWS
-	return _stricmp(a.c_str(), b.c_str());
+	int ret = _strnicmp(a.data(), b.data(), std::min(a.size(), b.size()));
 #else
-	return strcasecmp(a.c_str(), b.c_str());
+	int ret = strncasecmp(a.data(), b.data(), std::min(a.size(), b.size()));
 #endif
+	if (!ret) {
+		if (a.size() < b.size()) {
+			ret = -1;
+		}
+		else if (a.size() > b.size()) {
+			ret = 1;
+		}
+	}
+	return ret;
 }
 
-int stricmp(std::wstring const& a, std::wstring const& b)
+int stricmp(std::wstring_view const& a, std::wstring_view const& b)
 {
 #ifdef FZ_WINDOWS
-	return _wcsicmp(a.c_str(), b.c_str());
+	int ret = _wcsnicmp(a.data(), b.data(), std::min(a.size(), b.size()));
 #else
-	return wcscasecmp(a.c_str(), b.c_str());
+	int ret = wcsncasecmp(a.data(), b.data(), std::min(a.size(), b.size()));
 #endif
+	if (!ret) {
+		if (a.size() < b.size()) {
+			ret = -1;
+		}
+		else if (a.size() > b.size()) {
+			ret = 1;
+		}
+	}
+	return ret;
 }
 
 template<>

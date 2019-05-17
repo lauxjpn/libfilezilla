@@ -62,8 +62,8 @@ inline native_string to_native(T const& in) {
  *
  * \note does not handle embedded null
  */
-int FZ_PUBLIC_SYMBOL stricmp(std::string const& a, std::string const& b);
-int FZ_PUBLIC_SYMBOL stricmp(std::wstring const& a, std::wstring const& b);
+int FZ_PUBLIC_SYMBOL stricmp(std::string_view const& a, std::string_view const& b);
+int FZ_PUBLIC_SYMBOL stricmp(std::wstring_view const& a, std::wstring_view const& b);
 
 /** \brief Converts ASCII uppercase characters to lowercase as if C-locale is used.
 
@@ -395,7 +395,7 @@ bool starts_with(String const& s, String const& beginning)
 	if (beginning.size() > s.size()) {
 		return false;
 	}
-	if (insensitive_ascii) {
+	if constexpr (insensitive_ascii) {
 		return std::equal(beginning.begin(), beginning.end(), s.begin(), [](typename String::value_type const& a, typename String::value_type const& b) {
 			return tolower_ascii(a) == tolower_ascii(b);
 		});
@@ -416,7 +416,7 @@ bool ends_with(String const& s, String const& ending)
 		return false;
 	}
 
-	if (insensitive_ascii) {
+	if constexpr (insensitive_ascii) {
 		return std::equal(ending.rbegin(), ending.rend(), s.rbegin(), [](typename String::value_type const& a, typename String::value_type const& b) {
 			return tolower_ascii(a) == tolower_ascii(b);
 		});
