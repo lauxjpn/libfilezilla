@@ -1,5 +1,4 @@
 #include "libfilezilla/local_filesys.hpp"
-
 #ifndef FZ_WINDOWS
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -295,15 +294,14 @@ bool local_filesys::begin_find_files(native_string path, bool dirs_only)
 		return false;
 	}
 
-	m_raw_path = new char[path.size() + 2048 + 2];
-	m_buffer_length = path.size() + 2048 + 2;
-	strcpy(m_raw_path, path.c_str());
+	m_raw_path.resize(path.size() + 2048 + 2);
+	memcpy(m_raw_path.data(), path.data(), path.size());
 	if (path != fzT("/")) {
 		m_raw_path[path.size()] = '/';
-		m_file_part = m_raw_path + path.size() + 1;
+		m_file_part = m_raw_path.data() + path.size() + 1;
 	}
 	else {
-		m_file_part = m_raw_path + path.size();
+		m_file_part = m_raw_path.data() + path.size();
 	}
 
 	return true;
@@ -323,8 +321,7 @@ void local_filesys::end_find_files()
 		closedir(dir_);
 		dir_ = nullptr;
 	}
-	delete [] m_raw_path;
-	m_raw_path = nullptr;
+	m_raw_path.clear();
 	m_file_part = nullptr;
 #endif
 }
@@ -369,10 +366,9 @@ bool local_filesys::get_next_file(native_string& name)
 		if (dirs_only_) {
 #if HAVE_STRUCT_DIRENT_D_TYPE
 			if (entry->d_type == DT_LNK) {
-				bool wasLink;
-				alloc_path_buffer(entry->d_name);
-				strcpy(m_file_part, entry->d_name);
-				if (get_file_info(m_raw_path, wasLink, nullptr, nullptr, nullptr) != dir) {
+				bool wasLink{};
+				char const* const full_path = build_full_path(entry->d_name);
+				if (!full_path || get_file_info(full_path, wasLink, nullptr, nullptr, nullptr) != dir) {
 					continue;
 				}
 			}
@@ -381,10 +377,9 @@ bool local_filesys::get_next_file(native_string& name)
 			}
 #else
 			// Solaris doesn't have d_type
-			bool wasLink;
-			alloc_path_buffer(entry->d_name);
-			strcpy(m_file_part, entry->d_name);
-			if (get_file_info(m_raw_path, wasLink, nullptr, nullptr, nullptr) != dir) {
+			bool wasLink{};
+			char const* const full_path = build_full_path(entry->d_name);
+			if (!full_path || get_file_info(full_path, wasLink, nullptr, nullptr, nullptr) != dir) {
 				continue;
 			}
 #endif
@@ -511,10 +506,8 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 #if HAVE_STRUCT_DIRENT_D_TYPE
 		if (dirs_only_) {
 			if (entry->d_type == DT_LNK) {
-				alloc_path_buffer(entry->d_name);
-				strcpy(m_file_part, entry->d_name);
-				type t = get_file_info(m_raw_path, is_link, size, modification_time, mode);
-				if (t != dir) {
+				char const * const full_path = build_full_path(entry->d_name);
+				if (!full_path || get_file_info(full_path, is_link, size, modification_time, mode) != dir) {
 					continue;
 				}
 
@@ -528,9 +521,12 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 		}
 #endif
 
-		alloc_path_buffer(entry->d_name);
-		strcpy(m_file_part, entry->d_name);
-		type t = get_file_info(m_raw_path, is_link, size, modification_time, mode);
+		type t = unknown;
+
+		char const * const full_path = build_full_path(entry->d_name);
+		if (full_path) {
+			t = get_file_info(full_path, is_link, size, modification_time, mode);
+		}
 
 		if (t == unknown) { // Happens for example in case of permission denied
 #if HAVE_STRUCT_DIRENT_D_TYPE
@@ -565,19 +561,22 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 }
 
 #ifndef FZ_WINDOWS
-void local_filesys::alloc_path_buffer(char const* filename)
+char* local_filesys::build_full_path(char const* filename)
 {
-	int len = strlen(filename);
-	int pathlen = m_file_part - m_raw_path;
+	size_t const len = strlen(filename);
+	size_t const pathlen = static_cast<size_t>(m_file_part - m_raw_path.data());
 
-	if (len + pathlen >= m_buffer_length) {
-		m_buffer_length = (len + pathlen) * 2;
-		char* tmp = new char[m_buffer_length];
-		memcpy(tmp, m_raw_path, pathlen);
-		delete [] m_raw_path;
-		m_raw_path = tmp;
-		m_file_part = m_raw_path + pathlen;
+	if (m_raw_path.size() - pathlen <= len) {
+		size_t const new_len = (len + pathlen) * 2;
+		if (new_len < m_raw_path.size()) {
+			return nullptr;
+		}
+		m_raw_path.resize(new_len);
+		m_file_part = m_raw_path.data() + pathlen;
 	}
+
+	memcpy(m_file_part, filename, len + 1);
+	return m_raw_path.data();
 }
 #endif
 

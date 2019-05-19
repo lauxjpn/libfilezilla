@@ -88,7 +88,7 @@ public:
 
 private:
 #ifndef FZ_WINDOWS
-	void alloc_path_buffer(char const* filename); // Ensures m_raw_path is large enough to hold path and filename
+	char* build_full_path(char const* filename); // Ensures m_raw_path is large enough to hold path and filename
 #endif
 
 	// State for directory enumeration
@@ -100,9 +100,8 @@ private:
 	bool has_next_{};
 	native_string m_find_path;
 #else
-	char* m_raw_path{};
+	std::vector<char> m_raw_path;
 	char* m_file_part{}; // Points into m_raw_path past the trailing slash of the path part
-	int m_buffer_length{};
 	DIR* dir_{};
 #endif
 };
