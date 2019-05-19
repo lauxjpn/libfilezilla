@@ -335,7 +335,7 @@ public:
 	{
 		std::unique_ptr<char[]> ret;
 		ret.reset(new char[arg.size() + 1]);
-		strcpy(ret.get(), arg.c_str());
+		memcpy(ret.get(), arg.c_str(), arg.size() + 1);
 		argList.push_back(std::move(ret));
 	}
 
