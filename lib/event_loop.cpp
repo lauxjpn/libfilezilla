@@ -287,6 +287,7 @@ void event_loop::stop(bool join)
 		for (auto & v : pending_events_) {
 			delete v.second;
 		}
+		pending_events_.clear();
 
 		timers_.clear();
 		deadline_ = monotonic_clock();
