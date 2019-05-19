@@ -87,10 +87,6 @@ public:
 	static native_string get_link_target(native_string const& path);
 
 private:
-#ifndef FZ_WINDOWS
-	char* build_full_path(char const* filename); // Ensures m_raw_path is large enough to hold path and filename
-#endif
-
 	// State for directory enumeration
 	bool dirs_only_{};
 
@@ -100,8 +96,6 @@ private:
 	bool has_next_{};
 	native_string m_find_path;
 #else
-	std::vector<char> m_raw_path;
-	char* m_file_part{}; // Points into m_raw_path past the trailing slash of the path part
 	DIR* dir_{};
 #endif
 };
