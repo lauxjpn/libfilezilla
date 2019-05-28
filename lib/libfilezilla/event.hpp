@@ -94,7 +94,7 @@ public:
 	 *
 	 * You don't need to access this member directly if you use the \ref dispatch mechanism.
 	 */
-	tuple_type v_;
+	mutable tuple_type v_;
 };
 
 /// Used as lightweight RTTI alternative during \ref dispatch
