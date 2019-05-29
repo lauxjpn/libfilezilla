@@ -1785,4 +1785,53 @@ void socket::set_flags(int flags)
 	flags_ = flags;
 }
 
+
+socket_layer::socket_layer(event_handler* handler, socket_interface& next_layer, bool event_passthrough)
+	: socket_interface(next_layer.root())
+	, event_handler_(handler)
+	, next_layer_(next_layer)
+	, event_passthrough_(event_passthrough)
+{
+	if (event_passthrough) {
+		next_layer_.set_event_handler(handler);
+	}
+}
+
+socket_layer::~socket_layer()
+{
+	next_layer_.set_event_handler(nullptr);
+	remove_socket_events(event_handler_, this);
+}
+
+void socket_layer::set_event_handler(event_handler* handler)
+{
+	auto old = event_handler_;
+	event_handler_ = handler;
+	change_socket_event_handler(old, handler, this);
+
+	if (event_passthrough_) {
+		next_layer_.set_event_handler(handler);
+	}
+}
+
+void socket_layer::forward_socket_event(socket_event_source* source, socket_event_flag t, int error)
+{
+	if (event_handler_) {
+		(*event_handler_)(socket_event(source, t, error));
+	}
+}
+
+void socket_layer::forward_hostaddress_event(socket_event_source* source, std::string const& address)
+{
+	if (event_handler_) {
+		(*event_handler_)(hostaddress_event(source, address));
+	}
+}
+
+void socket_layer::set_event_passthrough()
+{
+	event_passthrough_ = true;
+	next_layer_.set_event_handler(event_handler_);
+}
+
 }

@@ -448,6 +448,71 @@ private:
 	duration keepalive_interval_;
 };
 
+/**
+ * \brief A base class for socket layers.
+ *
+ * Can be used to implement layers, e.g. for TLS or rate-limiting.
+ *
+ * Layers can in general be added on top of the next layer in any state,
+ * though individual layers may post restrictions on this.
+ *
+ * Note instance lifetime, layers must be destroyed in reverse order.
+ */
+class FZ_PUBLIC_SYMBOL socket_layer : public socket_interface
+{
+public:
+	explicit socket_layer(event_handler* handler, socket_interface& next_layer, bool event_passthrough);
+	virtual ~socket_layer();
+
+	socket_layer(socket_layer const&) = delete;
+	socket_layer& operator=(socket_layer const&) = delete;
+
+	/// The handler for any events generated (or forwarded) by this layer.
+	virtual void set_event_handler(event_handler* handler) override;
+
+	/**
+	 * Can be overriden to return something different, e.g. a proxy layer
+	 * would return the hostname of the peer connected to through the proxy,
+	 * whereas the next layer would return the address of the proxy istself.
+	 */
+	virtual native_string peer_host() const override { return next_layer_.peer_host(); }
+
+	/**
+	 * Can be overriden to return something different, e.g. a proxy layer
+	 * would return the post of the peer connected to through the proxy,
+	 * whereas the next layer would return the port of the proxy istself.
+	 */
+	virtual int peer_port(int& error) const override { return next_layer_.peer_port(error); }
+
+	/// The next layer further down. Usually another layer or the actual socket.
+	socket_interface& next() { return next_layer_; }
+
+protected:
+	/**
+	 * Call in a derived classes handler for fz::socket_event. Results in
+	 * a call to operator()(fz::event_base const&) on the event handler passed
+	 * to socket_layer.
+	 */
+	void forward_socket_event(socket_event_source* source, socket_event_flag t, int error);
+
+	/**
+	 * Call in a derived classes handler for fz::hostaddress_event. Results in
+	 * a call to operator()(fz::event_base const&) on the event handler passed
+	 * to socket_layer.
+	 */
+	void forward_hostaddress_event(socket_event_source* source, std::string const& address);
+
+	/**
+	 * A pass-through layer does not handle events itself. Instead any events sent by the next layer get
+	 * sent to the event handler passed to the layer.
+	 */
+	void set_event_passthrough();
+
+	event_handler* event_handler_{};
+	socket_interface& next_layer_;
+	bool event_passthrough_{};
+};
+
 #ifdef FZ_WINDOWS
 
 #ifndef EISCONN
