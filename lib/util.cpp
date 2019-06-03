@@ -114,7 +114,7 @@ std::vector<uint8_t> random_bytes(size_t size)
 
 uint64_t bitscan(uint64_t v)
 {
-#if !FZ_WINDOWS || defined(__MINGW64__)
+#if !FZ_WINDOWS || defined(__MINGW32__) || defined(__MINGW64__)
 	return __builtin_ctzll(v);
 #else
 	unsigned long i;
@@ -126,7 +126,7 @@ uint64_t bitscan(uint64_t v)
 
 uint64_t bitscan_reverse(uint64_t v)
 {
-#if !FZ_WINDOWS || defined(__MINGW64__)
+#if !FZ_WINDOWS || defined(__MINGW32__) || defined(__MINGW64__)
 	return __builtin_clzll(v);
 #else
 	unsigned long i;
