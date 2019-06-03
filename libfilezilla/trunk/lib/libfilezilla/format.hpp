@@ -130,67 +130,56 @@ String arg_to_string(...)
 }
 
 
-// Converts integral type to hex string with desired string type...
-// ... basic case: simple unsigned value
+// Converts integral type to hex string with desired string type
 template<typename String, bool Lowercase, typename Arg>
-typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_hex_string(Arg && arg)
+String integral_to_hex_string(Arg && arg)
 {
-	std::decay_t<Arg> v = arg;
-	typename String::value_type buf[sizeof(v) * 2];
-	auto *const end = buf + sizeof(v) * 2;
-	auto *p = end;
+	if constexpr (std::is_enum_v<std::decay_t<Arg>>) {
+		// Special handling for enum, cast to underlying type
+		return integral_to_hex_string<String, Lowercase>(static_cast<std::underlying_type_t<std::decay_t<Arg>>>(arg));
+	}
+	else if constexpr (std::is_integral_v<std::decay_t<Arg>>) {
+		std::decay_t<Arg> v = arg;
+		typename String::value_type buf[sizeof(v) * 2];
+		auto* const end = buf + sizeof(v) * 2;
+		auto* p = end;
 
-	do {
-		*(--p) = fz::int_to_hex_char<typename String::value_type, Lowercase>(v & 0xf);
-		v >>= 4;
-	} while (v);
+		do {
+			*(--p) = fz::int_to_hex_char<typename String::value_type, Lowercase>(v & 0xf);
+			v >>= 4;
+		} while (v);
 
-	return String(p, end);
+		return String(p, end);
+	}
+	else {
+		assert(0);
+		return String();
+	}
 }
 
-// ... for enums
-template<typename String, bool Lowercase, typename Arg>
-typename std::enable_if_t<std::is_enum<std::decay_t<Arg>>::value, String> integral_to_hex_string(Arg && arg)
-{
-	return integral_to_hex_string<String, Lowercase>(static_cast<std::underlying_type_t<std::decay_t<Arg>>>(arg));
-}
-
-// ... assert otherwise
-template<typename String, bool Lowercase, typename Arg>
-typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_hex_string(Arg &&)
-{
-	assert(0);
-	return String();
-}
-
-
-// Converts to pointer to hex string
+// Converts pointer to hex string
 template<typename String, typename Arg>
-typename std::enable_if_t<std::is_pointer<std::decay_t<Arg>>::value, String> pointer_to_string(Arg&& arg)
+String pointer_to_string(Arg&& arg)
 {
-	return String({'0', 'x'}) + integral_to_hex_string<String, true>(reinterpret_cast<uintptr_t>(arg));
-}
-
-
-template<typename String, typename Arg>
-typename std::enable_if_t<!std::is_pointer<std::decay_t<Arg>>::value, String> pointer_to_string(Arg&&)
-{
-	assert(0);
-	return String();
+	if constexpr (std::is_pointer_v<std::decay_t<Arg>>) {
+		return String({'0', 'x'}) + integral_to_hex_string<String, true>(reinterpret_cast<uintptr_t>(arg));
+	}
+	else {
+		assert(0);
+		return String();
+	}
 }
 
 template<typename String, typename Arg>
-typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value, String> char_to_string(Arg&& arg)
+String char_to_string(Arg&& arg)
 {
-	return String({static_cast<typename String::value_type>(static_cast<unsigned char>(arg))});
-}
-
-
-template<typename String, typename Arg>
-typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value, String> char_to_string(Arg&&)
-{
-	assert(0);
-	return String();
+	if constexpr (std::is_integral_v<std::decay_t<Arg>>) {
+		return String({static_cast<typename String::value_type>(static_cast<unsigned char>(arg))});
+	}
+	else {
+		assert(0);
+		return String();
+	}
 }
 
 
