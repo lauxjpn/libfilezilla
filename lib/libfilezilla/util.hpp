@@ -30,6 +30,22 @@ int64_t FZ_PUBLIC_SYMBOL random_number(int64_t min, int64_t max);
  */
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL random_bytes(size_t size);
 
+/** \brief Returns index of the least-significant set bit
+ *
+ * \example bitscan(12) returns 2
+ *
+ * Undefined if called with 0
+ */
+uint64_t FZ_PUBLIC_SYMBOL bitscan(uint64_t v);
+
+/** \brief Returns index of the most-significant set bit
+ *
+ * \example bitscan(12) returns 3
+ *
+ * Undefined if called with 0
+ */
+uint64_t FZ_PUBLIC_SYMBOL bitscan_reverse(uint64_t v);
+
 }
 
 #endif
