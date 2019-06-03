@@ -255,8 +255,8 @@ String extract_arg(char flags, size_t width, typename String::value_type type, s
 	return ret;
 }
 
-template<typename String, typename... Args>
-void process_arg(String const& fmt, typename String::size_type & pos, String& ret, size_t& arg_n, Args&&... args)
+template<typename InString, typename OutString, typename... Args>
+void process_arg(InString const& fmt, typename InString::size_type & pos, OutString& ret, size_t& arg_n, Args&&... args)
 {
 	++pos;
 
@@ -287,7 +287,10 @@ parse_start:
 		else {
 			break;
 		}
-		++pos;
+		if (++pos >= fmt.size()) {
+			assert(0);
+			return;
+		}
 	}
 
 	// Field width
@@ -296,7 +299,10 @@ parse_start:
 		flags |= with_width;
 		width *= 10;
 		width += fmt[pos] - '0';
-		++pos;
+		if (++pos >= fmt.size()) {
+			assert(0);
+			return;
+		}
 	}
 	if (width > 10000) {
 		assert(0);
@@ -306,7 +312,10 @@ parse_start:
 	if (fmt[pos] == '$') {
 		// Positional argument, start over
 		arg_n = width - 1;
-		++pos;
+		if (++pos >= fmt.size()) {
+			assert(0);
+			return;
+		}
 		goto parse_start;
 	}
 
@@ -314,7 +323,10 @@ parse_start:
 	while (true) {
 		auto c = fmt[pos];
 		if (c == 'h' || c == 'l' || c == 'L' || c == 'j' || c == 'z' || c == 't') {
-			++pos;
+			if (++pos >= fmt.size()) {
+				assert(0);
+				return;
+			}
 		}
 		else {
 			break;
@@ -329,11 +341,35 @@ parse_start:
 
 	auto const type = fmt[pos++];
 
-	ret += extract_arg<String>(flags, width, type, arg_n++, std::forward<Args>(args)...);
+	ret += extract_arg<OutString>(flags, width, type, arg_n++, std::forward<Args>(args)...);
 
 	// Now we're ready to print!
 }
 
+template<typename InString, typename CharType = typename InString::value_type, typename OutString = std::basic_string<CharType>, typename... Args>
+OutString do_sprintf(InString const& fmt, Args&&... args)
+{
+	OutString ret;
+
+	// Find % characters
+	typename InString::size_type start = 0, pos;
+
+	size_t arg_n{};
+	while ((pos = fmt.find('%', start)) != InString::npos) {
+		
+		// Copy segment preceeding the %
+		ret += fmt.substr(start, pos - start);
+
+		detail::process_arg(fmt, pos, ret, arg_n, std::forward<Args>(args)...);
+
+		start = pos;
+	}
+
+	// Copy remainder of string
+	ret += fmt.substr(start);
+
+	return ret;
+}
 }
 /// \endcond
 
@@ -358,40 +394,16 @@ parse_start:
 * assert(s == "bar foo"); // This is true
 * \endcode
 */
-template<typename String, typename... Args>
-String sprintf(String const& fmt, Args&&... args)
+template<typename... Args>
+std::string sprintf(std::string_view const& fmt, Args&&... args)
 {
-	String ret;
-
-	// Find % characters
-	typename String::size_type start = 0, pos;
-	size_t arg_n{};
-	while ((pos = fmt.find('%', start)) != String::npos) {
-		
-		// Copy segment preceeding the %
-		ret += fmt.substr(start, pos - start);
-
-		detail::process_arg(fmt, pos, ret, arg_n, std::forward<Args>(args)...);
-
-		start = pos;
-	}
-
-	// Copy remainder of string
-	ret += fmt.substr(start);
-
-	return ret;
+	return detail::do_sprintf(fmt, std::forward<Args>(args)...);
 }
 
 template<typename... Args>
-std::string sprintf(char const* fmt, Args&&... args)
+std::wstring sprintf(std::wstring_view const& fmt, Args&&... args)
 {
-	return sprintf(std::string(fmt), std::forward<Args>(args)...);
-}
-
-template<typename... Args>
-std::wstring sprintf(wchar_t const* fmt, Args&&... args)
-{
-	return sprintf(std::wstring(fmt), std::forward<Args>(args)...);
+	return detail::do_sprintf(fmt, std::forward<Args>(args)...);
 }
 
 }
