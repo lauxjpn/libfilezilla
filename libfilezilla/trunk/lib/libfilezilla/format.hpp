@@ -247,7 +247,10 @@ String extract_arg(char flags, size_t width, typename String::value_type type, s
 template<typename InString, typename OutString, typename... Args>
 void process_arg(InString const& fmt, typename InString::size_type & pos, OutString& ret, size_t& arg_n, Args&&... args)
 {
-	++pos;
+	if (++pos >= fmt.size()) {
+		assert(0);
+		return;
+	}
 
 	// Get literal percent out of the way
 	if (fmt[pos] == '%') {
