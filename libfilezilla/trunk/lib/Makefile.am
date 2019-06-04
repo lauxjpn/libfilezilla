@@ -38,6 +38,7 @@ nobase_include_HEADERS = \
 	libfilezilla/iputils.hpp \
 	libfilezilla/libfilezilla.hpp \
 	libfilezilla/local_filesys.hpp \
+	libfilezilla/logger.hpp \
 	libfilezilla/mutex.hpp \
 	libfilezilla/optional.hpp \
 	libfilezilla/process.hpp \
