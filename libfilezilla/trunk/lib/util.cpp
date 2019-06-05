@@ -127,10 +127,10 @@ uint64_t bitscan(uint64_t v)
 uint64_t bitscan_reverse(uint64_t v)
 {
 #if !FZ_WINDOWS || defined(__MINGW32__) || defined(__MINGW64__)
-	return __builtin_clzll(v);
+	return 63 - __builtin_clzll(v);
 #else
 	unsigned long i;
-	_BitScanForward64(&i, v);
+	_BitScanReverse64(&i, v);
 
 	return static_cast<uint64_t>(i);
 #endif
