@@ -9,4 +9,4 @@ URL: https://lib.filezilla-project.org/
 Version: @PACKAGE_VERSION@
 CFlags: -I${includedir}
 Libs: -L${libdir} -lfilezilla @libdeps@
-Requires.private: nettle >= 3.1, hogweed >= 3.1
+Requires.private: nettle >= 3.1, hogweed >= 3.1, gnutls >= 3.5.7
