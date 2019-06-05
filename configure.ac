@@ -120,6 +120,24 @@ AC_SUBST(HOGWEED_LIBS)
 AC_SUBST(HOGWEED_CFLAGS)
 
 
+# GnuTLS
+# ------
+
+PKG_CHECK_MODULES([GNUTLS], [gnutls >= 3.5.7],, [
+  AC_MSG_ERROR([GnuTLS 3.5.7 or greater was not found. You can get it from https://gnutls.org/])
+])
+
+AC_SUBST(GNUTLS_LIBS)
+AC_SUBST(GNUTLS_CFLAGS)
+
+AC_ARG_ENABLE(gnutlssystemciphers, AS_HELP_STRING([--enable-gnutlssystemciphers],[Enables the use of gnutls system ciphers.]),
+  [gnutlssystemciphers="$enableval"], [gnutlssystemciphers="no"])
+
+if test "$gnutlssystemciphers" = "yes"; then
+  AC_DEFINE(FZ_USE_GNUTLS_SYSTEM_CIPHERS, 1, [Set to 1 to use ciphers defined in system policy.])
+fi
+
+
 # Check for windres on MinGW builds
 # ---------------------------------
 

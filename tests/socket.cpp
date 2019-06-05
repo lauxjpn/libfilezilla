@@ -1,6 +1,8 @@
+#include "libfilezilla/hash.hpp"
+#include "libfilezilla/logger.hpp"
 #include "libfilezilla/socket.hpp"
 #include "libfilezilla/thread_pool.hpp"
-#include "libfilezilla/hash.hpp"
+#include "libfilezilla/tls_layer.hpp"
 #include "libfilezilla/util.hpp"
 
 #include "test_utils.hpp"
@@ -11,6 +13,7 @@ class socket_test final : public CppUnit::TestFixture
 {
 	CPPUNIT_TEST_SUITE(socket_test);
 	CPPUNIT_TEST(test_duplex);
+	CPPUNIT_TEST(test_duplex_tls);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -18,11 +21,24 @@ public:
 	void tearDown() {}
 
 	void test_duplex();
+	void test_duplex_tls();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(socket_test);
 
 namespace {
+struct logger : public fz::logger_interface
+{
+	virtual void do_log(fz::logmsg::type, std::wstring &&) {
+	};
+};
+
+auto const& get_key_and_cert()
+{
+	static auto key_and_cert = fz::tls_layer::generate_selfsigned_certificate(fz::native_string(), "CN=libfilezilla test", {});
+	return key_and_cert;
+}
+
 struct base : public fz::event_handler
 {
 	base(fz::event_loop & loop)
@@ -33,6 +49,8 @@ struct base : public fz::event_handler
 	void fail(int line, int error = 0)
 	{
 		fz::scoped_lock l(m_);
+		si_ = nullptr;
+		tls_.reset();
 		s_.reset();
 		if (failed_.empty()) {
 			failed_ = fz::to_string(line);
@@ -49,13 +67,15 @@ struct base : public fz::event_handler
 		if (shut_ && eof_) {
 			fz::scoped_lock l(m_);
 			cond_.signal(l);
+			si_ = nullptr;
+			tls_.reset();
 			s_.reset();
 		}
 	}
 
 	void on_socket_event_base(fz::socket_event_source * source, fz::socket_event_flag type, int error)
 	{
-		if (error || source != s_.get()) {
+		if (error || source != si_) {
 			fail(__LINE__, error);
 		}
 		else if (type == fz::socket_event_flag::read) {
@@ -63,7 +83,7 @@ struct base : public fz::event_handler
 				unsigned char buf[1024];
 
 				int error;
-				int r = s_->read(buf, 1024, error);
+				int r = si_->read(buf, 1024, error);
 				if (!r) {
 					eof_ = true;
 					check_done();
@@ -80,11 +100,11 @@ struct base : public fz::event_handler
 				}
 			}
 
-			send_event(new fz::socket_event(s_.get(), fz::socket_event_flag::read, 0));
+			send_event(new fz::socket_event(si_, fz::socket_event_flag::read, 0));
 		}
 		else if (type == fz::socket_event_flag::write) {
 			if (sent_ > 1024 * 1024 * 10 && (fz::monotonic_clock::now() - start_) > fz::duration::from_seconds(5)) {
-				int res = s_->shutdown();
+				int res = si_->shutdown();
 				if (res && res != EAGAIN) {
 					fail(__LINE__, res);
 				}
@@ -98,7 +118,7 @@ struct base : public fz::event_handler
 			for (int i = 0; i < fz::random_number(1, 20); ++i) {
 				auto buf = fz::random_bytes(1024);
 				int error;
-				int sent = s_->write(buf.data(), buf.size(), error);
+				int sent = si_->write(buf.data(), buf.size(), error);
 				if (sent <= 0) {
 					if (error != EAGAIN) {
 						fail(__LINE__, error);
@@ -110,7 +130,7 @@ struct base : public fz::event_handler
 					sent_hash_.update(buf.data(), sent);
 				}
 			}
-			send_event(new fz::socket_event(s_.get(), fz::socket_event_flag::write, 0));
+			send_event(new fz::socket_event(si_, fz::socket_event_flag::write, 0));
 		}
 	}
 
@@ -123,20 +143,35 @@ struct base : public fz::event_handler
 	fz::thread_pool pool_;
 
 	std::unique_ptr<fz::socket> s_;
+	std::unique_ptr<fz::tls_layer> tls_;
+	fz::socket_interface* si_{};
 
 	std::string failed_;
 	bool eof_{};
 	bool shut_{};
 	int64_t sent_{};
 	fz::monotonic_clock start_{fz::monotonic_clock::now()};
+
+	logger logger_;
 };
 
 struct client final : public base
 {
-	client(fz::event_loop & loop)
+	client(fz::event_loop & loop, bool tls = false)
 		: base(loop)
 	{
 		s_ = std::make_unique<fz::socket>(pool_, this);
+		if (tls) {
+			tls_ = std::make_unique<fz::tls_layer>(loop, this, *s_, nullptr, logger_);
+			auto const& cert = get_key_and_cert().second;
+			if (!tls_->client_handshake(std::vector<uint8_t>(cert.cbegin(), cert.cend()))) {
+				fail(__LINE__);
+			}
+			si_ = tls_.get();
+		}
+		else {
+			si_ = s_.get();
+		}
 	}
 
 	virtual ~client() {
@@ -155,8 +190,9 @@ struct client final : public base
 
 struct server final : public base
 {
-	server(fz::event_loop & loop)
+	server(fz::event_loop & loop, bool tls = false)
 		: base(loop)
+		, use_tls_(tls)
 	{
 		l_.bind("127.0.0.1");
 		int res = l_.listen(fz::address_type::ipv4);
@@ -188,7 +224,18 @@ struct server final : public base
 				if (!s_) {
 					fail(__LINE__, error);
 				}
-				s_->set_event_handler(this);
+				if (use_tls_) {
+					tls_ = std::make_unique<fz::tls_layer>(event_loop_, this, *s_, nullptr, logger_);
+					tls_->set_certificate(get_key_and_cert().first, get_key_and_cert().second, fz::native_string());
+					si_ = tls_.get();
+					if (!tls_->server_handshake()) {
+						fail(__LINE__);
+					}
+				}
+				else {
+					si_ = s_.get();
+				}
+				si_->set_event_handler(this);
 			}
 		}
 		else {
@@ -197,6 +244,7 @@ struct server final : public base
 	}
 
 	fz::listen_socket l_{pool_, this};
+	bool use_tls_{};
 };
 }
 
@@ -216,7 +264,45 @@ void socket_test::test_duplex()
 	fz::event_loop client_loop;
 	client c(client_loop);
 
-	CPPUNIT_ASSERT(!c.s_->connect(ip, port));
+	CPPUNIT_ASSERT(!c.si_->connect(ip, port));
+
+	{
+		fz::scoped_lock l(s.m_);
+		s.cond_.wait(l);
+	}
+	{
+		fz::scoped_lock l(c.m_);
+		c.cond_.wait(l);
+	}
+
+	ASSERT_EQUAL(std::string(), c.failed_);
+	ASSERT_EQUAL(std::string(), s.failed_);
+
+	CPPUNIT_ASSERT(c.sent_hash_.digest() == s.received_hash_.digest());
+	CPPUNIT_ASSERT(s.sent_hash_.digest() == c.received_hash_.digest());
+}
+
+void socket_test::test_duplex_tls()
+{
+	// Full duplex socket test of random data exchanged in both directions for 5 seconds, but this time wit TLS on top.
+
+	CPPUNIT_ASSERT(!get_key_and_cert().first.empty());
+	CPPUNIT_ASSERT(!get_key_and_cert().second.empty());
+
+	fz::event_loop server_loop;
+	server s(server_loop, true);
+
+	int error;
+	int port  = s.l_.local_port(error);
+	CPPUNIT_ASSERT(port != -1);
+
+	fz::native_string ip = fz::to_native(s.l_.local_ip());
+	CPPUNIT_ASSERT(!ip.empty());
+
+	fz::event_loop client_loop;
+	client c(client_loop, true);
+
+	CPPUNIT_ASSERT(!c.si_->connect(ip, port));
 
 	{
 		fz::scoped_lock l(s.m_);

@@ -19,6 +19,10 @@ libfilezilla_la_SOURCES = \
 	string.cpp \
 	thread.cpp \
 	thread_pool.cpp \
+	tls_info.cpp \
+	tls_layer.cpp \
+	tls_layer_impl.cpp \
+	tls_system_trust_store.cpp \
 	time.cpp \
 	uri.cpp \
 	util.cpp \
@@ -49,6 +53,9 @@ nobase_include_HEADERS = \
 	libfilezilla/string.hpp \
 	libfilezilla/thread.hpp \
 	libfilezilla/thread_pool.hpp \
+	libfilezilla/tls_info.hpp \
+	libfilezilla/tls_layer.hpp \
+	libfilezilla/tls_system_trust_store.hpp \
 	libfilezilla/time.hpp \
 	libfilezilla/uri.hpp \
 	libfilezilla/util.hpp \
@@ -66,9 +73,13 @@ nobase_include_HEADERS += \
 	libfilezilla/glue/unix.hpp
 endif
 
+dist_noinst_HEADERS = \
+	tls_layer_impl.hpp \
+	tls_system_trust_store_impl.hpp
+
 libfilezilla_la_CPPFLAGS = $(AM_CPPFLAGS)
 libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
-libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS)
+libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS) $(GNUTLS_CFLAGS)
 
 # Needed for version.hpp in out-of-tree builds
 libfilezilla_la_CPPFLAGS += -I$(srcdir)/libfilezilla
@@ -80,7 +91,7 @@ libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
 libfilezilla_la_LDFLAGS += -no-undefined
 libfilezilla_la_LIBADD = $(libdeps)
 
-libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS)
+libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS) $(GNUTLS_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libfilezilla.pc
