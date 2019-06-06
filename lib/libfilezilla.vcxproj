@@ -212,6 +212,10 @@
     <ClCompile Include="thread.cpp" />
     <ClCompile Include="thread_pool.cpp" />
     <ClCompile Include="time.cpp" />
+    <ClCompile Include="tls_info.cpp" />
+    <ClCompile Include="tls_layer.cpp" />
+    <ClCompile Include="tls_layer_impl.cpp" />
+    <ClCompile Include="tls_system_trust_store.cpp" />
     <ClCompile Include="uri.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="version.cpp" />
@@ -245,9 +249,15 @@
     <ClInclude Include="libfilezilla\thread.hpp" />
     <ClInclude Include="libfilezilla\thread_pool.hpp" />
     <ClInclude Include="libfilezilla\time.hpp" />
+    <ClInclude Include="libfilezilla\tls_info.hpp" />
+    <ClInclude Include="libfilezilla\tls_layer.hpp" />
+    <ClInclude Include="libfilezilla\tls_system_trust_store.hpp" />
+    <ClInclude Include="libfilezilla\translate.hpp" />
     <ClInclude Include="libfilezilla\uri.hpp" />
     <ClInclude Include="libfilezilla\util.hpp" />
     <ClInclude Include="libfilezilla\version.hpp" />
+    <ClInclude Include="tls_layer_impl.hpp" />
+    <ClInclude Include="tls_system_trust_store_impl.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

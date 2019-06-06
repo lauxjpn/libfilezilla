@@ -53,10 +53,11 @@ nobase_include_HEADERS = \
 	libfilezilla/string.hpp \
 	libfilezilla/thread.hpp \
 	libfilezilla/thread_pool.hpp \
+	libfilezilla/time.hpp \
 	libfilezilla/tls_info.hpp \
 	libfilezilla/tls_layer.hpp \
 	libfilezilla/tls_system_trust_store.hpp \
-	libfilezilla/time.hpp \
+	libfilezilla/translate.hpp \
 	libfilezilla/uri.hpp \
 	libfilezilla/util.hpp \
 	libfilezilla/version.hpp \

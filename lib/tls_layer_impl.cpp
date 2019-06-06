@@ -6,6 +6,7 @@
 
 #include "libfilezilla/file.hpp"
 #include "libfilezilla/iputils.hpp"
+#include "libfilezilla/translate.hpp"
 #include "libfilezilla/util.hpp"
 
 #include <gnutls/x509.h>
@@ -14,7 +15,6 @@
 
 #include <string.h>
 
-#define fztranslate //XXX FIXME
 fz::native_string socket_error_description(int error) { //XXX FIXME
 return fz::to_native(fz::to_string(error)); //XXX FIXME
 } //XXX FIXME
@@ -26,7 +26,7 @@ namespace fz {
 namespace {
 
 #if FZ_USE_GNUTLS_SYSTEM_CIPHERS
-char const ciphers[] = "@SYSTEM";
+char const ciphers[] = "@SYSTEM:-ARCFOUR-128:-3DES-CBC:-MD5:-SIGN-RSA-MD5:-VERS-SSL3.0";
 #else
 	#if GNUTLS_VERSION_NUMBER >= 0x030600
 		char const ciphers[] = "SECURE256:+SECURE128:-ARCFOUR-128:-3DES-CBC:-MD5:+SIGN-ALL:-SIGN-RSA-MD5:+CTYPE-X509:-VERS-SSL3.0";
