@@ -208,6 +208,7 @@
     <ClCompile Include="recursive_remove.cpp" />
     <ClCompile Include="signature.cpp" />
     <ClCompile Include="socket.cpp" />
+    <ClCompile Include="socket_errors.cpp" />
     <ClCompile Include="string.cpp" />
     <ClCompile Include="thread.cpp" />
     <ClCompile Include="thread_pool.cpp" />
@@ -216,6 +217,7 @@
     <ClCompile Include="tls_layer.cpp" />
     <ClCompile Include="tls_layer_impl.cpp" />
     <ClCompile Include="tls_system_trust_store.cpp" />
+    <ClCompile Include="translate.cpp" />
     <ClCompile Include="uri.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="version.cpp" />

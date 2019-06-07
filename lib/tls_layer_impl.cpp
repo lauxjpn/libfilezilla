@@ -1,4 +1,3 @@
-//#include "socket_errors.h" //XXX FIXME
 #include "libfilezilla/tls_layer.hpp"
 #include "tls_layer_impl.hpp"
 #include "libfilezilla/tls_info.hpp"
@@ -14,10 +13,6 @@
 #include <algorithm>
 
 #include <string.h>
-
-fz::native_string socket_error_description(int error) { //XXX FIXME
-return fz::to_native(fz::to_string(error)); //XXX FIXME
-} //XXX FIXME
 
 static_assert(GNUTLS_VERSION_NUMBER != 0x030604, "Using TLS 1.3 with this version of GnuTLS does not work, update your version of GnuTLS");
 
