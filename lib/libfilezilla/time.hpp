@@ -326,7 +326,7 @@ public:
 
 	friend duration FZ_PUBLIC_SYMBOL operator-(duration const& a, duration const& b);
 private:
-	explicit duration(int64_t ms) : ms_(ms) {}
+	explicit FZ_PRIVATE_SYMBOL duration(int64_t ms) : ms_(ms) {}
 
 	int64_t ms_{};
 };
@@ -401,7 +401,7 @@ public:
 	}
 
 private:
-	explicit monotonic_clock(clock_type::time_point const& t)
+	explicit FZ_PRIVATE_SYMBOL monotonic_clock(clock_type::time_point const& t)
 		: t_(t)
 	{}
 

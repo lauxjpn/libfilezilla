@@ -84,7 +84,7 @@ public:
 	 */
 	void resolve(uri const& base);
 private:
-	bool parse_authority(std::string && authority);
+	bool FZ_PRIVATE_SYMBOL parse_authority(std::string && authority);
 };
 
 /**

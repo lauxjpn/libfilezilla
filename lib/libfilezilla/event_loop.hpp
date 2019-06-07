@@ -95,7 +95,7 @@ private:
 
 	void FZ_PRIVATE_SYMBOL entry();
 
-	struct timer_data final
+	struct FZ_PRIVATE_SYMBOL timer_data final
 	{
 		event_handler* handler_{};
 		timer_id id_{};
