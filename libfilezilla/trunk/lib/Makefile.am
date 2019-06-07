@@ -16,6 +16,7 @@ libfilezilla_la_SOURCES = \
 	recursive_remove.cpp \
 	signature.cpp \
 	socket.cpp \
+	socket_errors.cpp \
 	string.cpp \
 	thread.cpp \
 	thread_pool.cpp \
@@ -24,6 +25,7 @@ libfilezilla_la_SOURCES = \
 	tls_layer_impl.cpp \
 	tls_system_trust_store.cpp \
 	time.cpp \
+	translate.cpp \
 	uri.cpp \
 	util.cpp \
 	version.cpp
