@@ -293,7 +293,7 @@ public:
 	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) = 0;
 
 	virtual fz::socket_state get_state() const = 0;
-	
+
 	/**
 	 * \brief Signals peers that we want to close the connections.
 	 *
@@ -304,7 +304,7 @@ public:
 
 protected:
 	socket_interface() = default;
-	
+
 	explicit socket_interface(socket_event_source * root)
 		: socket_event_source(root)
 	{}
@@ -521,12 +521,12 @@ protected:
  * \return name if the error code is known
  * \return number as string if the error code is not known
  */
-std::string socket_error_string(int error);
+std::string FZ_PUBLIC_SYMBOL socket_error_string(int error);
 
 /**
  * \brief Gets a human-readable, translated description of the error
  */
-native_string socket_error_description(int error);
+native_string FZ_PUBLIC_SYMBOL socket_error_description(int error);
 
 
 #ifdef FZ_WINDOWS
