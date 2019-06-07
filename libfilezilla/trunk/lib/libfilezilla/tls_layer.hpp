@@ -134,7 +134,7 @@ public:
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
 
 private:
-	virtual void operator()(event_base const& ev) override;
+	virtual void FZ_PRIVATE_SYMBOL operator()(event_base const& ev) override;
 
 	friend class tls_layer_impl;
 	std::unique_ptr<tls_layer_impl> impl_;
