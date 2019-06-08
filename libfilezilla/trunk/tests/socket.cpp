@@ -96,6 +96,7 @@ struct base : public fz::event_handler
 					return;
 				}
 				else {
+					received_ += r;
 					received_hash_.update(buf, r);
 				}
 			}
@@ -150,6 +151,7 @@ struct base : public fz::event_handler
 	bool eof_{};
 	bool shut_{};
 	int64_t sent_{};
+	int64_t received_{};
 	fz::monotonic_clock start_{fz::monotonic_clock::now()};
 
 	logger logger_;
@@ -316,6 +318,10 @@ void socket_test::test_duplex_tls()
 	ASSERT_EQUAL(std::string(), c.failed_);
 	ASSERT_EQUAL(std::string(), s.failed_);
 
+	CPPUNIT_ASSERT(c.sent_ == s.received_);
+	CPPUNIT_ASSERT(s.sent_ == c.received_);
+
 	CPPUNIT_ASSERT(c.sent_hash_.digest() == s.received_hash_.digest());
 	CPPUNIT_ASSERT(s.sent_hash_.digest() == c.received_hash_.digest());
 }
+
