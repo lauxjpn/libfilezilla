@@ -15,6 +15,20 @@ LT_LANG([C++])
 
 AC_CACHE_SAVE
 
+
+AC_ARG_ENABLE(locales, AS_HELP_STRING([--enable-locales],[Build message catalogs]), \
+        [locales="$enableval"], [locales="yes"])
+
+AC_ARG_ENABLE(localesonly, AS_HELP_STRING([--enable-localesonly],[Just build locales]), \
+        [localesonly="$enableval"], [localesonly="no"])
+
+if test "$locales" != "yes" -a "$localesonly" = "yes"; then
+  AC_MSG_ERROR([invalid flags: --disable-locales cannot be used together with --enable-localesonly])
+fi
+
+
+if ! test "$localesonly" = "yes"; then
+
 if test "X$GCC" = Xyes; then
   AX_APPEND_FLAG(-Wall, CFLAGS)
   AX_APPEND_FLAG(-g, CFLAGS)
@@ -228,7 +242,9 @@ PKG_PROG_PKG_CONFIG
 # CppUnit tests
 # -------------
 
-PKG_CHECK_MODULES(CPPUNIT, [cppunit >= 1.13.0], [has_cppunit=yes],[:])
+PKG_CHECK_MODULES(CPPUNIT, [cppunit >= 1.13.0], [have_cppunit=yes],[:])
+
+fi
 
 # Doxygen
 # -------
@@ -236,12 +252,70 @@ PKG_CHECK_MODULES(CPPUNIT, [cppunit >= 1.13.0], [has_cppunit=yes],[:])
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN(libfilezilla, Doxyfile)
 
+
+# Everything translation related
+# ------------------------------
+
+LIBFILEZILLA_LINGUAS=
+LIBFILEZILLA_LINGUAS_PO=
+LIBFILEZILLA_LINGUAS_MO=
+LIBFILEZILLA_LINGUAS_PO_NEW=
+
+if test "$locales" = "yes"; then
+  AC_PATH_PROG(xgettext, xgettext)
+  if test -z "$xgettext"; then
+    AC_MSG_ERROR([xgettext not found, please install the GNU gettext package and make sure xgettext is in the path.])
+  fi
+
+  AC_PATH_PROG(msgfmt, msgfmt)
+  if test -z "$msgfmt"; then
+    AC_MSG_ERROR([ msgfmt not found, please install the GNU gettext package and make sure  msgfmt is in the path.])
+  fi
+
+  FZ_PATH_PROG_VER(msgmerge, msgmerge, 0.11.0)
+  if test -z "$msgmerge"; then
+    AC_MSG_ERROR([msgmerge not found or too old, please install a current version of the GNU gettext package and make sure msgmerge is in the path.])
+  fi
+
+  AC_MSG_CHECKING([available libfilezilla message catalogs])
+
+  if /bin/ls > /dev/null; then
+    LSPROG='/bin/ls'
+  else
+    LSPROG='ls'
+  fi
+
+  if test x$srcdir = x; then
+    path="locales"
+  else
+    path="$srcdir/locales"
+  fi
+  for i in `$LSPROG $path/*.po`; do
+    i=${i%.*}
+    i=${i##*/}
+    LIBFILEZILLA_LINGUAS_PO=$LIBFILEZILLA_LINGUAS_PO${LIBFILEZILLA_LINGUAS_PO:+ }\$\(srcdir\)/$i.po
+    LIBFILEZILLA_LINGUAS_PO_NEW=$LIBFILEZILLA_LINGUAS_PO_NEW${LIBFILEZILLA_LINGUAS_PO_NEW:+ }$i.po.new
+    LIBFILEZILLA_LINGUAS=$LIBFILEZILLA_LINGUAS${LIBFILEZILLA_LINGUAS:+ }$i
+    LIBFILEZILLA_LINGUAS_MO=$LIBFILEZILLA_LINGUAS_MO${LIBFILEZILLA_LINGUAS_MO:+ }$i.mo
+  done
+
+  AC_MSG_RESULT([$LIBFILEZILLA_LINGUAS])
+fi
+
+AC_SUBST(LIBFILEZILLA_LINGUAS)
+AC_SUBST(LIBFILEZILLA_LINGUAS_PO)
+AC_SUBST(LIBFILEZILLA_LINGUAS_PO_NEW)
+AC_SUBST(LIBFILEZILLA_LINGUAS_MO)
+
 # Output automake conditionals
 # ----------------------------
 
 AM_CONDITIONAL(USE_RESOURCEFILE, test "$use_resourcefile" = "true")
 
 AM_CONDITIONAL(FZ_WINDOWS, test "$windows" = "1")
+AM_CONDITIONAL(HAVE_CPPUNIT, [test "$have_cppunit" = "yes"])
+AM_CONDITIONAL([LOCALES_ONLY], [test "$localesonly" = "yes"])
+AM_CONDITIONAL([LOCALES], [test "$locales" = "yes"])
 
 AC_CONFIG_FILES(
   Makefile
@@ -251,6 +325,7 @@ AC_CONFIG_FILES(
   demos/Makefile
   doc/Doxyfile
   doc/Makefile
+  locales/Makefile
   tests/Makefile
 )
 
