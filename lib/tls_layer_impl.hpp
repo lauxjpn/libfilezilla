@@ -71,7 +71,7 @@ private:
 	bool init_session(bool client);
 	void deinit_session();
 
-	void continue_write();
+	int continue_write();
 	int continue_handshake();
 	int continue_shutdown();
 
@@ -127,14 +127,12 @@ private:
 
 	bool shutdown_silence_read_errors_{true};
 
-	// Due to the strange gnutls_record_send semantics, call it again
-	// with 0 data and 0 length after GNUTLS_E_AGAIN and store the number
-	// of bytes written. These bytes get skipped on next write from the
-	// application.
-	// This avoids the rule to call it again with the -same- data after
-	// GNUTLS_E_AGAIN.
-	bool last_write_failed_{false};
-	unsigned int write_skip_{};
+	// gnutls_record_send has strange semantics, it needs to be called again
+	// with either 0 data and 0 length after GNUTLS_E_AGAIN, to actually send
+	// previously queued data. We unfortunately do not know how much data has
+	// been queued and thus need to make a copy of the input up to
+	// gnutls_record_get_max_size()
+	buffer send_buffer_;
 
 	std::vector<uint8_t> required_certificate_;
 
