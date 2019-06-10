@@ -614,7 +614,12 @@ void tls_layer_impl::on_send()
 		continue_handshake();
 	}
 	else if (state_ == socket_state::shutting_down) {
-		int res = continue_shutdown();
+		int res = continue_write();
+		if (res) {
+			return;
+		}
+
+		res = continue_shutdown();
 		if (res != EAGAIN) {
 			if (tls_layer_.event_handler_) {
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, res);
@@ -626,29 +631,44 @@ void tls_layer_impl::on_send()
 	}
 }
 
-void tls_layer_impl::continue_write()
+int tls_layer_impl::continue_write()
 {
-	if (last_write_failed_) {
+	if (send_buffer_.empty()) {
+		return 0;
+	}
+
+	do {
 		ssize_t res = GNUTLS_E_AGAIN;
 		while ((res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) && can_write_to_socket_) {
-			res = gnutls_record_send(session_, nullptr, 0);
+			res = gnutls_record_send(session_, send_buffer_.get(), send_buffer_.size());
 		}
 
 		if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
-			return;
+			return EAGAIN;
 		}
 
 		if (res < 0) {
 			failure(static_cast<int>(res), true);
-			return;
+			return ECONNABORTED;
 		}
 
-		write_skip_ += static_cast<int>(res);
-		last_write_failed_ = false;
+		if (static_cast<size_t>(res) > send_buffer_.size()) {
+			logger_.log(logmsg::error, L"gnutls_record_send has processed more data than it has buffered");
+			failure(0, true);
+			return ECONNABORTED;
+		}
+
+		send_buffer_.consume(static_cast<size_t>(res));
+	}
+	while (!send_buffer_.empty());
+
+	if (state_ == socket_state::connected) {
 		if (tls_layer_.event_handler_) {
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 		}
 	}
+
+	return 0;
 }
 
 bool tls_layer_impl::resumed_session() const
@@ -823,14 +843,6 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 
 	int res = do_call_gnutls_record_recv(buffer, len);
 	if (res >= 0) {
-		if (!res) {
-			// Peer did already initiate a shutdown, reply to it
-			gnutls_bye(session_, GNUTLS_SHUT_WR);
-			// Note: Theoretically this could return a write error.
-			// But we ignore it, since it is perfectly valid for peer
-			// to close the connection after sending its shutdown
-			// notification.
-		}
 		error = 0;
 		return res;
 	}
@@ -861,18 +873,10 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 		return -1;
 	}
 
-	if (last_write_failed_) {
+	if (!send_buffer_.empty()) {
 		error = EAGAIN;
 		return -1;
 	}
-
-	if (write_skip_ >= len) {
-		write_skip_ -= len;
-		return len;
-	}
-
-	len -= write_skip_;
-	buffer = (char*)buffer + write_skip_;
 
 	ssize_t res = gnutls_record_send(session_, buffer, len);
 
@@ -882,23 +886,19 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 
 	if (res >= 0) {
 		error = 0;
-		int written = static_cast<int>(res) + write_skip_;
-		write_skip_ = 0;
-		return written;
+		return static_cast<int>(res);
 	}
 
 	if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
-		if (write_skip_) {
-			error = 0;
-			int written = write_skip_;
-			write_skip_ = 0;
-			return written;
+		// Unfortunately we can't return EAGAIN here as GnuTLS has already consumed some data.
+		// With our semantics, EAGAIN means nothing has been handed off yet.
+		// Thus remember up to gnutls_record_get_max_size bytes from the input.
+		unsigned int max = static_cast<unsigned int>(gnutls_record_get_max_size(session_));
+		if (len > max) {
+			len = max;
 		}
-		else {
-			error = EAGAIN;
-			last_write_failed_ = true;
-			return -1;
-		}
+		send_buffer_.append(reinterpret_cast<unsigned char const*>(buffer), len);
+		return static_cast<int>(len);
 	}
 	else {
 		failure(static_cast<int>(res), false, L"gnutls_record_send");
@@ -959,6 +959,11 @@ int tls_layer_impl::shutdown()
 	}
 
 	state_ = socket_state::shutting_down;
+
+	if (!send_buffer_.empty()) {
+		logger_.log(logmsg::debug_verbose, L"Postponing shutdown, send_buffer_ not empty");
+		return EAGAIN;
+	}
 
 	return continue_shutdown();
 }
