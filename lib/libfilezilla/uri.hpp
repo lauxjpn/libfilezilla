@@ -52,10 +52,20 @@ public:
 
 	/// Often refered to as the protocol prefix, e.g. ftp://
 	std::string scheme_;
+
+	/// Optional user part of the authority
 	std::string user_;
+
+	/// Optional password part of the authority
 	std::string pass_;
+
+	/// Hostname, or IP address literal
 	std::string host_;
+
+	/// Optional Port if non-zero
 	unsigned short port_{};
+
+	/// Optional path, must start with a slash if set
 	std::string path_;
 
 	/**
