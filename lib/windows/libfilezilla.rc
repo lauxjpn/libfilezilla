@@ -1,5 +1,7 @@
 //{{NO_DEPENDENCIES}}
 
+#include "windows.h"
+
 #ifdef GNU_WINDRES
 1 24 "manifest.xml"
 #endif
