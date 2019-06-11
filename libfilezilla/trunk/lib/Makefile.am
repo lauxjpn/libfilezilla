@@ -68,12 +68,31 @@ nobase_include_HEADERS = \
 	libfilezilla/private/windows.hpp \
 	libfilezilla/glue/wx.hpp
 
-if !FZ_WINDOWS
+libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
+libfilezilla_la_LIBADD = $(libdeps)
+
+if FZ_WINDOWS
+
+nodist_noinst_DATA = libfilezilla_rc.o
+
+windows/libfilezilla_rc.o: $(srcdir)/windows/libfilezilla.rc $(srcdir)/windows/manifest.xml windows/version.rc
+	@if [ -f $@~ ]; then rm $@~; fi
+	@WINDRES@ --include-dir=. --include-dir=$(srcdir) $(WINDRESFLAGS) $(srcdir)/windows/libfilezilla.rc -D GNU_WINDRES -D HAS_VERSIONRC $@~ || rm $@~
+	@if [ -f $@ ]; then rm $@; fi
+	mv $@~ $@
+EXTRA_libfilezilla_la_DEPENDENCIES = windows/libfilezilla_rc.o
+libfilezilla_la_LDFLAGS += -Wl,windows/libfilezilla_rc.o
+
+else
+
+
 libfilezilla_la_SOURCES += \
 	glue/unix.cpp
 
 nobase_include_HEADERS += \
 	libfilezilla/glue/unix.hpp
+
+
 endif
 
 dist_noinst_HEADERS = \
@@ -90,15 +109,14 @@ libfilezilla_la_CPPFLAGS += -I$(srcdir)/libfilezilla
 libfilezilla_la_CXXFLAGS = $(AM_CXXFLAGS)
 libfilezilla_la_CXXFLAGS += -fvisibility=hidden
 
-libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
 libfilezilla_la_LDFLAGS += -no-undefined
-libfilezilla_la_LIBADD = $(libdeps)
 
 libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS) $(GNUTLS_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libfilezilla.pc
 
-DISTCLEANFILES = libfilezilla.pc
+DISTCLEANFILES = libfilezilla.pc windows/version.rc
+CLEANFILES = windows/libfilezilla_rc.o
 
 dist_noinst_DATA = libfilezilla.vcxproj

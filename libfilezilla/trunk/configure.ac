@@ -155,8 +155,6 @@ fi
 # Check for windres on MinGW builds
 # ---------------------------------
 
-WINDRESFLAGS=
-use_resourcefile=
 AC_MSG_CHECKING([whether to use windres])
 if test "$windows" = "1"; then
   AC_MSG_RESULT([yes])
@@ -164,7 +162,6 @@ if test "$windows" = "1"; then
   if test "x$WINDRES" = "x"; then
 	AC_MSG_ERROR([windres could not be found, please make sure this program is within your path.])
   fi
-  use_resourcefile=true
 else
   AC_MSG_RESULT([no])
 fi
@@ -310,8 +307,6 @@ AC_SUBST(LIBFILEZILLA_LINGUAS_MO)
 # Output automake conditionals
 # ----------------------------
 
-AM_CONDITIONAL(USE_RESOURCEFILE, test "$use_resourcefile" = "true")
-
 AM_CONDITIONAL(FZ_WINDOWS, test "$windows" = "1")
 AM_CONDITIONAL(HAVE_CPPUNIT, [test "$have_cppunit" = "yes"])
 AM_CONDITIONAL([LOCALES_ONLY], [test "$localesonly" = "yes"])
@@ -322,6 +317,7 @@ AC_CONFIG_FILES(
   lib/Makefile
   lib/libfilezilla.pc
   lib/libfilezilla/version.hpp
+  lib/windows/version.rc
   demos/Makefile
   doc/Doxyfile
   doc/Makefile
