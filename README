@@ -13,6 +13,8 @@ of the highlights include:
 
 - A typesafe, multi-threaded event system that's very simple to use yet extremely efficient
 - Timers for periodic events
+- A socket class for TCP communication with infrastructure to easily add layers on top
+- A TLS layer to secure communication
 - A datetime class that not only tracks timestamp but also their accuracy, which simplifies dealing with timestamps originating from different sources
 - Simple process handling for spawning child processes with redirected I/O
 
