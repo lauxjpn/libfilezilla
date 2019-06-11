@@ -77,7 +77,7 @@ nodist_noinst_DATA = libfilezilla_rc.o
 
 windows/libfilezilla_rc.o: $(srcdir)/windows/libfilezilla.rc $(srcdir)/windows/manifest.xml windows/version.rc
 	@if [ -f $@~ ]; then rm $@~; fi
-	@WINDRES@ --include-dir=. --include-dir=$(srcdir) $(WINDRESFLAGS) $(srcdir)/windows/libfilezilla.rc -D GNU_WINDRES -D HAS_VERSIONRC $@~ || rm $@~
+	@WINDRES@ --include-dir=windows --include-dir=$(srcdir)/windows $(WINDRESFLAGS) $(srcdir)/windows/libfilezilla.rc -D GNU_WINDRES -D HAS_VERSIONRC $@~ || rm $@~
 	@if [ -f $@ ]; then rm $@; fi
 	mv $@~ $@
 EXTRA_libfilezilla_la_DEPENDENCIES = windows/libfilezilla_rc.o
