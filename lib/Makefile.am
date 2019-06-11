@@ -73,8 +73,6 @@ libfilezilla_la_LIBADD = $(libdeps)
 
 if FZ_WINDOWS
 
-nodist_noinst_DATA = libfilezilla_rc.o
-
 windows/libfilezilla_rc.o: $(srcdir)/windows/libfilezilla.rc $(srcdir)/windows/manifest.xml windows/version.rc
 	@if [ -f $@~ ]; then rm $@~; fi
 	@WINDRES@ --include-dir=windows --include-dir=$(srcdir)/windows $(WINDRESFLAGS) $(srcdir)/windows/libfilezilla.rc -D GNU_WINDRES -D HAS_VERSIONRC $@~ || rm $@~
