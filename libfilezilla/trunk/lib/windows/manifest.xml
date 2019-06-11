@@ -3,7 +3,7 @@
   <assemblyIdentity
     name="libfilezilla"
     processorArchitecture="*"
-    version="3.40.0.0"
+    version="0.16.0.0"
     type="win32"
   />
   <description>libfilezilla</description>
