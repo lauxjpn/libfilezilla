@@ -1,6 +1,6 @@
 CLEANFILES = *.po.new *.mo libfilezilla.pot libfilezilla.pot.new libfilezilla.pot~
 
-dist_noinst_DATA = libfilezilla.pot @LIBFILEZILLA_LINGUAS_PO@
+dist_noinst_DATA = @LIBFILEZILLA_LINGUAS_PO@
 
 install-data-local: install-libfilezilla-catalogs
 
