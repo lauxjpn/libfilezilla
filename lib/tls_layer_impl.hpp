@@ -64,6 +64,8 @@ public:
 
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
 
+	int shutdown_read();
+
 private:
 	bool init();
 	void deinit();

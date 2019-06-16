@@ -136,4 +136,8 @@ std::pair<std::string, std::string> tls_layer::generate_selfsigned_certificate(n
 	return tls_layer_impl::generate_selfsigned_certificate(password, distinguished_name, hostnames);
 }
 
+int tls_layer::shutdown_read()
+{
+	return impl_->shutdown_read();
+}
 }

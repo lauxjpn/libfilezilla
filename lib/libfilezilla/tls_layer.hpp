@@ -57,7 +57,7 @@ public:
 	 *
 	 * Before calling server_handshake, a valid certificate and key must be passed
 	 * in through \ref set_certificate.
-	 */ 
+	 */
 	bool server_handshake();
 
 	/**
@@ -132,6 +132,8 @@ public:
 	 * The output pair is in PEM, first element is the key and the second the certificate.
 	 */
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
+
+	virtual int shutdown_read() override;
 
 private:
 	virtual void FZ_PRIVATE_SYMBOL operator()(event_base const& ev) override;

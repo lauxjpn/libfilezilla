@@ -302,6 +302,8 @@ public:
 	 */
 	virtual int shutdown() = 0;
 
+	virtual int shutdown_read() = 0;
+
 protected:
 	socket_interface() = default;
 
@@ -437,6 +439,8 @@ public:
 	 */
 	void set_keepalive_interval(duration const& d);
 
+	virtual int shutdown_read() override { return 0; }
+
 private:
 	friend class socket_base;
 	friend class listen_socket;
@@ -457,6 +461,9 @@ private:
  * though individual layers may post restrictions on this.
  *
  * Note instance lifetime, layers must be destroyed in reverse order.
+ *
+ * For safe closing of a layer hierarchy, both the write and read side
+ * should be shut down first, otherwise pending data might get discarded.
  */
 class FZ_PUBLIC_SYMBOL socket_layer : public socket_interface
 {
@@ -486,6 +493,29 @@ public:
 
 	/// The next layer further down. Usually another layer or the actual socket.
 	socket_interface& next() { return next_layer_; }
+
+	/**
+	 * \brief Check that all layers further down also have reached EOF.
+	 *
+	 * Can only be called after read has returned 0, calling it earlier is undefined.
+	 * shutdown_read should be called after eof to ensure all layers have reached EOF.
+	 *
+	 * \return 0 on success
+	 * \return EAGAIN if the shutdown cannot be completed, wait for a read event and try again.
+	 * \return otherwise an error has occured.
+	 *
+	 * On an ordinary socket, this is a no-op. Some layers however may return an EOF before the
+	 * next lower layer has reached its own EOF, such as the EOF of the secure channel from
+	 * \ref fz::tls_layer.
+	 *
+	 * Closing the layer stack without all layers having reached EOF can lead to truncation on
+	 * the write side: With a lower layer's EOF waiting in TCP's receive buffer and data pending
+	 * in the send buffer, closing the socket is not graceful, it discards all pending data.
+	 * Through shutdown_read you can assure that no pending data is left to receive, on this or
+	 * any lower layer, so that closing the socket is done graceful ensuring delivery of all
+	 * data in the send buffer (assuming there are no network errors).
+	 */
+	virtual int shutdown_read() override;
 
 protected:
 	/**
