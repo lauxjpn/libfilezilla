@@ -1834,4 +1834,8 @@ void socket_layer::set_event_passthrough()
 	next_layer_.set_event_handler(event_handler_);
 }
 
+int socket_layer::shutdown_read()
+{
+	return next_layer_.shutdown_read();
+}
 }

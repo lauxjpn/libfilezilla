@@ -511,9 +511,11 @@ ssize_t tls_layer_impl::pull_function(void* data, size_t len)
 	int error;
 	int read = tls_layer_.next_layer_.read(data, static_cast<unsigned int>(len), error);
 	if (read < 0) {
-		can_read_from_socket_ = false;
 		if (error != EAGAIN) {
 			socket_error_ = error;
+		}
+		else {
+			can_read_from_socket_ = false;
 		}
 		gnutls_transport_set_errno(session_, error);
 #if TLSDEBUG
@@ -846,8 +848,7 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 		error = 0;
 		return res;
 	}
-
-	if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
+	else if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
 		error = EAGAIN;
 	}
 	else {
@@ -946,7 +947,7 @@ void tls_layer_impl::failure(int code, bool send_close, std::wstring const& func
 
 int tls_layer_impl::shutdown()
 {
-	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::Shutdown()");
+	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::shutdown()");
 
 	if (state_ == socket_state::shut_down) {
 		return 0;
@@ -1859,6 +1860,26 @@ std::pair<std::string, std::string> tls_layer_impl::generate_selfsigned_certific
 	ret.second = ch.to_string();
 
 	return ret;
+}
+
+int tls_layer_impl::shutdown_read()
+{
+	if (!can_read_from_socket_) {
+		return EAGAIN;
+	}
+
+	char c{};
+	int error{};
+	int res = tls_layer_.next_layer_.read(&c, 1, error);
+	if (!res) {
+		return tls_layer_.next_layer_.shutdown_read();
+	}
+	else if (res > 0) {
+		// Have to fail the connection as we have now discarded data.
+		return ECONNABORTED;
+	}
+
+	return error;
 }
 
 }

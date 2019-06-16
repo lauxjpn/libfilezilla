@@ -85,8 +85,14 @@ struct base : public fz::event_handler
 				int error;
 				int r = si_->read(buf, 1024, error);
 				if (!r) {
-					eof_ = true;
-					check_done();
+					int res = si_->shutdown_read();
+					if (!res) {
+						eof_ = true;
+						check_done();
+					}
+					else if (res != EAGAIN) {
+						fail(__LINE__, res);
+					}
 					return;
 				}
 				else if (r == -1) {
