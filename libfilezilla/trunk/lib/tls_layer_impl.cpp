@@ -1064,13 +1064,13 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 
 	auto serial = bin2hex(buffer, size);
 
-	unsigned int pkBits;
-	int pkAlgo = gnutls_x509_crt_get_pk_algorithm(cert, &pkBits);
-	std::string pkAlgoName;
+	unsigned int pk_bits;
+	int pkAlgo = gnutls_x509_crt_get_pk_algorithm(cert, &pk_bits);
+	std::string pk_algo_name;
 	if (pkAlgo >= 0) {
 		char const* pAlgo = gnutls_pk_algorithm_get_name((gnutls_pk_algorithm_t)pkAlgo);
 		if (pAlgo) {
-			pkAlgoName = pAlgo;
+			pk_algo_name = pAlgo;
 		}
 	}
 
@@ -1097,7 +1097,7 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 		return false;
 	}
 
-	std::vector<x509_certificate::SubjectName> alt_subject_names = get_cert_subject_alt_names(cert);
+	std::vector<x509_certificate::subject_name> alt_subject_names = get_cert_subject_alt_names(cert);
 
 	datum_holder raw_issuer;
 	if (!gnutls_x509_crt_get_issuer_dn3(cert, &raw_issuer, 0)) {
@@ -1137,7 +1137,7 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 		std::move(data),
 		activation_time, expiration_time,
 		serial,
-		pkAlgoName, pkBits,
+		pk_algo_name, pk_bits,
 		signAlgoName,
 		fingerprint_sha256,
 		fingerprint_sha1,
@@ -1149,9 +1149,9 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 }
 
 
-std::vector<x509_certificate::SubjectName> tls_layer_impl::get_cert_subject_alt_names(gnutls_x509_crt_t cert)
+std::vector<x509_certificate::subject_name> tls_layer_impl::get_cert_subject_alt_names(gnutls_x509_crt_t cert)
 {
-	std::vector<x509_certificate::SubjectName> ret;
+	std::vector<x509_certificate::subject_name> ret;
 
 	char san[4096];
 	for (unsigned int i = 0; i < 10000; ++i) { // I assume this is a sane limit
@@ -1167,13 +1167,13 @@ std::vector<x509_certificate::SubjectName> tls_layer_impl::get_cert_subject_alt_
 		if (type_or_error == GNUTLS_SAN_DNSNAME || type_or_error == GNUTLS_SAN_RFC822NAME) {
 			std::string dns = san;
 			if (!dns.empty()) {
-				ret.emplace_back(x509_certificate::SubjectName{std::move(dns), type_or_error == GNUTLS_SAN_DNSNAME});
+				ret.emplace_back(x509_certificate::subject_name{std::move(dns), type_or_error == GNUTLS_SAN_DNSNAME});
 			}
 		}
 		else if (type_or_error == GNUTLS_SAN_IPADDRESS) {
 			std::string ip = socket::address_to_string(san, static_cast<int>(san_size));
 			if (!ip.empty()) {
-				ret.emplace_back(x509_certificate::SubjectName{std::move(ip), false});
+				ret.emplace_back(x509_certificate::subject_name{std::move(ip), false});
 			}
 		}
 	}
@@ -1714,7 +1714,7 @@ std::vector<uint8_t> tls_layer_impl::get_session_parameters() const
 	else {
 		ret = ticket_key_;
 	}
-	
+
 	return ret;
 }
 

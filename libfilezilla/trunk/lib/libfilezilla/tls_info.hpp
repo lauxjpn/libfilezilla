@@ -1,17 +1,24 @@
 #ifndef LIBFILEZILLA_TLS_INFO_HEADER
 #define LIBFILEZILLA_TLS_INFO_HEADER
 
+/** \file
+ * \brief Classes to query parameters of a TLS session, including the certificate chain
+ */
+
 #include "time.hpp"
 
 namespace fz {
+/**
+ * Represents all relevant information of a X.509 certificate as used by TLS.
+ */
 class x509_certificate final
 {
 public:
-	class SubjectName final
+	class subject_name final
 	{
 	public:
 		std::string name;
-		bool isDns{};
+		bool is_dns{};
 	};
 
 	x509_certificate() = default;
@@ -31,7 +38,7 @@ public:
 		std::string const& fingerprint_sha1,
 		std::string const& issuer,
 		std::string const& subject,
-		std::vector<SubjectName> const& altSubjectNames);
+	    std::vector<subject_name> const& alt_subject_names);
 
 	x509_certificate(
 		std::vector<uint8_t> && rawdata,
@@ -43,26 +50,43 @@ public:
 		std::string const& fingerprint_sha1,
 		std::string const& issuer,
 		std::string const& subject,
-		std::vector<SubjectName> && altSubjectNames);
+	    std::vector<subject_name> && alt_subject_names);
 
 
-	std::vector<uint8_t> GetRawData() const { return raw_cert_; }
-	fz::datetime GetActivationTime() const { return activation_time_; }
-	fz::datetime GetExpirationTime() const { return expiration_time_; }
+	/// The raw, DER-encoded X.509 certificate
+	std::vector<uint8_t> get_raw_data() const { return raw_cert_; }
 
-	std::string const& GetSerial() const { return serial_; }
-	std::string const& GetPkAlgoName() const { return pkalgoname_; }
-	unsigned int GetPkAlgoBits() const { return pkalgobits_; }
+	fz::datetime const& get_activation_time() const { return activation_time_; }
+	fz::datetime const& get_expiration_time() const { return expiration_time_; }
 
-	std::string const& GetSignatureAlgorithm() const { return signalgoname_; }
+	std::string const& get_serial() const { return serial_; }
 
-	std::string const& GetFingerPrintSHA256() const { return fingerprint_sha256_; }
-	std::string const& GetFingerPrintSHA1() const { return fingerprint_sha1_; }
+	/// The public key algorithm used by the certificate
+	std::string const& get_pubkey_algorithm() const { return pkalgoname_; }
 
-	std::string const& GetSubject() const { return subject_; }
-	std::string const& GetIssuer() const { return issuer_; }
+	/// The number of bits of the public key algorithm
+	unsigned int get_pubkey_bits() const { return pkalgobits_; }
 
-	std::vector<SubjectName> const& GetAltSubjectNames() const { return alt_subject_names_; }
+	/// The algorithm used for signing, typically the public key algorithm combined with a hash
+	std::string const& get_signature_algorithm() const { return signalgoname_; }
+
+	/// Gets fingerprint as hex-encoded sha256
+	std::string const& get_fingerprint_sha256() const { return fingerprint_sha256_; }
+
+	/// Gets fingerprint as hex-encoded sha1
+	std::string const& get_fingerprint_sha1() const { return fingerprint_sha1_; }
+
+	/** \brief Gets the subject of the certificate as RDN as described in RFC4514
+	 *
+	 * Never use the CN field to compare it against a hostname, that's what the SANs are for.
+	 */
+	std::string const& get_subject() const { return subject_; }
+
+	/// Gets the issuer of the certificate as RDN as described in RFC4514
+	std::string const& get_issuer() const { return issuer_; }
+
+	/// Gets the alternative subject names (SANSs) of the certificated, usually hostnames
+	std::vector<subject_name> const& get_alt_subject_names() const { return alt_subject_names_; }
 
 	explicit operator bool() const { return !raw_cert_.empty(); }
 
@@ -84,9 +108,10 @@ private:
 	std::string issuer_;
 	std::string subject_;
 
-	std::vector<SubjectName> alt_subject_names_;
+	std::vector<subject_name> alt_subject_names_;
 };
 
+/// Information about a TLS session
 class tls_session_info final
 {
 public:
@@ -107,16 +132,32 @@ public:
 		bool system_trust,
 		bool hostname_mismatch);
 
-	std::string const& GetHost() const { return host_; }
-	unsigned int GetPort() const { return port_; }
+	/// The server's hostname used to connect
+	std::string const& get_host() const { return host_; }
 
-	std::string const& GetSessionCipher() const { return session_cipher_; }
+	/// The server's port
+	unsigned int get_port() const { return port_; }
+
+	/// The symmetric algorithm used to encrypt all exchanged application data
+	std::string const& get_session_cipher() const { return session_cipher_; }
+
+	/// The MAC used for integrity-protect and authenticate the exchanged application data
 	std::string const& GetSessionMac() const { return session_mac_; }
 
-	const std::vector<fz::x509_certificate> GetCertificates() const { return certificates_; }
+	/** \brief The server's certificate chain
+	 *
+	 * The chain is ordered from the server's own certificate at index 0 up to the self-signed
+	 * root CA.
+	 *
+	 * Chain may be partial.
+	 */
+	std::vector<fz::x509_certificate> const& get_certificates() const { return certificates_; }
 
-	std::string const& GetProtocol() const { return protocol_; }
-	std::string const& GetKeyExchange() const { return key_exchange_; }
+	/// TLS version
+	std::string const& get_protocol() const { return protocol_; }
+
+	/// Key exchange algorithm
+	std::string const& get_key_exchange() const { return key_exchange_; }
 
 	enum algorithm_warnings_t
 	{
@@ -126,10 +167,15 @@ public:
 		kex = 8
 	};
 
-	int GetAlgorithmWarnings() const { return algorithm_warnings_; }
+	/// Warnings about old algorithms used, which are considered weak
+	int get_algorithm_warnings() const { return algorithm_warnings_; }
 
-	bool SystemTrust() const { return system_trust_; }
-	bool MismatchedHostname() const { return hostname_mismatch_; }
+	/// Returns true if the server certificate is to be trusted according to
+	/// the operating system's trust store.
+	bool system_trust() const { return system_trust_; }
+
+	/// True if the hostname in the SANs does not match the requested hostname
+	bool mismatched_hostname() const { return hostname_mismatch_; }
 
 private:
 	std::string host_;

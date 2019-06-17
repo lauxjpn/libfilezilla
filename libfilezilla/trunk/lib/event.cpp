@@ -9,9 +9,9 @@ size_t get_unique_type_id(std::type_info const& id)
 {
 	std::string name = id.name();
 
-	static fz::mutex m;
+	static mutex m;
 	
-	fz::scoped_lock l(m);
+	scoped_lock l(m);
 
 	static std::map<std::string, size_t> eventTypes;
 
