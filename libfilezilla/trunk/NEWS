@@ -1,3 +1,14 @@
+0.17.0 (2019-06-17)
+
++ libfilezilla now requires C++17
++ Changed a lot of functions to use std::string_view
++ Added fz::socket_layer as base class for layers on top of sockets
++ Added fz::tls_layer, a Transport Layer Security layer, requiring GnuTLS 3.5.7 or later
++ Added fz::translate for gettext-style translatable strings. GNU Gettext is now a built-time (but not runtime) dependency
++ Added fz::bitscan and fz::bitscan_reverse to get the index of least and most significant bit set
++ Added fz::logger_interface as a base for logging system
+- *nix: Small speed-up of fz::local_filesys through the use of fstatat()
+
 0.16.0 (2019-04-21)
 
 + Add fz::socket
