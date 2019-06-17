@@ -1,6 +1,10 @@
 #ifndef LIBFILEZILLA_TLS_LAYER_HEADER
 #define LIBFILEZILLA_TLS_LAYER_HEADER
 
+/** \file
+ * \brief A Transport Layer Security (TLS) layer
+ */
+
 #include "socket.hpp"
 
 namespace fz {
@@ -14,6 +18,14 @@ class tls_layer_impl;
 struct certificate_verification_event_type;
 typedef simple_event<certificate_verification_event_type, tls_layer*, tls_session_info> certificate_verification_event;
 
+/**
+ * \brief A Transport Layer Security (TLS) layer
+ *
+ * Can be used both for client- and server-side TLS.
+ *
+ * This class also supports TLS session resumption. Resumption has to be requested
+ * explicitly, there is no shared state between unrelated sessions.
+ */
 class FZ_PUBLIC_SYMBOL tls_layer final : protected event_handler, public socket_layer
 {
 public:
@@ -78,24 +90,17 @@ public:
 	/// Gets the session's peer certificate in DER
 	std::vector<uint8_t> get_raw_certificate() const;
 
-	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override;
-
-	virtual int read(void *buffer, unsigned int size, int& error) override;
-	virtual int write(void const* buffer, unsigned int size, int& error) override;
-
-	virtual int shutdown() override;
-
 	/// Must be called after having received certificate_verification_event
 	void set_verification_result(bool trusted);
 
-	virtual socket_state get_state() const override;
-
 	std::string get_protocol() const;
+
 	std::string get_key_exchange() const;
 	std::string get_cipher() const;
 	std::string get_mac() const;
 	int get_algorithm_warnings() const;
 
+	/// After a successful handshake, returns whether the session has been resumed.
 	bool resumed_session() const;
 
 	/// Returns a human-readable list of all TLS ciphers available with the passed priority string
@@ -132,6 +137,16 @@ public:
 	 * The output pair is in PEM, first element is the key and the second the certificate.
 	 */
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
+
+
+	virtual socket_state get_state() const override;
+
+	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override;
+
+	virtual int read(void *buffer, unsigned int size, int& error) override;
+	virtual int write(void const* buffer, unsigned int size, int& error) override;
+
+	virtual int shutdown() override;
 
 	virtual int shutdown_read() override;
 

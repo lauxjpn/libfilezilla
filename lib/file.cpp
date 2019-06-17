@@ -124,7 +124,7 @@ bool file::opened() const
 	return hFile_ != INVALID_HANDLE_VALUE;
 }
 
-bool remove_file(fz::native_string const& name)
+bool remove_file(native_string const& name)
 {
 	bool ret = DeleteFileW(name.c_str()) != 0;
 	if (!ret && GetLastError() == ERROR_FILE_NOT_FOUND) {
@@ -245,7 +245,7 @@ bool file::opened() const
 	return fd_ != -1;
 }
 
-bool remove_file(fz::native_string const& name)
+bool remove_file(native_string const& name)
 {
 	bool ret = unlink(name.c_str()) == 0;
 	if (!ret && errno == ENOENT) {
