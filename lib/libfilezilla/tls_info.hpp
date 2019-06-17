@@ -142,7 +142,7 @@ public:
 	std::string const& get_session_cipher() const { return session_cipher_; }
 
 	/// The MAC used for integrity-protect and authenticate the exchanged application data
-	std::string const& GetSessionMac() const { return session_mac_; }
+	std::string const& get_session_mac() const { return session_mac_; }
 
 	/** \brief The server's certificate chain
 	 *
