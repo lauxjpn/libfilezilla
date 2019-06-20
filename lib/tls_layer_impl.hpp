@@ -146,7 +146,7 @@ private:
 
 	native_string hostname_;
 
-	std::unique_ptr<tls_system_trust_store> system_trust_store_;
+	tls_system_trust_store* system_trust_store_{};
 
 	event_handler * verification_handler_{};
 };
