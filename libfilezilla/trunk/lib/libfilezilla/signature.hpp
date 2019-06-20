@@ -86,7 +86,7 @@ enum {
 /// Returns the message with the signature appended, created using the passed private key
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::vector<uint8_t> const& message, private_signing_key const& priv);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::string_view const& message, private_signing_key const& priv);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(uint8_t const& message, size_t const size, private_signing_key const& priv);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(uint8_t const* message, size_t const size, private_signing_key const& priv);
 
 /// Verify the message. Returns true iff it has been signed by the private key corresponding to the passed public key
 bool FZ_PUBLIC_SYMBOL verify(std::vector<uint8_t> const& message, public_verification_key const& pub);
