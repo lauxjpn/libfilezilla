@@ -84,14 +84,19 @@ enum {
 };
 
 /// Returns the message with the signature appended, created using the passed private key
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::vector<uint8_t> const& message, private_signing_key const& priv);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::string_view const& message, private_signing_key const& priv);
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(uint8_t const* message, size_t const size, private_signing_key const& priv);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::vector<uint8_t> const& message, private_signing_key const& priv, bool include_message = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(std::string_view const& message, private_signing_key const& priv, bool include_message = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL sign(uint8_t const* message, size_t const size, private_signing_key const& priv, bool include_message = true);
 
-/// Verify the message. Returns true iff it has been signed by the private key corresponding to the passed public key
+/// Verify a message with attached signature. Returns true iff it has been signed by the private key corresponding to the passed public key
 bool FZ_PUBLIC_SYMBOL verify(std::vector<uint8_t> const& message, public_verification_key const& pub);
 bool FZ_PUBLIC_SYMBOL verify(std::string_view const& message, public_verification_key const& pub);
 bool FZ_PUBLIC_SYMBOL verify(uint8_t const* message, size_t const size, public_verification_key const& pub);
+
+/// Verify a message with detached signature. Returns true iff it has been signed by the private key corresponding to the passed public key
+bool FZ_PUBLIC_SYMBOL verify(std::vector<uint8_t> const& message, std::vector<uint8_t> const& signature, public_verification_key const& pub);
+bool FZ_PUBLIC_SYMBOL verify(std::string_view const& message, std::string_view const& signature, public_verification_key const& pub);
+bool FZ_PUBLIC_SYMBOL verify(uint8_t const* message, size_t const message_size, uint8_t const* signature, size_t const sig_size, public_verification_key const& pub);
 
 }
 
