@@ -1,3 +1,8 @@
+0.17.1 (2019-06-21)
+
++ Added support for detached signatures
+- Fixed crash if using the system trust store
+
 0.17.0 (2019-06-17)
 
 + libfilezilla now requires C++17
