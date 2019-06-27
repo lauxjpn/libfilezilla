@@ -62,11 +62,13 @@ nobase_include_HEADERS = \
 	libfilezilla/translate.hpp \
 	libfilezilla/uri.hpp \
 	libfilezilla/util.hpp \
-	libfilezilla/version.hpp \
 	libfilezilla/private/defs.hpp \
 	libfilezilla/private/visibility.hpp \
 	libfilezilla/private/windows.hpp \
 	libfilezilla/glue/wx.hpp
+
+nodist_nobase_include_HEADERS = version.hpp
+
 
 libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
 libfilezilla_la_LIBADD = $(libdeps)
