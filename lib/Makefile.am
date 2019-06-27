@@ -67,7 +67,7 @@ nobase_include_HEADERS = \
 	libfilezilla/private/windows.hpp \
 	libfilezilla/glue/wx.hpp
 
-nodist_nobase_include_HEADERS = version.hpp
+nodist_nobase_include_HEADERS = libfilezilla/version.hpp
 
 
 libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
