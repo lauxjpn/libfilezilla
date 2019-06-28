@@ -119,4 +119,4 @@ pkgconfig_DATA = libfilezilla.pc
 DISTCLEANFILES = libfilezilla.pc windows/version.rc
 CLEANFILES = windows/libfilezilla_rc.o
 
-dist_noinst_DATA = libfilezilla.vcxproj
+dist_noinst_DATA = libfilezilla.vcxproj windows/libfilezilla.rc windows/manifest.xml
