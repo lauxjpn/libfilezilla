@@ -79,7 +79,6 @@ private:
 };
 
 
-#ifdef FZ_UNIX
 /** \brief Starts a detached process
  *
  * This function takes care of properly quoting and escaping the the program's path and its arguments.
@@ -89,7 +88,6 @@ private:
  * \note May return \c true even if the process cannot be started.
  */
 bool FZ_PUBLIC_SYMBOL spawn_detached_process(std::vector<native_string> const& cmd_with_args);
-#endif
 
 }
 

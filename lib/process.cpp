@@ -78,6 +78,60 @@ public:
 	HANDLE read_{INVALID_HANDLE_VALUE};
 	HANDLE write_{INVALID_HANDLE_VALUE};
 };
+
+native_string escape_argument(native_string const& arg)
+{
+	native_string ret;
+
+	// Treat newlines as whitespace just to be sure, even if MSDN doesn't mention it
+	if (arg.find_first_of(fzT(" \"\t\r\n\v")) != native_string::npos) {
+		// Quite horrible, as per MSDN: 
+		// Backslashes are interpreted literally, unless they immediately precede a double quotation mark.
+		// If an even number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is interpreted as a string delimiter.
+		// If an odd number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is "escaped" by the remaining backslash, causing a literal double quotation mark (") to be placed in argv.
+
+		ret = fzT("\"");
+		int backslashCount = 0;
+		for (auto it = arg.begin(); it != arg.end(); ++it) {
+			if (*it == '\\') {
+				++backslashCount;
+			}
+			else {
+				if (*it == '"') {
+					// Escape all preceeding backslashes and escape the quote
+					ret += native_string(backslashCount + 1, '\\');
+				}
+				backslashCount = 0;
+			}
+			ret += *it;
+		}
+		if (backslashCount) {
+			// Escape all preceeding backslashes
+			ret += native_string(backslashCount, '\\');
+		}
+
+		ret += fzT("\"");
+	}
+	else {
+		ret = arg;
+	}
+
+	return ret;
+}
+
+native_string get_cmd_line(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
+{
+	native_string cmdline = escape_argument(cmd);
+
+	for (auto it = begin; it != end; ++it) {
+		auto const& arg = *it;
+		if (!arg.empty()) {
+			cmdline += fzT(" ") + escape_argument(arg);
+		}
+	}
+
+	return cmdline;
+}
 }
 
 class process::impl
@@ -184,60 +238,6 @@ public:
 	}
 
 private:
-	native_string escape_argument(native_string const& arg)
-	{
-		native_string ret;
-
-		// Treat newlines are whitespace just to be sure, even if MSDN doesn't mention it
-		if (arg.find_first_of(fzT(" \"\t\r\n\v")) != native_string::npos) {
-			// Quite horrible, as per MSDN: 
-			// Backslashes are interpreted literally, unless they immediately precede a double quotation mark.
-			// If an even number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is interpreted as a string delimiter.
-			// If an odd number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is "escaped" by the remaining backslash, causing a literal double quotation mark (") to be placed in argv.
-
-			ret = fzT("\"");
-			int backslashCount = 0;
-			for (auto it = arg.begin(); it != arg.end(); ++it) {
-				if (*it == '\\') {
-					++backslashCount;
-				}
-				else {
-					if (*it == '"') {
-						// Escape all preceeding backslashes and escape the quote
-						ret += native_string(backslashCount + 1, '\\');
-					}
-					backslashCount = 0;
-				}
-				ret += *it;
-			}
-			if (backslashCount) {
-				// Escape all preceeding backslashes
-				ret += native_string(backslashCount, '\\');
-			}
-
-			ret += fzT("\"");
-		}
-		else {
-			ret = arg;
-		}
-
-		return ret;
-	}
-
-	native_string get_cmd_line(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
-	{
-		native_string cmdline = escape_argument(cmd);
-
-		for (auto it = begin; it != end; ++it)  {
-			auto const& arg = *it;
-			if (!arg.empty()) {
-				cmdline += fzT(" ") + escape_argument(arg);
-			}
-		}
-
-		return cmdline;
-	}
-
 	HANDLE process_{INVALID_HANDLE_VALUE};
 
 	pipe in_;
@@ -507,12 +507,33 @@ bool process::write(char const* buffer, unsigned int len)
 	return impl_ ? impl_->write(buffer, len) : false;
 }
 
-#ifdef FZ_UNIX
 bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 {
 	if (cmd_with_args.empty()) {
 		return false;
 	}
+
+#ifdef FZ_WINDOWS
+	STARTUPINFO si{};
+	si.cb = sizeof(si);
+
+	auto begin = cmd_with_args.cbegin() + 1;
+	auto cmdline = get_cmd_line(cmd_with_args.front(), begin, cmd_with_args.cend());
+
+	PROCESS_INFORMATION pi{};
+
+	auto cmdline_buf = cmdline.data();
+
+	DWORD const flags = CREATE_UNICODE_ENVIRONMENT | CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW;
+	BOOL res = CreateProcess(cmd_with_args.front().c_str(), cmdline_buf, nullptr, nullptr, TRUE, flags, nullptr, nullptr, &si, &pi);
+	if (!res) {
+		return false;
+	}
+
+	reset_handle(pi.hProcess);
+	reset_handle(pi.hThread);
+	return true;
+#else
 	if (cmd_with_args[0][0] != '/') {
 		return false;
 	}
@@ -544,8 +565,7 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 
 		return ret != -1;
 	}
-
 	return false;
-}
 #endif
+}
 }
