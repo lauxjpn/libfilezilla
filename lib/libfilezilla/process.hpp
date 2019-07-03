@@ -40,6 +40,8 @@ public:
 	 */
 	bool spawn(native_string const& cmd, std::vector<native_string> const& args = std::vector<native_string>());
 
+	bool spawn(std::vector<native_string> const& command_with_args);
+
 	/** \brief Stops the spawned process
 	 *
 	 * This function doesn't actually kill the process, it merely closes the pipes.
@@ -75,6 +77,19 @@ private:
 	class impl;
 	impl* impl_;
 };
+
+
+#ifdef FZ_UNIX
+/** \brief Starts a detached process
+ *
+ * This function takes care of properly quoting and escaping the the program's path and its arguments.
+ *
+ * \param cmd_with_args The full path of the program to execute and any additional arguments
+ *
+ * \note May return \c true even if the process cannot be started.
+ */
+bool FZ_PUBLIC_SYMBOL spawn_detached_process(std::vector<native_string> const& cmd_with_args);
+#endif
 
 }
 

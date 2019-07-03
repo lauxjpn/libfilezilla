@@ -100,7 +100,7 @@ public:
 			err_.create(true);
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string> const& args)
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
 	{
 		if (process_ != INVALID_HANDLE_VALUE) {
 			return false;
@@ -117,7 +117,7 @@ public:
 		si.hStdOutput = out_.write_;
 		si.hStdError = err_.write_;
 
-		auto cmdline = get_cmd_line(cmd, args);
+		auto cmdline = get_cmd_line(cmd, begin, end);
 
 		PROCESS_INFORMATION pi{};
 
@@ -224,11 +224,12 @@ private:
 		return ret;
 	}
 
-	native_string get_cmd_line(native_string const& cmd, std::vector<native_string> const& args)
+	native_string get_cmd_line(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
 	{
 		native_string cmdline = escape_argument(cmd);
 
-		for (auto const& arg : args) {
+		for (auto it = begin; it != end; ++it)  {
+			auto const& arg = *it;
 			if (!arg.empty()) {
 				cmdline += fzT(" ") + escape_argument(arg);
 			}
@@ -309,6 +310,30 @@ public:
 	int read_{-1};
 	int write_{-1};
 };
+
+void make_arg(native_string const& arg, std::vector<std::unique_ptr<native_string::value_type[]>> & argList)
+{
+	std::unique_ptr<char[]> ret;
+	ret.reset(new char[arg.size() + 1]);
+	memcpy(ret.get(), arg.c_str(), arg.size() + 1);
+	argList.push_back(std::move(ret));
+}
+
+void get_argv(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, std::vector<std::unique_ptr<char[]>> & argList, std::unique_ptr<char *[]> & argV)
+{
+	argList.reserve(end - begin + 1);
+	make_arg(cmd, argList);
+	for (auto it = begin; it != end; ++it) {
+		make_arg(*it, argList);
+	}
+
+	argV.reset(new char *[argList.size() + 1]);
+	char ** v = argV.get();
+	for (auto const& a : argList) {
+		*(v++) = a.get();
+	}
+	*v = nullptr;
+}
 }
 
 class process::impl
@@ -331,30 +356,7 @@ public:
 			err_.create();
 	}
 
-	void make_arg(native_string const& arg, std::vector<std::unique_ptr<native_string::value_type[]>> & argList)
-	{
-		std::unique_ptr<char[]> ret;
-		ret.reset(new char[arg.size() + 1]);
-		memcpy(ret.get(), arg.c_str(), arg.size() + 1);
-		argList.push_back(std::move(ret));
-	}
-
-	void get_argv(native_string const& cmd, std::vector<native_string> const& args, std::vector<std::unique_ptr<char[]>> & argList, std::unique_ptr<char *[]> & argV)
-	{
-		make_arg(cmd, argList);
-		for (auto const& a : args) {
-			make_arg(a, argList);
-		}
-
-		argV.reset(new char *[argList.size() + 1]);
-		char ** v = argV.get();
-		for (auto const& a : argList) {
-			*(v++) = a.get();
-		}
-		*v = nullptr;
-	}
-
-	bool spawn(native_string const& cmd, std::vector<native_string> const& args)
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
 	{
 		if (pid_ != -1) {
 			return false;
@@ -366,9 +368,9 @@ public:
 
 		std::vector<std::unique_ptr<char[]>> argList;
 		std::unique_ptr<char *[]> argV;
-		get_argv(cmd, args, argList, argV);
+		get_argv(cmd, begin, end, argList, argV);
 
-		int pid = fork();
+		pid_t pid = fork();
 		if (pid < 0) {
 			return false;
 		}
@@ -476,7 +478,16 @@ process::~process()
 
 bool process::spawn(native_string const& cmd, std::vector<native_string> const& args)
 {
-	return impl_ ? impl_->spawn(cmd, args) : false;
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend()) : false;
+}
+
+bool process::spawn(std::vector<native_string> const& command_with_args)
+{
+	if (command_with_args.empty()) {
+		return false;
+	}
+	auto begin = command_with_args.begin() + 1;
+	return impl_ ? impl_->spawn(command_with_args.front(), begin, command_with_args.end()) : false;
 }
 
 void process::kill()
@@ -496,4 +507,45 @@ bool process::write(char const* buffer, unsigned int len)
 	return impl_ ? impl_->write(buffer, len) : false;
 }
 
+#ifdef FZ_UNIX
+bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
+{
+	if (cmd_with_args.empty()) {
+		return false;
+	}
+	if (cmd_with_args[0][0] != '/') {
+		return false;
+	}
+
+	std::vector<std::unique_ptr<char[]>> argList;
+	std::unique_ptr<char *[]> argV;
+	auto begin = cmd_with_args.cbegin() + 1;
+	get_argv(cmd_with_args.front(), begin, cmd_with_args.cend(), argList, argV);
+
+	pid_t const parent = getppid();
+	pid_t const ppgid = getpgid(parent);
+	pid_t pid = fork();
+	if (!pid) {
+		pid_t inner_pid = fork();
+		if (!inner_pid) {
+			// Change the process group ID of the new process so that terminating the outer process does not terminate the child
+			setpgid(0, ppgid);
+			execv(argV.get()[0], argV.get());
+			_exit(-1);
+		}
+		else {
+			_exit(0);
+		}
+	}
+	else {
+		int ret;
+		do {
+		} while ((ret = waitpid(pid, nullptr, 0)) == -1 && errno == EINTR);
+
+		return ret != -1;
+	}
+
+	return false;
+}
+#endif
 }
