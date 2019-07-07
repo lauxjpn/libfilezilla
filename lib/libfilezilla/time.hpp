@@ -301,6 +301,11 @@ public:
 	}
 	/// \}
 
+	duration& operator+=(duration const& op) {
+		ms_ += op.ms_;
+		return *this;
+	}
+
 	duration& operator-=(duration const& op) {
 		ms_ -= op.ms_;
 		return *this;
@@ -325,6 +330,7 @@ public:
 	bool operator>=(duration const& op) const { return ms_ >= op.ms_; }
 
 	friend duration FZ_PUBLIC_SYMBOL operator-(duration const& a, duration const& b);
+	friend duration FZ_PUBLIC_SYMBOL operator+(duration const& a, duration const& b);
 private:
 	explicit FZ_PRIVATE_SYMBOL duration(int64_t ms) : ms_(ms) {}
 
@@ -336,6 +342,10 @@ inline duration operator-(duration const& a, duration const& b)
 	return duration(a) -= b;
 }
 
+inline duration operator+(duration const& a, duration const& b)
+{
+	return duration(a) += b;
+}
 
 /** \relates datetime
  * \relatesalso duration
