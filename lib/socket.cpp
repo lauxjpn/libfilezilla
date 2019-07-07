@@ -312,6 +312,18 @@ public:
 private:
 	bool initialized_{};
 };
+#else
+void close_pipe(int pipe[2])
+{
+	if (pipe[0] != -1) {
+		::close(pipe[0]);
+		pipe[0] = -1;
+	}
+	if (pipe[1] != -1) {
+		::close(pipe[1]);
+		pipe[1] = -1;
+	}
+}
 #endif
 }
 
@@ -345,12 +357,7 @@ public:
 			WSACloseEvent(sync_event_);
 		}
 #else
-		if (pipe_[0] != -1) {
-			close(pipe_[0]);
-		}
-		if (pipe_[1] != -1) {
-			close(pipe_[1]);
-		}
+		close_pipe(pipe_);
 #endif
 	}
 
@@ -385,9 +392,7 @@ public:
 		// Connect method of socket ensures port is in range
 		port_ = fz::to_string(port);
 
-		start();
-
-		return 0;
+		return start();
 	}
 
 	int start()
@@ -414,11 +419,7 @@ public:
 
 #ifndef HAVE_POLL
 			if (pipe_[0] >= FD_SETSIZE) {
-				::close(pipe_[0]);
-				::close(pipe_[1]);
-				pipe_[0] = -1;
-				pipe_[1] = -1;
-
+				close_pipe(pipe_);
 				return EMFILE;
 			}
 #endif
@@ -427,7 +428,12 @@ public:
 
 		thread_ = socket_->thread_pool_.spawn([this]() { entry(); });
 
-		return thread_ ? 0 : 1;
+		if (!thread_) {
+			close_pipe(pipe_);
+			return EMFILE;
+		}
+
+		return 0;
 	}
 
 	// Cancels select or idle wait
@@ -1125,6 +1131,7 @@ void socket_base::do_set_event_handler(event_handler* pEvtHandler)
 int socket_base::close()
 {
 	if (!socket_thread_) {
+		socket_thread::close_socket_fd(fd_);
 		return 0;
 	}
 
@@ -1386,7 +1393,6 @@ int listen_socket::listen(address_type family, int port)
 	if (res) {
 		res = last_socket_error();
 		socket_thread::close_socket_fd(fd_);
-		fd_ = -1;
 		return res;
 	}
 
@@ -1394,7 +1400,13 @@ int listen_socket::listen(address_type family, int port)
 
 	socket_thread_->waiting_ = WAIT_ACCEPT;
 
-	socket_thread_->start();
+	if (socket_thread_->start()) {
+		delete socket_thread_;
+		socket_thread_ = nullptr;
+		state_ = listen_socket_state::none;
+		socket_thread::close_socket_fd(fd_);
+		return EMFILE;
+	}
 
 	return 0;
 }
@@ -1447,20 +1459,22 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 
 	do_set_buffer_sizes(fd, buffer_sizes_[0], buffer_sizes_[1]);
 
-	socket* pSocket = new socket(thread_pool_, nullptr);
+	auto pSocket = std::make_unique<socket>(thread_pool_, nullptr);
 	if (!pSocket->socket_thread_) {
 		error = ENOMEM;
-		delete pSocket;
-		return nullptr;
+		pSocket.reset();
+	}
+	else {
+		pSocket->state_ = socket_state::connected;
+		pSocket->fd_ = fd;
+		pSocket->host_ = to_native(pSocket->peer_ip());
+		pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
+		if (pSocket->socket_thread_->start()) {
+			pSocket.reset();
+		}
 	}
 
-	pSocket->state_ = socket_state::connected;
-	pSocket->fd_ = fd;
-	pSocket->host_ = to_native(pSocket->peer_ip());
-	pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
-	pSocket->socket_thread_->start();
-
-	return std::unique_ptr<socket>(pSocket);
+	return pSocket;
 }
 
 listen_socket_state listen_socket::get_state() const
