@@ -1389,7 +1389,7 @@ int listen_socket::listen(address_type family, int port)
 		}
 	}
 
-	int res = ::listen(fd_, 1);
+	int res = ::listen(fd_, 64);
 	if (res) {
 		res = last_socket_error();
 		socket_thread::close_socket_fd(fd_);
