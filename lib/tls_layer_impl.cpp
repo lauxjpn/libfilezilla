@@ -480,7 +480,7 @@ ssize_t tls_layer_impl::push_function(void const* data, size_t len)
 
 	if (written < 0) {
 		can_write_to_socket_ = false;
-		if (error == EAGAIN) {
+		if (error != EAGAIN) {
 			socket_error_ = error;
 		}
 		gnutls_transport_set_errno(session_, error);
@@ -824,7 +824,13 @@ int tls_layer_impl::continue_handshake()
 		return 0;
 	}
 	else if (res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) {
-		return EAGAIN;
+		if (!socket_error_) {
+			return EAGAIN;
+		}
+
+		// GnuTLS has a writev() emulation that ignores trailing errors if
+		// at least some data got sent
+		res = GNUTLS_E_PUSH_ERROR;
 	}
 
 	failure(res, true);
@@ -853,7 +859,7 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 	}
 	else {
 		failure(res, false, L"gnutls_record_recv");
-		error = socket_error_;
+		error = socket_error_ ? socket_error_ : ECONNABORTED;
 	}
 
 	return -1;
@@ -891,21 +897,26 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 	}
 
 	if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
-		// Unfortunately we can't return EAGAIN here as GnuTLS has already consumed some data.
-		// With our semantics, EAGAIN means nothing has been handed off yet.
-		// Thus remember up to gnutls_record_get_max_size bytes from the input.
-		unsigned int max = static_cast<unsigned int>(gnutls_record_get_max_size(session_));
-		if (len > max) {
-			len = max;
+		if (!socket_error_) {
+			// Unfortunately we can't return EAGAIN here as GnuTLS has already consumed some data.
+			// With our semantics, EAGAIN means nothing has been handed off yet.
+			// Thus remember up to gnutls_record_get_max_size bytes from the input.
+			unsigned int max = static_cast<unsigned int>(gnutls_record_get_max_size(session_));
+			if (len > max) {
+				len = max;
+			}
+			send_buffer_.append(reinterpret_cast<unsigned char const*>(buffer), len);
+			return static_cast<int>(len);
 		}
-		send_buffer_.append(reinterpret_cast<unsigned char const*>(buffer), len);
-		return static_cast<int>(len);
+
+		// GnuTLS has a writev() emulation that ignores trailing errors if
+		// at least some data got sent
+		res = GNUTLS_E_PUSH_ERROR;
 	}
-	else {
-		failure(static_cast<int>(res), false, L"gnutls_record_send");
-		error = socket_error_;
-		return -1;
-	}
+
+	failure(static_cast<int>(res), false, L"gnutls_record_send");
+	error = socket_error_ ? socket_error_ : ECONNABORTED;
+	return -1;
 }
 
 void tls_layer_impl::failure(int code, bool send_close, std::wstring const& function)
@@ -979,9 +990,15 @@ int tls_layer_impl::continue_shutdown()
 			res = gnutls_bye(session_, GNUTLS_SHUT_WR);
 		}
 		if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
-			return EAGAIN;
+			if (!socket_error_) {
+				return EAGAIN;
+			}
+
+			// GnuTLS has a writev() emulation that ignores trailing errors if
+			// at least some data got sent
+			res = GNUTLS_E_PUSH_ERROR;
 		}
-		else if (res) {
+		if (res) {
 			failure(res, false, L"gnutls_bye");
 			return socket_error_ ? socket_error_ : ECONNABORTED;
 		}
@@ -1659,6 +1676,10 @@ int tls_layer_impl::do_call_gnutls_record_recv(void* data, size_t len)
 		// we are not getting another receive event.
 		logger_.log(logmsg::debug_verbose, L"gnutls_record_recv returned spurious EAGAIN");
 		res = gnutls_record_recv(session_, data, len);
+	}
+
+	if ((res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) && socket_error_) {
+		res = GNUTLS_E_PULL_ERROR;
 	}
 
 	return static_cast<int>(res);

@@ -139,7 +139,7 @@ private:
 	std::vector<uint8_t> required_certificate_;
 
 	bool socket_eof_{};
-	int socket_error_{ECONNABORTED}; // Set in the push and pull functions if reading/writing fails fatally
+	int socket_error_{}; // Set in the push and pull functions if reading/writing fails fatally
 
 	friend class tls_layer;
 	friend class tls_layerCallbacks;
