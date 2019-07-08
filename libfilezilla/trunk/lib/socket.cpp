@@ -1402,8 +1402,6 @@ int listen_socket::listen(address_type family, int port)
 	socket_thread_->waiting_ = WAIT_ACCEPT;
 
 	if (socket_thread_->start()) {
-		delete socket_thread_;
-		socket_thread_ = nullptr;
 		state_ = listen_socket_state::none;
 		socket_thread::close_socket_fd(fd_);
 		return EMFILE;
