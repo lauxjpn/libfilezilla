@@ -521,8 +521,8 @@ protected:
 			socket_->evt_handler_->send_event<hostaddress_event>(socket_->ev_source_, socket::address_to_string(addr.ai_addr, addr.ai_addrlen));
 		}
 
-		socket::socket_t fd = create_socket_fd(addr);
-		if (fd == -1) {
+		socket_->fd_ = create_socket_fd(addr);
+		if (socket_->fd_ == -1) {
 			if (socket_->evt_handler_) {
 				socket_->evt_handler_->send_event<socket_event>(socket_->ev_source_, addr.ai_next ? socket_event_flag::connection_next : socket_event_flag::connection, last_socket_error());
 			}
@@ -531,14 +531,14 @@ protected:
 		}
 
 		if (bindAddr.sockaddr_.sa_family != AF_UNSPEC && bindAddr.sockaddr_.sa_family == addr.ai_family) {
-			(void)::bind(fd, &bindAddr.sockaddr_, sizeof(bindAddr));
+			(void)::bind(socket_->fd_, &bindAddr.sockaddr_, sizeof(bindAddr));
 		}
 
 		auto* s = static_cast<socket*>(socket_);
-		do_set_flags(fd, s->flags_, s->flags_, s->keepalive_interval_);
-		do_set_buffer_sizes(fd, socket_->buffer_sizes_[0], socket_->buffer_sizes_[1]);
+		do_set_flags(socket_->fd_, s->flags_, s->flags_, s->keepalive_interval_);
+		do_set_buffer_sizes(socket_->fd_, socket_->buffer_sizes_[0], socket_->buffer_sizes_[1]);
 
-		int res = ::connect(fd, addr.ai_addr, addr.ai_addrlen);
+		int res = ::connect(socket_->fd_, addr.ai_addr, addr.ai_addrlen);
 		if (res == -1) {
 #ifdef FZ_WINDOWS
 			// Map to POSIX error codes
@@ -555,9 +555,6 @@ protected:
 		}
 
 		while (res == EINPROGRESS) {
-
-			socket_->fd_ = fd;
-
 			bool wait_successful;
 			do {
 				wait_successful = do_wait(WAIT_CONNECT, l);
@@ -567,9 +564,8 @@ protected:
 			} while (wait_successful);
 
 			if (!wait_successful) {
-				close_socket_fd(fd);
 				if (socket_) {
-					socket_->fd_ = -1;
+					close_socket_fd(socket_->fd_);
 				}
 				return -1;
 			}
@@ -583,11 +579,9 @@ protected:
 				socket_->evt_handler_->send_event<socket_event>(socket_->ev_source_, addr.ai_next ? socket_event_flag::connection_next : socket_event_flag::connection, res);
 			}
 
-			close_socket_fd(fd);
-			socket_->fd_ = -1;
+			close_socket_fd(socket_->fd_);
 		}
 		else {
-			socket_->fd_ = fd;
 			static_cast<socket*>(socket_)->state_ = socket_state::connected;
 
 			if (socket_->evt_handler_) {
