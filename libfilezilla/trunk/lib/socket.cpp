@@ -29,6 +29,9 @@
   #endif
   #include <poll.h>
   #undef mutex
+  #if HAVE_EVENTFD
+	#include <sys/eventfd.h>
+  #endif
 #endif
 
 #include <assert.h>
@@ -312,18 +315,6 @@ public:
 private:
 	bool initialized_{};
 };
-#else
-void close_pipe(int pipe[2])
-{
-	if (pipe[0] != -1) {
-		::close(pipe[0]);
-		pipe[0] = -1;
-	}
-	if (pipe[1] != -1) {
-		::close(pipe[1]);
-		pipe[1] = -1;
-	}
-}
 #endif
 }
 
@@ -339,10 +330,6 @@ public:
 	{
 #ifdef FZ_WINDOWS
 		static winsock_initializer init;
-		sync_event_ = WSA_INVALID_EVENT;
-#else
-		pipe_[0] = -1;
-		pipe_[1] = -1;
 #endif
 		for (int i = 0; i < WAIT_EVENTCOUNT; ++i) {
 			triggered_errors_[i] = 0;
@@ -352,12 +339,69 @@ public:
 	~socket_thread()
 	{
 		thread_.join();
+		destroy_sync();
+	}
+
+	int create_sync()
+	{
+#ifdef FZ_WINDOWS
+		if (sync_event_ == WSA_INVALID_EVENT) {
+			sync_event_ = WSACreateEvent();
+		}
+		if (sync_event_ == WSA_INVALID_EVENT) {
+			return 1;
+		}
+#elif defined HAVE_EVENTFD
+		if (event_fd_ == -1) {
+			event_fd_ = eventfd(0, EFD_CLOEXEC|EFD_NONBLOCK);
+			if (event_fd_ == -1) {
+				return errno;
+			}
+#ifndef HAVE_POLL
+			if (event_fd_ >= FD_SETSIZE) {
+				destroy_sync();
+				return EMFILE;
+			}
+#endif
+		}
+#else
+		if (pipe_[0] == -1) {
+			if (!create_pipe(pipe_)) {
+				return errno;
+			}
+
+#ifndef HAVE_POLL
+			if (pipe_[0] >= FD_SETSIZE) {
+				destroy_sync();
+				return EMFILE;
+			}
+#endif
+		}
+#endif
+		return 0;
+	}
+
+
+	void destroy_sync()
+	{
 #ifdef FZ_WINDOWS
 		if (sync_event_ != WSA_INVALID_EVENT) {
 			WSACloseEvent(sync_event_);
 		}
+#elif defined HAVE_EVENTFD
+		if (event_fd_ != -1) {
+			::close(event_fd_);
+			event_fd_ = -1;
+		}
 #else
-		close_pipe(pipe_);
+		if (pipe_[0] != -1) {
+			::close(pipe_[0]);
+			pipe_[0] = -1;
+		}
+		if (pipe_[1] != -1) {
+			::close(pipe_[1]);
+			pipe_[1] = -1;
+		}
 #endif
 	}
 
@@ -404,39 +448,16 @@ public:
 			wakeup_thread(l);
 			return 0;
 		}
-#ifdef FZ_WINDOWS
-		if (sync_event_ == WSA_INVALID_EVENT) {
-			sync_event_ = WSACreateEvent();
-		}
-		if (sync_event_ == WSA_INVALID_EVENT) {
-			return 1;
-		}
-#else
-		if (pipe_[0] == -1) {
-			if (!create_pipe(pipe_)) {
-				return errno;
-			}
 
-#ifndef HAVE_POLL
-			if (pipe_[0] >= FD_SETSIZE) {
-				close_pipe(pipe_);
-				return EMFILE;
-			}
-#endif
+		int res = create_sync();
+		if (res) {
+			return res;
 		}
-#endif
 
 		thread_ = socket_->thread_pool_.spawn([this]() { entry(); });
 
 		if (!thread_) {
-#ifdef FZ_WINDOWS
-			if (sync_event_ != WSA_INVALID_EVENT) {
-				WSACloseEvent(sync_event_);
-				sync_event_ = WSA_INVALID_EVENT;
-			}
-#else
-			close_pipe(pipe_);
-#endif
+			destroy_sync();
 			return EMFILE;
 		}
 
@@ -464,6 +485,13 @@ public:
 
 #ifdef FZ_WINDOWS
 		WSASetEvent(sync_event_);
+#elif defined(HAVE_EVENTFD)
+		uint64_t tmp = 1;
+
+		int ret;
+		do {
+			ret = write(event_fd_, &tmp, 8);
+		} while (ret == -1 && errno == EINTR);
 #else
 		char tmp = 0;
 
@@ -782,7 +810,11 @@ protected:
 			}
 #elif defined(HAVE_POLL)
 			pollfd fds[2]{};
+#ifdef HAVE_EVENTFD
+			fds[0].fd = event_fd_;
+#else
 			fds[0].fd = pipe_[0];
+#endif
 			fds[0].events = POLLIN;
 			fds[1].fd = socket_->fd_;
 			fds[1].events = 0;
@@ -802,7 +834,11 @@ protected:
 
 			if (res > 0 && fds[0].revents) {
 				char buffer[100];
+#ifdef HAVE_EVENTFD
+				int damn_spurious_warning = read(event_fd_, buffer, 8);
+#else
 				int damn_spurious_warning = read(pipe_[0], buffer, 100);
+#endif
 				(void)damn_spurious_warning; // We do not care about return value and this is definitely correct!
 			}
 
@@ -867,7 +903,11 @@ protected:
 			FD_ZERO(&readfds);
 			FD_ZERO(&writefds);
 
+#ifdef HAVE_EVENTFD
+			FD_SET(event_fd_, &readfds);
+#else
 			FD_SET(pipe_[0], &readfds);
+#endif
 
 			if (waiting_ & (WAIT_READ | WAIT_ACCEPT)) {
 				FD_SET(socket_->fd_, &readfds);
@@ -876,7 +916,11 @@ protected:
 				FD_SET(socket_->fd_, &writefds);
 			}
 
+#ifdef HAVE_EVENTFD
+			int maxfd = std::max(event_fd_, socket_->fd_) + 1;
+#else
 			int maxfd = std::max(pipe_[0], socket_->fd_) + 1;
+#endif
 
 			l.unlock();
 
@@ -884,9 +928,15 @@ protected:
 
 			l.lock();
 
+#ifdef HAVE_EVENTFD
+			if (res > 0 && FD_ISSET(event_fd_, &readfds)) {
+				char buffer[8];
+				int damn_spurious_warning = read(event_fd_, buffer, 8);
+#else
 			if (res > 0 && FD_ISSET(pipe_[0], &readfds)) {
 				char buffer[100];
 				int damn_spurious_warning = read(pipe_[0], buffer, 100);
+#endif
 				(void)damn_spurious_warning; // We do not care about return value and this is definitely correct!
 			}
 
@@ -1046,10 +1096,12 @@ protected:
 
 #ifdef FZ_WINDOWS
 	// We wait on this using WSAWaitForMultipleEvents
-	WSAEVENT sync_event_;
+	WSAEVENT sync_event_{WSA_INVALID_EVENT};
+#elif defined(HAVE_EVENTFD)
+	int event_fd_{-1};
 #else
 	// A pipe is used to unblock select
-	int pipe_[2];
+	int pipe_[2]{-1, -1};
 #endif
 
 	mutex mutex_;

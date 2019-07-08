@@ -71,6 +71,9 @@ AC_CHECK_FUNCS(posix_fadvise)
 
 AC_CHECK_FUNCS(poll pipe2 accept4)
 
+# eventfd is preferred over selfpipe, half the descriptors after all.
+CHECK_EVENTFD
+
 # Some platforms have no d_type entry in their dirent structure
 gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE
 
