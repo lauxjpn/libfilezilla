@@ -429,7 +429,14 @@ public:
 		thread_ = socket_->thread_pool_.spawn([this]() { entry(); });
 
 		if (!thread_) {
+#ifdef FZ_WINDOWS
+			if (sync_event_ != WSA_INVALID_EVENT) {
+				WSACloseEvent(sync_event_);
+				sync_event_ = WSA_INVALID_EVENT;
+			}
+#else
 			close_pipe(pipe_);
+#endif
 			return EMFILE;
 		}
 
