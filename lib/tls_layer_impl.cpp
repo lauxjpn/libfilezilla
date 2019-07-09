@@ -1763,11 +1763,13 @@ std::pair<std::string, std::string> tls_layer_impl::generate_selfsigned_certific
 		return ret;
 	}
 
-	unsigned int bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_RSA, GNUTLS_SEC_PARAM_HIGH);
-	if (bits < 2048) {
+	auto fmt = GNUTLS_PK_ECDSA;
+	unsigned int bits = gnutls_sec_param_to_pk_bits(fmt, GNUTLS_SEC_PARAM_HIGH);
+	if (fmt == GNUTLS_PK_RSA && bits < 2048) {
 		bits = 2048;
 	}
-	res = gnutls_x509_privkey_generate(priv, GNUTLS_PK_RSA, bits, 0);
+
+	res = gnutls_x509_privkey_generate(priv, fmt, bits, 0);
 	if (res) {
 		gnutls_x509_privkey_deinit(priv);
 		return ret;
