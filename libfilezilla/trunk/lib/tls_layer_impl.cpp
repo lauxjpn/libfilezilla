@@ -738,8 +738,13 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 		set_hostname(session_hostname);
 	}
 
-	if (tls_layer_.next_layer_.get_state() != socket_state::connected) {
+	if (tls_layer_.next_layer_.get_state() == socket_state::none || tls_layer_.next_layer_.get_state() == socket_state::connecting) {
+		// Wait until the socket gets connected
 		return true;
+	}
+	else if (tls_layer_.next_layer_.get_state() != socket_state::connected) {
+		// We're too late
+		return false;
 	}
 
 	if (hostname_.empty()) {
@@ -769,8 +774,13 @@ bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_res
 		gnutls_handshake_set_hook_function(session_, GNUTLS_HANDSHAKE_ANY, GNUTLS_HOOK_BOTH, &handshake_hook_func);
 	}
 
-	if (tls_layer_.next_layer_.get_state() != socket_state::connected) {
+	if (tls_layer_.next_layer_.get_state() == socket_state::none || tls_layer_.next_layer_.get_state() == socket_state::connecting) {
+		// Wait until the socket gets connected
 		return true;
+	}
+	else if (tls_layer_.next_layer_.get_state() != socket_state::connected) {
+		// We're too late
+		return false;
 	}
 
 	return continue_handshake() == EAGAIN;
