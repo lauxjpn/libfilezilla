@@ -300,9 +300,9 @@ inline auto FZ_PUBLIC_SYMBOL strtok_view(std::wstring_view const& tokens, wchar_
 	return strtok_view(tokens, std::wstring_view(&delim, 1), ignore_empty);
 }
 
-// Converts string to integral type T. If string is not convertible, T() is returned.
+/// \private
 template<typename T, typename String>
-T to_integral(String const& s, T const errorval = T())
+T to_integral_impl(String const& s, T const errorval = T())
 {
 	T ret{};
 
@@ -331,6 +331,23 @@ T to_integral(String const& s, T const errorval = T())
 		return ret;
 	}
 }
+
+/// Converts string to integral type T. If string is not convertible, errorval is returned.
+template<typename T>
+T to_integral(std::string_view const& s, T const errorval = T()) {
+	return to_integral_impl<T>(s, errorval);
+}
+
+template<typename T>
+T to_integral(std::wstring_view const& s, T const errorval = T()) {
+	return to_integral_impl<T>(s, errorval);
+}
+
+template<typename T, typename StringType>
+T to_integral(std::basic_string_view<StringType> const& s, T const errorval = T()) {
+	return to_integral_impl<T>(s, errorval);
+}
+
 
 /// \brief Returns true iff the string only has characters in the 7-bit ASCII range
 template<typename String>
