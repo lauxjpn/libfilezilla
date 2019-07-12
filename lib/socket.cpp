@@ -316,6 +316,19 @@ private:
 	bool initialized_{};
 };
 #endif
+
+
+void close_socket_fd(socket::socket_t& fd)
+{
+	if (fd != -1) {
+#ifdef FZ_WINDOWS
+		closesocket(fd);
+#else
+		close(fd);
+#endif
+		fd = -1;
+	}
+}
 }
 
 class socket_thread final
@@ -536,18 +549,6 @@ protected:
 		}
 
 		return fd;
-	}
-
-	static void close_socket_fd(socket::socket_t& fd)
-	{
-		if (fd != -1) {
-	#ifdef FZ_WINDOWS
-			closesocket(fd);
-	#else
-			close(fd);
-	#endif
-			fd = -1;
-		}
 	}
 
 	int try_connect_host(addrinfo & addr, sockaddr_u const& bindAddr, scoped_lock & l)
@@ -1184,7 +1185,7 @@ void socket_base::do_set_event_handler(event_handler* pEvtHandler)
 int socket_base::close()
 {
 	if (!socket_thread_) {
-		socket_thread::close_socket_fd(fd_);
+		close_socket_fd(fd_);
 		return 0;
 	}
 
@@ -1197,7 +1198,7 @@ int socket_base::close()
 
 	socket_thread_->wakeup_thread(l);
 
-	socket_thread::close_socket_fd(fd);
+	close_socket_fd(fd);
 	if (dynamic_cast<socket*>(this)) {
 		static_cast<socket*>(this)->state_ = socket_state::closed;
 	}
@@ -1359,6 +1360,12 @@ bool socket_base::bind(std::string const& address)
 }
 
 
+socket_descriptor::~socket_descriptor()
+{
+	close_socket_fd(fd_);
+}
+
+
 listen_socket::listen_socket(thread_pool & pool, event_handler* evt_handler)
 	: socket_base(pool, evt_handler, this)
 	, socket_event_source(this)
@@ -1434,7 +1441,7 @@ int listen_socket::listen(address_type family, int port)
 			}
 
 			res = last_socket_error();
-			socket_thread::close_socket_fd(fd_);
+			close_socket_fd(fd_);
 		}
 		freeaddrinfo(addressList);
 		if (fd_ == -1) {
@@ -1445,7 +1452,7 @@ int listen_socket::listen(address_type family, int port)
 	int res = ::listen(fd_, 64);
 	if (res) {
 		res = last_socket_error();
-		socket_thread::close_socket_fd(fd_);
+		close_socket_fd(fd_);
 		return res;
 	}
 
@@ -1455,7 +1462,7 @@ int listen_socket::listen(address_type family, int port)
 
 	if (socket_thread_->start()) {
 		state_ = listen_socket_state::none;
-		socket_thread::close_socket_fd(fd_);
+		close_socket_fd(fd_);
 		return EMFILE;
 	}
 
@@ -1464,8 +1471,23 @@ int listen_socket::listen(address_type family, int port)
 
 std::unique_ptr<socket> listen_socket::accept(int &error)
 {
+	socket_descriptor desc = fast_accept(error);
+	if (!desc) {
+		return std::unique_ptr<socket>();
+	}
+
+	auto ret = socket::from_descriptor(std::move(desc), thread_pool_, error);
+	if (!ret) {
+		error = ENOMEM;
+	}
+	return ret;
+}
+
+socket_descriptor listen_socket::fast_accept(int &error)
+{
 	if (!socket_thread_) {
-		return nullptr;
+		error = ENOTSOCK;
+		return socket_descriptor();
 	}
 
 	socket_t fd;
@@ -1490,42 +1512,15 @@ std::unique_ptr<socket> listen_socket::accept(int &error)
 		if (fd >= FD_SETSIZE) {
 			::close(fd);
 			error = EMFILE;
-			return nullptr;
+			return socket_descriptor();
 		}
 #endif
 	}
 
-	if (fd == -1) {
-		error = last_socket_error();
-		return nullptr;
+	if (fd != -1) {
+		do_set_buffer_sizes(fd, buffer_sizes_[0], buffer_sizes_[1]);
 	}
-
-#if defined(SO_NOSIGPIPE) && !defined(MSG_NOSIGNAL)
-	// We do not want SIGPIPE if writing to socket.
-	const int value = 1;
-	setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(int));
-#endif
-
-	set_nonblocking(fd);
-
-	do_set_buffer_sizes(fd, buffer_sizes_[0], buffer_sizes_[1]);
-
-	auto pSocket = std::make_unique<socket>(thread_pool_, nullptr);
-	if (!pSocket->socket_thread_) {
-		error = ENOMEM;
-		pSocket.reset();
-	}
-	else {
-		pSocket->state_ = socket_state::connected;
-		pSocket->fd_ = fd;
-		pSocket->host_ = to_native(pSocket->peer_ip());
-		pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
-		if (pSocket->socket_thread_->start()) {
-			pSocket.reset();
-		}
-	}
-
-	return pSocket;
+	return socket_descriptor(fd);
 }
 
 listen_socket_state listen_socket::get_state() const
@@ -1553,6 +1548,42 @@ socket::~socket()
 
 	scoped_lock l(socket_thread_->mutex_);
 	detach_thread(l);
+}
+
+std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error)
+{
+	if (!desc) {
+		error = ENOTSOCK;
+		return nullptr;
+	}
+
+	socket_t fd = desc.detach();
+
+#if defined(SO_NOSIGPIPE) && !defined(MSG_NOSIGNAL)
+	// We do not want SIGPIPE if writing to socket.
+	const int value = 1;
+	setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(int));
+#endif
+
+	set_nonblocking(fd);
+
+	auto pSocket = std::make_unique<socket>(pool, nullptr);
+	if (!pSocket->socket_thread_) {
+		error = ENOMEM;
+		pSocket.reset();
+	}
+	else {
+		pSocket->state_ = socket_state::connected;
+		pSocket->fd_ = fd;
+		pSocket->host_ = to_native(pSocket->peer_ip());
+		pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
+		if (pSocket->socket_thread_->start()) {
+			error = ENOMEM;
+			pSocket.reset();
+		}
+	}
+
+	return pSocket;
 }
 
 int socket::connect(native_string const& host, unsigned int port, address_type family)
