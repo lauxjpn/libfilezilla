@@ -201,11 +201,39 @@ enum class listen_socket_state
 	listening,
 };
 
+class FZ_PUBLIC_SYMBOL socket_descriptor final
+{
+public:
+	socket_descriptor() = default;
+	~socket_descriptor();
+	explicit socket_descriptor(socket_base::socket_t fd) noexcept : fd_(fd) {}
+
+	socket_descriptor(socket_descriptor const&) = delete;
+	socket_descriptor& operator=(socket_descriptor const&) = delete;
+
+	socket_descriptor(socket_descriptor && rhs) noexcept { std::swap(fd_, rhs.fd_); }
+	socket_descriptor& operator=(socket_descriptor && rhs) noexcept {
+		std::swap(fd_, rhs.fd_);
+		return *this;
+	}
+
+	socket_base::socket_t detach() {
+		int ret = fd_;
+		fd_ = -1;
+		return ret;
+	}
+
+	explicit operator bool() const { return fd_ != -1; }
+
+private:
+	socket_base::socket_t fd_{-1};
+};
+
 /**
  * /brief Simple Listen socket
  *
  * When a client connects, a socket event with the connection flag is send.
- * 
+ *
  * Call accept to accept.
  */
 class FZ_PUBLIC_SYMBOL listen_socket final : public socket_base, public socket_event_source
@@ -231,6 +259,14 @@ public:
 
 	/// Accepts incoming connection. If no socket is returned, error contains the reason
 	std::unique_ptr<socket> accept(int& error);
+
+	/**
+	 * \brief  Like accept, but only returns a socket descriptor.
+	 *
+	 * Best suited for tight accept loops where the descriptor is handed
+	 * off to other threads.
+	 */
+	socket_descriptor fast_accept(int& error);
 
 	listen_socket_state get_state() const;
 
@@ -329,6 +365,8 @@ public:
 
 	socket(socket const&) = delete;
 	socket& operator=(socket const&) = delete;
+
+	static std::unique_ptr<socket> from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error);
 
 	socket_state get_state() const override;
 	bool is_connected() const {
