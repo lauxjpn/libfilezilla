@@ -57,23 +57,24 @@ void ip_address_test::test_addresses()
 	test_address("4::1",                                    fz::address_type::ipv6, true,  "0004:0000:0000:0000:0000:0000:0000:0001");
 	test_address("1234:abcd::1234:ef01",                    fz::address_type::ipv6, true,  "1234:abcd:0000:0000:0000:0000:1234:ef01");
 	test_address("1234:ABCD::1234:ef01",                    fz::address_type::ipv6, true,  "1234:abcd:0000:0000:0000:0000:1234:ef01");
-	test_address("0:0:0:0:0:0:0:1",                         fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("0:0:0::0:0:0:0:1",                        fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("::0:0:0:0:0:0:0:1",                       fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("0000:0000:0000:0000:0000:0000:0000:0001", fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("0:0:0:0:0:0:0:1",                         fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("0:0:0::0:0:0:0:1",                        fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("::0:0:0:0:0:0:0:1",                       fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("0000:0000:0000:0000:0000:0000:0000:0001", fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("::",                                      fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0000");
 
 	test_address("[::1]",                                     fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
 	test_address("[1234::1]",                                 fz::address_type::ipv6, true,  "1234:0000:0000:0000:0000:0000:0000:0001");
 	test_address("[4::1]",                                    fz::address_type::ipv6, true,  "0004:0000:0000:0000:0000:0000:0000:0001");
 	test_address("[1234:abcd::1234:ef01]",                    fz::address_type::ipv6, true,  "1234:abcd:0000:0000:0000:0000:1234:ef01");
 	test_address("[1234:ABCD::1234:ef01]",                    fz::address_type::ipv6, true,  "1234:abcd:0000:0000:0000:0000:1234:ef01");
-	test_address("[0:0:0:0:0:0:0:1]",                         fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("[::0:0:0:0:0:0:0:1]",                       fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("[0:0:0::0:0:0:0:1]",                        fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
-	test_address("[0000:0000:0000:0000:0000:0000:0000:0001]", fz::address_type::ipv6, false,  "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("[0:0:0:0:0:0:0:1]",                         fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("[::0:0:0:0:0:0:0:1]",                       fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("[0:0:0::0:0:0:0:1]",                        fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("[0000:0000:0000:0000:0000:0000:0000:0001]", fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0001");
+	test_address("[::]",                                      fz::address_type::ipv6, false, "0000:0000:0000:0000:0000:0000:0000:0000");
 
 	// Invalid IPv6 addresses
-	test_address("::",                                fz::address_type::unknown, false, "");
 	test_address(":::",                               fz::address_type::unknown, false, "");
 	test_address(":1234:abcd::1234:ef01",             fz::address_type::unknown, false, "");
 	test_address("1234:abcd::1234:ef01:",             fz::address_type::unknown, false, "");

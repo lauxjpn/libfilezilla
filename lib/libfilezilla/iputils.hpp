@@ -15,8 +15,8 @@ namespace fz {
  *
  * Returns an empty string if the passed string isn't a valid IPv6 address.
  */
-std::string FZ_PUBLIC_SYMBOL get_ipv6_long_form(std::string const& short_address);
-std::wstring FZ_PUBLIC_SYMBOL get_ipv6_long_form(std::wstring const& short_address);
+std::string FZ_PUBLIC_SYMBOL get_ipv6_long_form(std::string_view const& short_address);
+std::wstring FZ_PUBLIC_SYMBOL get_ipv6_long_form(std::wstring_view const& short_address);
 
 /** \brief Tests whether the passed IP address is routable on the public Internet.
  *
@@ -34,8 +34,8 @@ std::wstring FZ_PUBLIC_SYMBOL get_ipv6_long_form(std::wstring const& short_addre
  *
  * All other addresses are assumed routable.
  */
-bool FZ_PUBLIC_SYMBOL is_routable_address(std::string const& address);
-bool FZ_PUBLIC_SYMBOL is_routable_address(std::wstring const& address);
+bool FZ_PUBLIC_SYMBOL is_routable_address(std::string_view const& address);
+bool FZ_PUBLIC_SYMBOL is_routable_address(std::wstring_view const& address);
 
 enum class address_type
 {
@@ -45,8 +45,8 @@ enum class address_type
 };
 
 /** \brief Gets the type of the passed IP address. */
-address_type FZ_PUBLIC_SYMBOL get_address_type(std::string const& address);
-address_type FZ_PUBLIC_SYMBOL get_address_type(std::wstring const& address);
+address_type FZ_PUBLIC_SYMBOL get_address_type(std::string_view const& address);
+address_type FZ_PUBLIC_SYMBOL get_address_type(std::wstring_view const& address);
 
 }
 
