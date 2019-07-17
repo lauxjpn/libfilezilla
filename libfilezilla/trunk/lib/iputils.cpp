@@ -1,153 +1,134 @@
 #include "libfilezilla/iputils.hpp"
 #include "libfilezilla/encode.hpp"
 
-#include <stddef.h>
-
 namespace fz {
-template<typename String, typename Char = typename String::value_type>
-String do_get_ipv6_long_form(String const& short_address)
+template<typename String, typename Char = typename String::value_type, typename OutString = std::basic_string<Char>>
+OutString do_get_ipv6_long_form(String const& short_address)
 {
 	size_t start = 0;
 	size_t end = short_address.size();
 
 	if (!short_address.empty() && short_address[0] == '[') {
 		if (short_address.back() != ']') {
-			return String();
+			return OutString();
 		}
 		++start;
 		--end;
 	}
 
-	Char buf[40] = { '0', '0', '0', '0', ':',
+	if ((end - start) < 2 || (end - start) > 39) {
+		return OutString();
+	}
+
+	Char buf[39] = {
 		'0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
 		'0', '0', '0', '0', ':',
-		'0', '0', '0', '0', 0
+		'0', '0', '0', '0', ':',
+		'0', '0', '0', '0'
 	};
 
-	Char* out = buf;
+	size_t left_segments{};
 
-	if (end - start > 39) {
-		return String();
-	}
-
-	// First part, before possible ::
-	size_t i;
-	size_t grouplength = 0;
-
-	Char const* s = short_address.c_str();
-	for (i = start; i <= end; ++i) {
-		Char const& c = tolower_ascii(s[i]);
-		if (i == end || c == ':' || !c) {
-			if (!grouplength) {
-				// Empty group length, not valid
-				if (i == end || !c || s[i + 1] != ':') {
-					return String();
+	// Left half, before possible ::
+	while (left_segments < 8 && start < end) {
+		size_t pos = short_address.find(':', start);
+		if (pos == String::npos) {
+			pos = end;
+		}
+		if (pos == start) {
+			if (!left_segments) {
+				if (short_address[start + 1] != ':') {
+					return OutString();
 				}
-				++i;
-				break;
+				start = pos + 1;
 			}
-
-			out += 4 - grouplength;
-			for (size_t j = grouplength; j > 0; --j) {
-				*out++ = tolower_ascii(s[i - j]);
+			else {
+				start = pos;
 			}
-			// End of string...
-			if (i == end || !c) {
-				if (!*out) {
-					// ...on time
-					return buf;
-				}
-				else {
-					// ...premature
-					return String();
-				}
-			}
-			else if (!*out) {
-				// Too long
-				return String();
-			}
-
-			++out;
-
-			grouplength = 0;
-			if (s[i + 1] == ':') {
-				++i;
-				break;
-			}
-			continue;
+			break;
 		}
-		else if ((c < '0' || c > '9') &&
-			(c < 'a' || c > 'f'))
-		{
-			// Invalid character
-			return String();
+
+		size_t group_length = pos - start;
+		if (group_length > 4) {
+			return OutString();
 		}
-		// Too long group
-		if (++grouplength > 4) {
-			return String();
+
+		Char* out = buf + 5 * left_segments;
+		out += 4 - group_length;
+		for (size_t i = start; i < pos; ++i) {
+			Char const& c = short_address[i];
+			if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+				*out++ = c;
+			}
+			else if (c >= 'A' && c <= 'F') {
+				*out++ = c + ('a' - 'A');
+			}
+			else {
+				// Invalid character
+				return OutString();
+			}
 		}
+		++left_segments;
+
+		start = pos + 1;
 	}
 
-	// Second half after ::
+	size_t right_segments{};
 
-	Char* end_first = out;
-	out = &buf[38];
-	size_t stop = i;
-	for (i = end - 1; i > stop; --i) {
-		if (out < end_first) {
-			// Too long
-			return String();
-		}
+	// Right half, after possible ::
+	while (left_segments + right_segments < 8 && start < end) {
+		--end;
+		size_t pos = short_address.rfind(':', end); // Cannot be npos
 
-		Char const& c = tolower_ascii(s[i]);
-		if (c == ':') {
-			if (!grouplength) {
-				// Empty group length, not valid
-				return String();
+		size_t const group_length = end - pos;
+		if (!group_length) {
+			if (left_segments || right_segments) {
+				/// ::: or two ::
+				return OutString();
 			}
-
-			out -= 5 - grouplength;
-
-			grouplength = 0;
-			continue;
+			break;
 		}
-		else if ((c < '0' || c > '9') &&
-			(c < 'a' || c > 'f'))
-		{
-			// Invalid character
-			return String();
+		else if (group_length > 4) {
+			return OutString();
 		}
-		// Too long group
-		if (++grouplength > 4) {
-			return String();
-		}
-		*out-- = c;
-	}
-	if (!grouplength) {
-		// Empty group length, not valid
-		return String();
-	}
-	out -= 5 - grouplength;
-	out += 2;
 
-	ptrdiff_t diff = out - end_first;
-	if (diff < 0 || diff % 5) {
-		return String();
+		Char* out = buf + 5 * (8 - right_segments) - 1;
+		for (size_t i = end; i > pos; --i) {
+			Char const& c = short_address[i];
+			if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+				*(--out) = c;
+			}
+			else if (c >= 'A' && c <= 'F') {
+				*(--out) = c + ('a' - 'A');
+			}
+			else {
+				// Invalid character
+				return OutString();
+			}
+		}
+		++right_segments;
+
+		end = pos;
 	}
 
-	return buf;
+	if (start < end) {
+		// Too many segments
+		return OutString();
+	}
+
+	return OutString(buf, 39);
 }
 
-std::string get_ipv6_long_form(std::string const& short_address)
+std::string get_ipv6_long_form(std::string_view const& short_address)
 {
 	return do_get_ipv6_long_form(short_address);
 }
 
-std::wstring get_ipv6_long_form(std::wstring const& short_address)
+std::wstring get_ipv6_long_form(std::wstring_view const& short_address)
 {
 	return do_get_ipv6_long_form(short_address);
 }
@@ -158,7 +139,7 @@ bool do_is_routable_address(String const& address)
 	auto const type = get_address_type(address);
 
 	if (type == address_type::ipv6) {
-		String long_address = do_get_ipv6_long_form(address);
+		auto long_address = do_get_ipv6_long_form(address);
 		if (long_address.size() != 39) {
 			return false;
 		}
@@ -173,13 +154,13 @@ bool do_is_routable_address(String const& address)
 			}
 
 			if (long_address.substr(0, 30) == fzS(Char, "0000:0000:0000:0000:0000:ffff:")) {
-				Char const dot = '.';
+				char const dot = '.';
 				// IPv4 mapped
-				String ipv4 =
-					toString<String>(hex_char_to_int(long_address[30]) * 16 + hex_char_to_int(long_address[31])) + dot +
-					toString<String>(hex_char_to_int(long_address[32]) * 16 + hex_char_to_int(long_address[33])) + dot +
-					toString<String>(hex_char_to_int(long_address[35]) * 16 + hex_char_to_int(long_address[36])) + dot +
-					toString<String>(hex_char_to_int(long_address[37]) * 16 + hex_char_to_int(long_address[38]));
+				std::string ipv4 =
+					toString<std::string>(hex_char_to_int(long_address[30]) * 16 + hex_char_to_int(long_address[31])) + dot +
+					toString<std::string>(hex_char_to_int(long_address[32]) * 16 + hex_char_to_int(long_address[33])) + dot +
+					toString<std::string>(hex_char_to_int(long_address[35]) * 16 + hex_char_to_int(long_address[36])) + dot +
+					toString<std::string>(hex_char_to_int(long_address[37]) * 16 + hex_char_to_int(long_address[38]));
 
 				return do_is_routable_address(ipv4);
 			}
@@ -221,7 +202,7 @@ bool do_is_routable_address(String const& address)
 				return false;
 			}
 
-			int segment = std::stoi(middle.substr(0, pos)); // Cannot throw as we have verified it to be a valid IPv4
+			auto segment = fz::to_integral<uint8_t>(middle.substr(0, pos)); // Cannot throw as we have verified it to be a valid IPv4
 			if (segment >= 16 && segment <= 31) {
 				return false;
 			}
@@ -233,12 +214,12 @@ bool do_is_routable_address(String const& address)
 	return false;
 }
 
-bool is_routable_address(std::string const& address)
+bool is_routable_address(std::string_view const& address)
 {
 	return do_is_routable_address(address);
 }
 
-bool is_routable_address(std::wstring const& address)
+bool is_routable_address(std::wstring_view const& address)
 {
 	return do_is_routable_address(address);
 }
@@ -288,12 +269,12 @@ address_type do_get_address_type(String const& address)
 	return address_type::ipv4;
 }
 
-address_type get_address_type(std::string const& address)
+address_type get_address_type(std::string_view const& address)
 {
 	return do_get_address_type(address);
 }
 
-address_type get_address_type(std::wstring const& address)
+address_type get_address_type(std::wstring_view const& address)
 {
 	return do_get_address_type(address);
 }
