@@ -15,6 +15,9 @@ typedef std::make_signed_t<size_t> ssize_t;
 namespace fz {
 class tls_system_trust_store;
 class logger_interface;
+namespace {
+struct cert_list_holder;
+}
 
 class tls_layer;
 class tls_layer_impl final
@@ -78,7 +81,7 @@ private:
 	int continue_shutdown();
 
 	int verify_certificate();
-	bool certificate_is_blacklisted(std::vector<x509_certificate> const& certificates);
+	bool certificate_is_blacklisted(cert_list_holder const& certificates);
 
 	void log_error(int code, std::wstring const& function, logmsg::type logLevel = logmsg::error);
 	void log_alert(logmsg::type logLevel);

@@ -11,6 +11,7 @@
 #include <gnutls/x509.h>
 
 #include <algorithm>
+#include <set>
 
 #include <string.h>
 
@@ -1207,8 +1208,25 @@ std::vector<x509_certificate::subject_name> tls_layer_impl::get_cert_subject_alt
 	return ret;
 }
 
-bool tls_layer_impl::certificate_is_blacklisted(std::vector<x509_certificate> const&)
+bool tls_layer_impl::certificate_is_blacklisted(cert_list_holder const& certs)
 {
+	static std::set<std::string, std::less<>> const bad_authority_key_ids = {
+		std::string("\xF4\x94\xBF\xDE\x50\xB6\xDB\x6B\x24\x3D\x9E\xF7\xBE\x3A\xAE\x36\xD7\xFB\x0E\x05", 20) // Nation-wide MITM in Kazakhstan
+	};
+
+	char buf[256];
+	unsigned int critical{};
+	for (size_t i = 0; i < certs.certs_size; ++i) {
+		auto const& cert = certs.certs[i];
+		size_t size = sizeof(buf);
+		int res = gnutls_x509_crt_get_authority_key_id(cert, buf, &size, &critical);
+		if (!res) {
+			auto it = bad_authority_key_ids.find(std::string_view(buf, size));
+			if (it != bad_authority_key_ids.cend()) {
+				return true;
+			}
+		}
+	}
 	return false;
 }
 
@@ -1536,7 +1554,8 @@ int tls_layer_impl::verify_certificate()
 			}
 		}
 
-		if (certificate_is_blacklisted(certificates)) {
+		if (certificate_is_blacklisted(certs)) {
+			logger_.log(logmsg::error, fztranslate("Man-in-the-Middle attack detected, aborting connection."));
 			failure(0, true);
 			return EINVAL;
 		}
