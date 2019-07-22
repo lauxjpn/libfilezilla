@@ -35,23 +35,36 @@ int hex_char_to_int(Char c)
 	return -1;
 }
 
-template<typename String>
-std::vector<uint8_t> hex_decode(String const& in)
+/// \private
+template<typename OutString, typename String>
+OutString hex_decode_impl(String const& in)
 {
-	std::vector<uint8_t> ret;
+	OutString ret;
 	if (!(in.size() % 2)) {
 		ret.reserve(in.size() / 2);
 		for (size_t i = 0; i < in.size(); i += 2) {
 			int high = hex_char_to_int(in[i]);
 			int low = hex_char_to_int(in[i + 1]);
 			if (high == -1 || low == -1) {
-				return std::vector<uint8_t>();
+				return OutString();
 			}
-			ret.push_back(static_cast<uint8_t>((high << 4) + low));
+			ret.push_back(static_cast<typename OutString::value_type>((high << 4) + low));
 		}
 	}
 
 	return ret;
+}
+
+template<typename OutString = std::vector<uint8_t>>
+OutString hex_decode(std::string_view const& in)
+{
+	return hex_decode_impl<OutString>(in);
+}
+
+template<typename OutString = std::vector<uint8_t>>
+OutString hex_decode(std::wstring_view const& in)
+{
+	return hex_decode_impl<OutString>(in);
 }
 
 /** \brief Converts an integer to the corresponding lowercase hex digit
