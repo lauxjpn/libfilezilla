@@ -468,6 +468,11 @@ public:
 	};
 
 	int flags() const { return flags_; }
+
+	/// Enables or disabled the passed flags
+	void set_flags(int flags, bool enable);
+
+	/// Sets the entire mask of enabled flag, disabling all others
 	void set_flags(int flags);
 
 	/**

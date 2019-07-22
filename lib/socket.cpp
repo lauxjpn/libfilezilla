@@ -1867,6 +1867,25 @@ void socket::set_keepalive_interval(duration const& d)
 	}
 }
 
+void socket::set_flags(int flags, bool enable)
+{
+	if (!socket_thread_) {
+		return;
+	}
+
+	scoped_lock l(socket_thread_->mutex_);
+
+	if (fd_ != -1) {
+		do_set_flags(fd_, enable ? flags : 0, flags & (flags ^ flags_), keepalive_interval_);
+	}
+	if (enable) {
+		flags_ |= flags;
+	}
+	else {
+		flags_ &= ~flags;
+	}
+}
+
 void socket::set_flags(int flags)
 {
 	if (!socket_thread_) {
@@ -1880,7 +1899,6 @@ void socket::set_flags(int flags)
 	}
 	flags_ = flags;
 }
-
 
 socket_layer::socket_layer(event_handler* handler, socket_interface& next_layer, bool event_passthrough)
 	: socket_interface(next_layer.root())
