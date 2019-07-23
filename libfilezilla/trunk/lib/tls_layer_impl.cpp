@@ -248,7 +248,7 @@ bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_s
 	}
 	std::string k;
 	k.resize(ks);
-	int read = kf.read(k.data(), ks);
+	auto read = kf.read(k.data(), ks);
 	if (read != ks) {
 		logger_.log(logmsg::error, fztranslate("Could not read key file."));
 		return false;

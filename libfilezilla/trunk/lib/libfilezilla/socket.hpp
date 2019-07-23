@@ -218,7 +218,7 @@ public:
 	}
 
 	socket_base::socket_t detach() {
-		int ret = fd_;
+		socket_base::socket_t ret = fd_;
 		fd_ = -1;
 		return ret;
 	}
