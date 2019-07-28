@@ -245,7 +245,7 @@ String format_arg(field const& f, Arg&& arg)
 }
 
 template<typename String, typename... Args>
-String extract_arg(field const& f, size_t)
+String extract_arg(field const&, size_t)
 {
 	return String();
 }
