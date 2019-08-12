@@ -148,6 +148,22 @@ void buffer::reserve(size_t capacity)
 	pos_ = data_;
 }
 
+void buffer::resize(size_t size)
+{
+	if (!size) {
+		clear();
+	}
+	else if (size < size_) {
+		size_ = size;
+		return;
+	}
+	else {
+		size_t const diff = size - size_;
+		memset(get(diff), 0, diff);
+		size_ = size;
+	}
+}
+
 bool buffer::operator==(buffer const& rhs) const
 {
 	if (size() != rhs.size()) {
