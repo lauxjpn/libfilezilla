@@ -155,7 +155,6 @@ void buffer::resize(size_t size)
 	}
 	else if (size < size_) {
 		size_ = size;
-		return;
 	}
 	else {
 		size_t const diff = size - size_;
