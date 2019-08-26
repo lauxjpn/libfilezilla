@@ -250,20 +250,20 @@ bool query_string::set(std::string const& raw)
 {
 	segments_.clear();
 
-	auto const tokens = fz::strtok_view(raw, "&");
+	auto const tokens = strtok_view(raw, "&");
 	for (auto const& token : tokens) {
 		size_t pos = token.find('=');
 		if (!pos) {
 			return false;
 		}
 
-		std::string key = fz::percent_decode(token.substr(0, pos));
+		std::string key = percent_decode(token.substr(0, pos));
 		if (key.empty()) {
 			return false;
 		}
 		std::string value;
 		if (pos != std::string::npos) {
-			value = fz::percent_decode(token.substr(pos + 1));
+			value = percent_decode(token.substr(pos + 1));
 			if (value.empty() && pos + 1 != token.size()) {
 				return false;
 			}
@@ -292,9 +292,9 @@ std::string query_string::to_string(bool encode_slashes) const
 	std::string ret;
 	if (!segments_.empty()) {
 		for (auto const& segment : segments_) {
-			ret += fz::percent_encode(segment.first, !encode_slashes);
+			ret += percent_encode(segment.first, !encode_slashes);
 			ret += '=';
-			ret += fz::percent_encode(segment.second, !encode_slashes);
+			ret += percent_encode(segment.second, !encode_slashes);
 			ret += '&';
 		}
 		ret.pop_back();
