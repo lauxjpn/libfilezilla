@@ -95,9 +95,9 @@ public:
 	 */
 	void resolve(uri const& base);
 
-	bool operator==(fz::uri const& arg) const;
+	bool operator==(uri const& arg) const;
 
-	bool operator!=(fz::uri const& arg) const { return !(*this == arg); }
+	bool operator!=(uri const& arg) const { return !(*this == arg); }
 
 private:
 	bool FZ_PRIVATE_SYMBOL parse_authority(std::string && authority);
@@ -122,12 +122,12 @@ public:
 	void remove(std::string const& key);
 	std::string& operator[](std::string const& key);
 
-	std::map<std::string, std::string, fz::less_insensitive_ascii> const& pairs() const { return segments_; }
+	std::map<std::string, std::string, less_insensitive_ascii> const& pairs() const { return segments_; }
 
 	bool empty() const { return segments_.empty(); }
 
 private:
-	std::map<std::string, std::string, fz::less_insensitive_ascii> segments_;
+	std::map<std::string, std::string, less_insensitive_ascii> segments_;
 };
 
 }
