@@ -49,6 +49,7 @@ public:
 	std::string get_authority(bool with_userinfo) const;
 
 	bool empty() const;
+	explicit operator bool() const { return !empty(); }
 
 	/// Often refered to as the protocol prefix, e.g. ftp://
 	std::string scheme_;
@@ -93,6 +94,11 @@ public:
 	 * If the URI is not relative or from a different scheme, it is not changed.
 	 */
 	void resolve(uri const& base);
+
+	bool operator==(fz::uri const& arg) const;
+
+	bool operator!=(fz::uri const& arg) const { return !(*this == arg); }
+
 private:
 	bool FZ_PRIVATE_SYMBOL parse_authority(std::string && authority);
 };

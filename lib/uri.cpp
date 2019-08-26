@@ -221,6 +221,12 @@ bool uri::empty() const
 }
 
 
+bool uri::operator==(uri const& arg) const
+{
+	return std::tie(scheme_, user_, pass_, host_, port_, path_, query_, fragment_) == std::tie(arg.scheme_, arg.user_, arg.pass_, arg.host_, arg.port_, arg.path_, arg.query_, arg.fragment_);
+}
+
+
 query_string::query_string(std::string const& raw)
 {
 	set(raw);
