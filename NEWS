@@ -1,3 +1,7 @@
+0.18.2 (2019-09-16)
+
++ Added operator== and != to fz::uri
+
 0.18.1 (2019-08-14)
 
 + Added fz::buffer::resize
