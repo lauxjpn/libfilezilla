@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: filezilla_nl\n"
 "Report-Msgid-Bugs-To: https://trac.filezilla-project.org/\n"
-"POT-Creation-Date: 2019-06-10 12:22+0200\n"
+"POT-Creation-Date: 2019-08-08 08:49+0200\n"
 "PO-Revision-Date: 2018-07-29 21:39+0200\n"
 "Last-Translator: Jan Verheijen\n"
 "Language-Team: en@li.org\n"
@@ -14,11 +14,11 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 
-#: ../lib/tls_layer_impl.cpp:1324
+#: ../lib/tls_layer_impl.cpp:1370
 msgid "A certificate in the chain was signed using an insecure algorithm"
 msgstr "Een certificaat in de keten is getekend met een onveilig algoritme"
 
-#: ../lib/tls_layer_impl.cpp:1328
+#: ../lib/tls_layer_impl.cpp:1374
 msgid "An issuer in the certificate chain is not a certificate authority"
 msgstr "Een uitgever in de certificaatketen is geen certificeringsinstantie"
 
@@ -30,7 +30,7 @@ msgstr "Argument-buffergrootte overschreden"
 msgid "Bad file descriptor"
 msgstr "Beschrijving van beschadigd bestand"
 
-#: ../lib/tls_layer_impl.cpp:1314
+#: ../lib/tls_layer_impl.cpp:1360
 msgid "Beware! Certificate has been revoked"
 msgstr "Let op! Het certificaat is ingetrokken"
 
@@ -38,7 +38,15 @@ msgstr "Let op! Het certificaat is ingetrokken"
 msgid "Cannot assign requested address"
 msgstr "Kan het gevraagde adres niet toewijzen"
 
-#: ../lib/tls_layer_impl.cpp:1320
+#: ../lib/tls_layer_impl.cpp:265
+msgid "Certificate file too big."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:1425
+msgid "Certificate of connection does not match expected certificate."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:1366
 msgid "Certificate signature verification failed"
 msgstr "Verificatie certificaathandtekening mislukt"
 
@@ -62,15 +70,15 @@ msgstr "Verbinding gereset door netwerk"
 msgid "Connection reset by peer"
 msgstr "Verbinding gereset door server"
 
-#: ../lib/tls_layer_impl.cpp:1461
+#: ../lib/tls_layer_impl.cpp:1507
 msgid "Could not add certificate to temporary trust list"
 msgstr "Kan certificaat niet toevoegen aan tijdelijke vertrouwenslijst"
 
-#: ../lib/tls_layer_impl.cpp:1453
+#: ../lib/tls_layer_impl.cpp:1499
 msgid "Could not copy certificate"
 msgstr "Kan certificaat niet kopiëren"
 
-#: ../lib/tls_layer_impl.cpp:1109
+#: ../lib/tls_layer_impl.cpp:1138
 msgid ""
 "Could not get distinguished name of certificate issuer, "
 "gnutls_x509_get_issuer_dn failed"
@@ -78,7 +86,7 @@ msgstr ""
 "Kan geen onderscheidende naam verkrijgen van certificaatverschaffer: "
 "gnutls_x509_get_issuer_dn mislukte"
 
-#: ../lib/tls_layer_impl.cpp:1095
+#: ../lib/tls_layer_impl.cpp:1124
 msgid ""
 "Could not get distinguished name of certificate subject, gnutls_x509_get_dn "
 "failed"
@@ -86,11 +94,27 @@ msgstr ""
 "Kan geen onderscheidende naam verkrijgen het certificaatonderwerp: "
 "gnutls_x509_get_dn mislukte"
 
-#: ../lib/tls_layer_impl.cpp:1297
+#: ../lib/tls_layer_impl.cpp:260
+msgid "Could not open certificate file."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:241
+msgid "Could not open key file."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:272
+msgid "Could not read certificate file."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:253
+msgid "Could not read key file."
+msgstr ""
+
+#: ../lib/tls_layer_impl.cpp:1343
 msgid "Could not sort peer certificates"
 msgstr "Kan peercertificaat niet sorteren"
 
-#: ../lib/tls_layer_impl.cpp:1424 ../lib/tls_layer_impl.cpp:1475
+#: ../lib/tls_layer_impl.cpp:1470 ../lib/tls_layer_impl.cpp:1521
 msgid "Failed to verify peer certificate"
 msgstr "Controleren van peercertificaat is mislukt"
 
@@ -98,22 +122,22 @@ msgstr "Controleren van peercertificaat is mislukt"
 msgid "File descriptor not a socket"
 msgstr "Bestandsbeschrijving is geen socket"
 
-#: ../lib/tls_layer_impl.cpp:447
+#: ../lib/tls_layer_impl.cpp:448
 #, c-format
 msgid "GnuTLS error %d"
 msgstr "GnuTLS-fout voor %d"
 
-#: ../lib/tls_layer_impl.cpp:450
+#: ../lib/tls_layer_impl.cpp:451
 #, c-format
 msgid "GnuTLS error %d in %s"
 msgstr "GnuTLS-fout %d in %s"
 
-#: ../lib/tls_layer_impl.cpp:442
+#: ../lib/tls_layer_impl.cpp:443
 #, c-format
 msgid "GnuTLS error %d in %s: %s"
 msgstr "GnuTLS-fout %d in %s: %s"
 
-#: ../lib/tls_layer_impl.cpp:439
+#: ../lib/tls_layer_impl.cpp:440
 #, c-format
 msgid "GnuTLS error %d: %s"
 msgstr "GnuTLS-fout %d: %s"
@@ -130,6 +154,10 @@ msgstr "Onderbroken door signaal"
 msgid "Invalid argument passed"
 msgstr "Ongeldig argument opgegeven"
 
+#: ../lib/socket_errors.cpp:105
+msgid "Invalid characters in hostname"
+msgstr ""
+
 #: ../lib/socket_errors.cpp:82
 msgid "Invalid value for ai_flags"
 msgstr "Ongeldige waarde voor ai-vlaggen"
@@ -138,6 +166,10 @@ msgstr "Ongeldige waarde voor ai-vlaggen"
 msgid "Invalid value for hints"
 msgstr "Ongeldige waarde voor aanwijzingen"
 
+#: ../lib/tls_layer_impl.cpp:246
+msgid "Key file too big."
+msgstr ""
+
 #: ../lib/socket_errors.cpp:46
 msgid "Local address in use"
 msgstr "Lokaal adres is in gebruik"
@@ -145,6 +177,10 @@ msgstr "Lokaal adres is in gebruik"
 #: ../lib/socket_errors.cpp:74
 msgid "Local endpoint has been closed"
 msgstr "Lokaal eindpunt is gesloten"
+
+#: ../lib/tls_layer_impl.cpp:1558
+msgid "Man-in-the-Middle attack detected, aborting connection."
+msgstr ""
 
 #: ../lib/socket_errors.cpp:88
 msgid "Memory allocation failure"
@@ -221,12 +257,12 @@ msgstr "Protocol wordt niet ondersteund"
 msgid "Protocol not supported on given socket type"
 msgstr "Protocol van dit sockettype wordt niet ondersteund"
 
-#: ../lib/tls_layer_impl.cpp:461
+#: ../lib/tls_layer_impl.cpp:462
 #, c-format
 msgid "Received TLS alert from the server: %s (%d)"
 msgstr "TLS-waarschuwing ontvangen van server: %s (%d)"
 
-#: ../lib/tls_layer_impl.cpp:1342
+#: ../lib/tls_layer_impl.cpp:1388
 #, c-format
 msgid ""
 "Received certificate chain could not be verified. Verification status is %d."
@@ -234,12 +270,12 @@ msgstr ""
 "Ontvangen certificaatketen kon niet worden geverifieerd. Verificatiestatus "
 "is %d."
 
-#: ../lib/tls_layer_impl.cpp:464
+#: ../lib/tls_layer_impl.cpp:465
 #, c-format
 msgid "Received unknown TLS alert %d from the server"
 msgstr "Onbekende TLS-waarschuwing %d van de server ontvangen"
 
-#: ../lib/tls_layer_impl.cpp:1031
+#: ../lib/tls_layer_impl.cpp:1060
 msgid "Remote certificate not trusted."
 msgstr "Externe certificaat is niet vertrouwd."
 
@@ -251,11 +287,11 @@ msgstr "Gevonden protocol is onbekend"
 msgid "Resource temporarily unavailable"
 msgstr "Uitweg tijdelijk niet beschikbaar"
 
-#: ../lib/tls_layer_impl.cpp:923
+#: ../lib/tls_layer_impl.cpp:946
 msgid "Server did not properly shut down TLS connection"
 msgstr "Server heeft de TLS-verbinding niet goed gesloten"
 
-#: ../lib/tls_layer_impl.cpp:1288
+#: ../lib/tls_layer_impl.cpp:1334
 msgid ""
 "Server sent unsorted certificate chain in violation of the TLS specifications"
 msgstr ""
@@ -302,7 +338,7 @@ msgstr "Dit ai-familielid wordt niet ondersteund"
 msgid "The ai_socktype member is not supported"
 msgstr "Dit ai-socktype-lid wordt niet ondersteund"
 
-#: ../lib/tls_layer_impl.cpp:1337
+#: ../lib/tls_layer_impl.cpp:1383
 msgid ""
 "The certificate requires the server to include an OCSP status in its "
 "response, but the OCSP status is missing."
@@ -310,7 +346,7 @@ msgstr ""
 "Het certificaat eist dat de server in het antwoord een OCSP-status insluit, "
 "maar de OCSP-status ontbreekt."
 
-#: ../lib/tls_layer_impl.cpp:1332
+#: ../lib/tls_layer_impl.cpp:1378
 msgid "The server's hostname does not match the certificate's hostname"
 msgstr ""
 "De hostnaam van de server komt niet overeen met de hostnaam van het "
@@ -328,23 +364,23 @@ msgstr "De opgegeven adresfamilie wordt niet ondersteund"
 msgid "The specified network name is no longer available"
 msgstr "De opgegeven netwerknaam is niet langer beschikbaar"
 
-#: ../lib/tls_layer_impl.cpp:1357
+#: ../lib/tls_layer_impl.cpp:1403
 msgid "Unsupported certificate type"
 msgstr "Niet-ondersteund certificaattype"
 
-#: ../lib/tls_layer_impl.cpp:1496
+#: ../lib/tls_layer_impl.cpp:1542
 msgid "Verifying certificate..."
 msgstr "Certificaat controleren...."
 
-#: ../lib/tls_layer_impl.cpp:1251
+#: ../lib/tls_layer_impl.cpp:1297
 msgid "gnutls_certificate_get_peers returned no certificates"
 msgstr "gnutls_certificate_get_peers gaf geen certificaten terug"
 
-#: ../lib/tls_layer_impl.cpp:1263
+#: ../lib/tls_layer_impl.cpp:1309
 msgid "gnutls_pem_base64_encode2 failed"
 msgstr "gnutls_pem_base64_encode2 mislukt"
 
-#: ../lib/tls_layer_impl.cpp:1555 ../lib/tls_layer_impl.cpp:1571
-#: ../lib/tls_layer_impl.cpp:1587 ../lib/tls_layer_impl.cpp:1603
+#: ../lib/tls_layer_impl.cpp:1602 ../lib/tls_layer_impl.cpp:1618
+#: ../lib/tls_layer_impl.cpp:1634 ../lib/tls_layer_impl.cpp:1650
 msgid "unknown"
 msgstr "onbekend"
