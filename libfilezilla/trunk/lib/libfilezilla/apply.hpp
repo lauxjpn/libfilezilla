@@ -1,6 +1,7 @@
 #ifndef LIBFILEZILLA_APPLY_HEADER
 #define LIBFILEZILLA_APPLY_HEADER
 
+#include <cstddef>
 #include <utility>
 #include <tuple>
 #include <type_traits>
