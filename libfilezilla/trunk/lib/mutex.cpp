@@ -85,6 +85,15 @@ void mutex::unlock()
 #endif
 }
 
+bool mutex::try_lock()
+{
+#ifdef FZ_WINDOWS
+	return TryEnterCriticalSection(&m_) != 0;
+#else
+	return pthread_mutex_trylock(&m_) == 0;
+#endif
+}
+
 
 condition::condition()
 {

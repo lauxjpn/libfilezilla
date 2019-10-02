@@ -39,6 +39,9 @@ public:
 	/// Beware, manual locking isn't exception safe, use scoped_lock
 	void unlock();
 
+	/// Beware, manual locking isn't exception safe
+	bool try_lock();
+
 private:
 	friend class condition;
 	friend class scoped_lock;
