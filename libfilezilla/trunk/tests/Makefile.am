@@ -1,6 +1,6 @@
 # Rules for the test code (use `make check` to execute)
 
-TESTS = test
+TESTS = test ratelimit_test
 check_PROGRAMS = $(TESTS)
 
 test_SOURCES =  test.cpp \
@@ -30,3 +30,12 @@ test_LDADD += $(libdeps)
 test_DEPENDENCIES = ../lib/libfilezilla.la
 
 noinst_HEADERS = test_utils.hpp
+
+
+ratelimit_test_SOURCES = \
+	ratelimit.cpp
+
+ratelimit_test_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/lib
+ratelimit_test_LDFLAGS = $(AM_LDFLAGS) -no-install
+ratelimit_test_LDADD = ../lib/libfilezilla.la $(libdeps)
+ratelimit_test_DEPENDENCIES = ../lib/libfilezilla.la
