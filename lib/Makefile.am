@@ -13,7 +13,8 @@ libfilezilla_la_SOURCES = \
 	local_filesys.cpp \
 	mutex.cpp \
 	process.cpp \
-	rate_limit_layer.cpp \
+	rate_limiter.cpp \
+	rate_limited_layer.cpp \
 	recursive_remove.cpp \
 	signature.cpp \
 	socket.cpp \
@@ -49,7 +50,8 @@ nobase_include_HEADERS = \
 	libfilezilla/mutex.hpp \
 	libfilezilla/optional.hpp \
 	libfilezilla/process.hpp \
-	libfilezilla/rate_limit_layer.hpp \
+	libfilezilla/rate_limiter.hpp \
+	libfilezilla/rate_limited_layer.hpp \
 	libfilezilla/recursive_remove.hpp \
 	libfilezilla/shared.hpp \
 	libfilezilla/signature.hpp \

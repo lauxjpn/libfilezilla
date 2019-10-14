@@ -1,4 +1,4 @@
-#include "libfilezilla/rate_limit_layer.hpp"
+#include "libfilezilla/rate_limiter.hpp"
 #include "libfilezilla/util.hpp"
 
 #include <assert.h>
@@ -16,7 +16,7 @@
 */
 namespace fz {
 
-auto const delay = fz::duration::from_milliseconds(200);
+auto const delay = duration::from_milliseconds(200);
 int const frequency = 5;
 
 rate_limit_manager::rate_limit_manager(event_loop & loop)
@@ -30,14 +30,14 @@ rate_limit_manager::~rate_limit_manager()
 	remove_handler();
 }
 
-void rate_limit_manager::operator()(fz::event_base const& ev)
+void rate_limit_manager::operator()(event_base const& ev)
 {
-	fz::dispatch<fz::timer_event>(ev, this, &rate_limit_manager::on_timer);
+	dispatch<timer_event>(ev, this, &rate_limit_manager::on_timer);
 }
 
-void rate_limit_manager::on_timer(fz::timer_id const&)
+void rate_limit_manager::on_timer(timer_id const&)
 {
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 	for (auto * limiter : limiters_) {
 		process(limiter);
 	}
@@ -50,7 +50,7 @@ void rate_limit_manager::set_waiting()
 {
 	int old = activity_.exchange(0);
 	if (old == 2) {
-		timer_ = add_timer(fz::duration::from_milliseconds(1000 / frequency), false);
+		timer_ = add_timer(duration::from_milliseconds(1000 / frequency), false);
 	}
 }
 
@@ -62,10 +62,10 @@ void rate_limit_manager::add(rate_limiter* limiter)
 
 	limiter->remove_bucket();
 
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 
 	{
-		fz::scoped_lock ll(limiter->mtx_);
+		scoped_lock ll(limiter->mtx_);
 
 		limiter->mgr_ = this;
 		limiter->parent_ = this;
@@ -100,13 +100,13 @@ void rate_limit_manager::process(rate_limiter* limiter)
 
 void bucket_base::remove_bucket()
 {
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 	while (idx_ != unlimited && parent_) {
 		if (parent_ == mgr_) {
 			if (mgr_->mtx_.try_lock()) {
 				auto * other = mgr_->limiters_.back();
 				if (other != this) {
-					fz::scoped_lock ol(other->mtx_);
+					scoped_lock ol(other->mtx_);
 					other->idx_ = idx_;
 					mgr_->limiters_[idx_] = other;
 				}
@@ -120,7 +120,7 @@ void bucket_base::remove_bucket()
 			if (parent->mtx_.try_lock()) {
 				auto * other = parent->buckets_.back();
 				if (other != this) {
-					fz::scoped_lock ol(other->mtx_);
+					scoped_lock ol(other->mtx_);
 					other->idx_ = idx_;
 					parent->buckets_[idx_] = other;
 				}
@@ -132,7 +132,7 @@ void bucket_base::remove_bucket()
 
 		// Break deadlock
 		l.unlock();
-		fz::sleep(fz::duration::from_milliseconds(1));
+		sleep(duration::from_milliseconds(1));
 		l.lock();
 	}
 	parent_ = nullptr;
@@ -143,7 +143,7 @@ void bucket_base::remove_bucket()
 rate_limiter::~rate_limiter()
 {
 	{
-		fz::scoped_lock l(mtx_);
+		scoped_lock l(mtx_);
 		for (auto * bucket : buckets_) {
 			bucket->parent_ = nullptr;
 			bucket->idx_ = unlimited;
@@ -156,7 +156,7 @@ rate_limiter::~rate_limiter()
 
 void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
 {
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 	limit_[0] = download_limit;
 	limit_[1] = upload_limit;
 	if (mgr_) {
@@ -166,7 +166,7 @@ void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
 
 size_t rate_limiter::limit(size_t direction)
 {
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 	return limit_[direction ? 1 : 0];
 }
 
@@ -178,7 +178,7 @@ void rate_limiter::add(bucket_base* bucket)
 
 	bucket->remove_bucket();
 
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 
 
 	bucket->lock_tree();
@@ -191,18 +191,23 @@ void rate_limiter::add(bucket_base* bucket)
 	bucket->update_stats();
 
 	for (size_t i = 0; i < 2; ++i) {
+		size_t weight = bucket->weight();
+		if (!weight) {
+			weight = 1;
+		}
+
 		size_t tokens;
 		if (merged_tokens_[i] == unlimited) {
 			tokens = unlimited;
 		}
 		else {
-			tokens = merged_tokens_[i] / (bucket->weight() * 2);
+			tokens = merged_tokens_[i] / (weight * 2);
 		}
 		bucket->add_tokens(i, tokens, tokens);
 		bucket->distribute_overflow(i, 0);
 
 		if (tokens != unlimited) {
-			debt_[i] += tokens * bucket->weight();
+			debt_[i] += tokens * weight;
 		}
 	}
 
@@ -228,7 +233,8 @@ void rate_limiter::unlock_tree()
 void rate_limiter::pay_debt(size_t direction)
 {
 	if (merged_tokens_[direction] != unlimited) {
-		size_t debt_reduction = std::min(merged_tokens_[direction], debt_[direction] / weight_);
+		size_t weight = weight_ ? weight_ : 1;
+		size_t debt_reduction = std::min(merged_tokens_[direction], debt_[direction] / weight);
 		merged_tokens_[direction] -= debt_reduction;
 		debt_[direction] -= debt_reduction;
 	}
@@ -240,7 +246,7 @@ void rate_limiter::pay_debt(size_t direction)
 size_t rate_limiter::add_tokens(size_t direction, size_t tokens, size_t limit)
 {
 	if (!weight_) {
-		merged_tokens_[direction] = tokens;
+		merged_tokens_[direction] = std::min(limit_[direction], tokens);
 		pay_debt(direction);
 		return (tokens == unlimited) ? 0 : tokens;
 	}
@@ -446,10 +452,10 @@ size_t bucket::distribute_overflow(size_t direction, size_t tokens)
 void bucket::unlock_tree()
 {
 	for (size_t i = 0; i < 2; ++i) {
-		if (available_[i]) {
+		if (waiting_[i] && available_[i]) {
 			waiting_[i] = false;
+			wakeup(i);
 		}
-		// TODO: Notify wakeup
 	}
 	bucket_base::unlock_tree();
 }
@@ -476,7 +482,13 @@ size_t bucket::available(int direction)
 	if (direction != 0) {
 		direction = 1;
 	}
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
+	if (!available_[direction]) {
+		waiting_[direction] = true;
+		if (mgr_) {
+			mgr_->set_waiting();
+		}
+	}
 	return available_[direction];
 }
 
@@ -485,17 +497,13 @@ void bucket::consume(int direction, size_t amount)
 	if (direction != 0) {
 		direction = 1;
 	}
-	fz::scoped_lock l(mtx_);
+	scoped_lock l(mtx_);
 	if (available_[direction] != unlimited) {
 		if (available_[direction] > amount) {
 			available_[direction] -= amount;
 		}
 		else {
 			available_[direction] = 0;
-			waiting_[direction] = true;
-			if (mgr_) {
-				mgr_->set_waiting();
-			}
 		}
 	}
 }
