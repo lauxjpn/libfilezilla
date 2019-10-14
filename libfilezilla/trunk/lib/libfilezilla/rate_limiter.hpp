@@ -1,5 +1,5 @@
-#ifndef LIBFILEZILLA_RATE_LIMIT_LAYER_HEADER
-#define LIBFILEZILLA_RATE_LIMIT_LAYER_HEADER
+#ifndef LIBFILEZILLA_RATE_LIMITER_HEADER
+#define LIBFILEZILLA_RATE_LIMITER_HEADER
 
 #include "event_handler.hpp"
 
@@ -28,8 +28,8 @@ private:
 
 	void set_waiting();
 
-	void operator()(fz::event_base const& ev);
-	void on_timer(fz::timer_id const&);
+	void operator()(event_base const& ev);
+	void on_timer(timer_id const&);
 
 	void process(rate_limiter* limiter);
 
@@ -46,20 +46,22 @@ class FZ_PUBLIC_SYMBOL bucket_base
 public:
 	virtual ~bucket_base() = default;
 
+	/// Must be called in the most-received class
+	void remove_bucket();
+
 protected:
 	friend class rate_limiter;
 
-	void remove_bucket();
 
 	virtual void lock_tree() { mtx_.lock(); }
 
 	// The following functions must only be caled with a locked tree
 	virtual void update_stats() = 0;
 	virtual size_t weight() const { return 1; }
-	virtual size_t unsaturated(size_t direction) const { return 0; }
+	virtual size_t unsaturated(size_t /*direction*/) const { return 0; }
 
-	virtual size_t add_tokens(size_t direction, size_t tokens, size_t limit) = 0;
-	virtual size_t distribute_overflow(size_t direction, size_t tokens) { return 0; }
+	virtual size_t add_tokens(size_t /*direction*/, size_t /*tokens*/, size_t /*limit*/) = 0;
+	virtual size_t distribute_overflow(size_t /*direction*/, size_t /*tokens*/) { return 0; }
 
 	virtual void unlock_tree() { mtx_.unlock(); }
 
@@ -110,13 +112,16 @@ private:
 	size_t carry_[2]{};
 };
 
-class FZ_PUBLIC_SYMBOL bucket final : public bucket_base
+class FZ_PUBLIC_SYMBOL bucket : public bucket_base
 {
 public:
 	virtual ~bucket();
 
 	size_t available(int direction);
 	void consume(int direction, size_t amount);
+
+protected:
+	virtual void wakeup(int /*direction*/) {}
 
 private:
 	virtual void update_stats() override;
