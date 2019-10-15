@@ -26,7 +26,7 @@ private:
 	friend class bucket_base;
 	friend class bucket;
 
-	void set_waiting();
+	void record_activity();
 
 	void operator()(event_base const& ev);
 	void on_timer(timer_id const&);
@@ -56,7 +56,7 @@ protected:
 	virtual void lock_tree() { mtx_.lock(); }
 
 	// The following functions must only be caled with a locked tree
-	virtual void update_stats() = 0;
+	virtual void update_stats(bool & active) = 0;
 	virtual size_t weight() const { return 1; }
 	virtual size_t unsaturated(size_t /*direction*/) const { return 0; }
 
@@ -87,7 +87,7 @@ private:
 
 	virtual void lock_tree() override;
 
-	virtual void update_stats() override;
+	virtual void update_stats(bool & active) override;
 	virtual size_t weight() const override { return weight_; }
 	virtual size_t unsaturated(size_t direction) const override { return unused_capacity_[direction] ? unsaturated_[direction] : 0; }
 
@@ -124,7 +124,7 @@ protected:
 	virtual void wakeup(int /*direction*/) {}
 
 private:
-	virtual void update_stats() override;
+	virtual void update_stats(bool & active) override;
 	virtual size_t unsaturated(size_t direction) const override { return unsaturated_[direction] ? 1 : 0; }
 
 	virtual size_t add_tokens(size_t direction, size_t tokens, size_t limit) override;
