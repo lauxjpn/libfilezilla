@@ -33,7 +33,7 @@ public:
 	}
 
 protected:
-	virtual void wakeup(int direction) override;
+	virtual void wakeup(direction::type d) override;
 };
 
 }
