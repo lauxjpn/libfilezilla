@@ -69,11 +69,14 @@ void rate_limit_manager::add(rate_limiter* limiter)
 	scoped_lock l(mtx_);
 
 	{
-		scoped_lock ll(limiter->mtx_);
+		limiter->lock_tree();
 
-		limiter->mgr_ = this;
+		limiter->set_mgr_recursive(this);
 		limiter->parent_ = this;
 		limiter->idx_ = limiters_.size();
+
+		limiter->unlock_tree();
+
 		limiters_.push_back(limiter);
 	}
 	process(limiter);
@@ -147,6 +150,10 @@ void bucket_base::remove_bucket()
 	idx_ = unlimited;
 }
 
+void bucket_base::set_mgr_recursive(rate_limit_manager * mgr)
+{
+	mgr_ = mgr;
+}
 
 rate_limiter::~rate_limiter()
 {
@@ -160,6 +167,16 @@ rate_limiter::~rate_limiter()
 	}
 
 	remove_bucket();
+}
+
+void rate_limiter::set_mgr_recursive(rate_limit_manager * mgr)
+{
+	if (mgr != mgr_) {
+		mgr_ = mgr;
+		for (auto * bucket : buckets_) {
+			bucket->set_mgr_recursive(mgr);
+		}
+	}
 }
 
 void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
@@ -197,7 +214,7 @@ void rate_limiter::add(bucket_base* bucket)
 
 	bucket->lock_tree();
 
-	bucket->mgr_ = mgr_;
+	bucket->set_mgr_recursive(mgr_);
 	bucket->parent_ = this;
 	bucket->idx_ = buckets_.size();
 	buckets_.push_back(bucket);
