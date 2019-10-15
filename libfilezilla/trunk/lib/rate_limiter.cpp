@@ -182,17 +182,26 @@ void rate_limiter::set_mgr_recursive(rate_limit_manager * mgr)
 void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
 {
 	scoped_lock l(mtx_);
-	limit_[0] = download_limit;
-	limit_[1] = upload_limit;
-	size_t weight = weight_ ? weight_ : 1;
-	for (size_t i = 0; i < 2; ++i) {
-		if (limit_[i] != unlimited) {
-			merged_tokens_[i] = std::min(merged_tokens_[i], limit_[0] / weight);
-		}
-	}
-	if (mgr_) {
+	bool changed = do_set_limit(0, download_limit);
+	changed |= do_set_limit(1, upload_limit);
+	if (changed && mgr_) {
 		mgr_->record_activity();
 	}
+}
+
+bool rate_limiter::do_set_limit(int direction, size_t limit)
+{
+	if (limit_[direction] == limit) {
+		return false;
+	}
+
+	limit_[direction] = limit;
+
+	size_t weight = weight_ ? weight_ : 1;
+	if (limit_[direction] != unlimited) {
+		merged_tokens_[direction] = std::min(merged_tokens_[direction], limit_[direction] / weight);
+	}
+	return true;
 }
 
 size_t rate_limiter::limit(size_t direction)

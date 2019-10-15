@@ -88,6 +88,8 @@ private:
 
 	virtual void lock_tree() override;
 
+	bool do_set_limit(int direction, size_t limit);
+
 	virtual void update_stats(bool & active) override;
 	virtual size_t weight() const override { return weight_; }
 	virtual size_t unsaturated(size_t direction) const override { return unused_capacity_[direction] ? unsaturated_[direction] : 0; }
