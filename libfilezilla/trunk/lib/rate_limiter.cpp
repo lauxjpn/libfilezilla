@@ -35,22 +35,26 @@ void rate_limit_manager::operator()(event_base const& ev)
 	dispatch<timer_event>(ev, this, &rate_limit_manager::on_timer);
 }
 
-void rate_limit_manager::on_timer(timer_id const&)
+void rate_limit_manager::on_timer(timer_id const& id)
 {
 	scoped_lock l(mtx_);
+	if (++activity_ == 2) {
+		timer_id expected = id;
+		if (timer_.compare_exchange_strong(expected, 0)) {
+			stop_timer(id);
+		}
+
+	}
 	for (auto * limiter : limiters_) {
 		process(limiter);
 	}
-	if (++activity_ == 2) {
-		stop_timer(timer_);
-	}
 }
 
-void rate_limit_manager::set_waiting()
+void rate_limit_manager::record_activity()
 {
-	int old = activity_.exchange(0);
-	if (old == 2) {
-		timer_ = add_timer(duration::from_milliseconds(1000 / frequency), false);
+	if (activity_.exchange(0) == 2) {
+		timer_id old = timer_.exchange(add_timer(duration::from_milliseconds(1000 / frequency), false));
+		stop_timer(old);
 	}
 }
 
@@ -85,7 +89,11 @@ void rate_limit_manager::process(rate_limiter* limiter)
 	limiter->lock_tree();
 
 	// Step 1: Update stats such as weight and unsaturated buckets
-	limiter->update_stats();
+	bool active{};
+	limiter->update_stats(active);
+	if (active) {
+		record_activity();
+	}
 	for (size_t i = 0; i < 2; ++i) {
 		// Step 2: Add the normal tokens
 		limiter->add_tokens(i, unlimited, unlimited);
@@ -159,8 +167,14 @@ void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
 	scoped_lock l(mtx_);
 	limit_[0] = download_limit;
 	limit_[1] = upload_limit;
+	size_t weight = weight_ ? weight_ : 1;
+	for (size_t i = 0; i < 2; ++i) {
+		if (limit_[i] != unlimited) {
+			merged_tokens_[i] = std::min(merged_tokens_[i], limit_[0] / weight);
+		}
+	}
 	if (mgr_) {
-		mgr_->set_waiting();
+		mgr_->record_activity();
 	}
 }
 
@@ -188,26 +202,32 @@ void rate_limiter::add(bucket_base* bucket)
 	bucket->idx_ = buckets_.size();
 	buckets_.push_back(bucket);
 
-	bucket->update_stats();
+	bool active{};
+	bucket->update_stats(active);
+	if (active && mgr_) {
+		mgr_->record_activity();
+	}
+
+	size_t bucket_weight = bucket->weight();
+	if (!bucket_weight) {
+		bucket_weight = 1;
+	}
+	weight_ += bucket_weight;
 
 	for (size_t i = 0; i < 2; ++i) {
-		size_t weight = bucket->weight();
-		if (!weight) {
-			weight = 1;
-		}
 
 		size_t tokens;
 		if (merged_tokens_[i] == unlimited) {
 			tokens = unlimited;
 		}
 		else {
-			tokens = merged_tokens_[i] / (weight * 2);
+			tokens = merged_tokens_[i] / (bucket_weight * 2);
 		}
 		bucket->add_tokens(i, tokens, tokens);
 		bucket->distribute_overflow(i, 0);
 
 		if (tokens != unlimited) {
-			debt_[i] += tokens * weight;
+			debt_[i] += tokens * bucket_weight;
 		}
 	}
 
@@ -373,14 +393,14 @@ size_t rate_limiter::distribute_overflow(size_t direction, size_t overflow)
 	}
 }
 
-void rate_limiter::update_stats()
+void rate_limiter::update_stats(bool & active)
 {
 	weight_ = 0;
 
 	unsaturated_[0] = 0;
 	unsaturated_[1] = 0;
 	for (size_t i = 0; i < buckets_.size(); ++i) {
-		buckets_[i]->update_stats();
+		buckets_[i]->update_stats(active);
 		weight_ += buckets_[i]->weight();
 		unsaturated_[0] += buckets_[i]->unsaturated(0);
 		unsaturated_[1] += buckets_[i]->unsaturated(1);
@@ -460,7 +480,7 @@ void bucket::unlock_tree()
 	bucket_base::unlock_tree();
 }
 
-void bucket::update_stats()
+void bucket::update_stats(bool & active)
 {
 	for (size_t i = 0; i < 2; ++i) {
 		if (bucket_size_[i] == unlimited) {
@@ -472,6 +492,9 @@ void bucket::update_stats()
 			}
 			else {
 				unsaturated_[i] = waiting_[i];
+				if (waiting_[i]) {
+					active = true;
+				}
 			}
 		}
 	}
@@ -486,7 +509,7 @@ size_t bucket::available(int direction)
 	if (!available_[direction]) {
 		waiting_[direction] = true;
 		if (mgr_) {
-			mgr_->set_waiting();
+			mgr_->record_activity();
 		}
 	}
 	return available_[direction];
@@ -494,11 +517,17 @@ size_t bucket::available(int direction)
 
 void bucket::consume(int direction, size_t amount)
 {
+	if (!amount) {
+		return;
+	}
 	if (direction != 0) {
 		direction = 1;
 	}
 	scoped_lock l(mtx_);
 	if (available_[direction] != unlimited) {
+		if (mgr_) {
+			mgr_->record_activity();
+		}
 		if (available_[direction] > amount) {
 			available_[direction] -= amount;
 		}
