@@ -59,6 +59,7 @@ protected:
 	virtual void update_stats(bool & active) = 0;
 	virtual size_t weight() const { return 1; }
 	virtual size_t unsaturated(size_t /*direction*/) const { return 0; }
+	virtual void set_mgr_recursive(rate_limit_manager * mgr);
 
 	virtual size_t add_tokens(size_t /*direction*/, size_t /*tokens*/, size_t /*limit*/) = 0;
 	virtual size_t distribute_overflow(size_t /*direction*/, size_t /*tokens*/) { return 0; }
@@ -90,6 +91,7 @@ private:
 	virtual void update_stats(bool & active) override;
 	virtual size_t weight() const override { return weight_; }
 	virtual size_t unsaturated(size_t direction) const override { return unused_capacity_[direction] ? unsaturated_[direction] : 0; }
+	virtual void set_mgr_recursive(rate_limit_manager * mgr) override;
 
 	virtual size_t add_tokens(size_t direction, size_t tokens, size_t limit) override;
 	virtual size_t distribute_overflow(size_t direction, size_t tokens) override;
