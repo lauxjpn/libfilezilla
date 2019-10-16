@@ -133,9 +133,9 @@ std::string FZ_PUBLIC_SYMBOL percent_encode(std::string_view const& s, bool keep
 std::string FZ_PUBLIC_SYMBOL percent_encode(std::wstring_view const& s, bool keep_slashes = false);
 
 /**
- * \brief Percent-enodes wide-character. Non-ASCII characters are converted to UTF-8 befor they are encoded.
+ * \brief Percent-encodes wide-character. Non-ASCII characters are converted to UTF-8 befor they are encoded.
  *
- * \sa \ref fz::percent-encode
+ * \sa \ref fz::percent_encode
  */
 std::wstring FZ_PUBLIC_SYMBOL percent_encode_w(std::wstring_view const& s, bool keep_slashes = false);
 

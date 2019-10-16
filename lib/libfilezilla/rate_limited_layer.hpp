@@ -1,11 +1,20 @@
 #ifndef LIBFILEZILLA_RATE_LIMITED_LAYER_HEADER
 #define LIBFILEZILLA_RATE_LIMITED_LAYER_HEADER
 
+/** \file
+ * \brief A rate-limited socket layer
+ */
+
 #include "rate_limiter.hpp"
 #include "socket.hpp"
 
 namespace fz {
 
+/**
+ * \brief A rate-limited socket layer.
+ *
+ * This socket layer is a bucket that can be added to a \sa rate_limiter.
+ */
 class FZ_PUBLIC_SYMBOL rate_limited_layer final : public socket_layer, private bucket
 {
 public:

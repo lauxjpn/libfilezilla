@@ -23,14 +23,32 @@ struct sockaddr;
 namespace fz {
 class thread_pool;
 
+/// The type of a socket event
 enum class socket_event_flag
 {
-	// This is a nonfatal condition. It
-	// means there are additional addresses to try.
+	/**
+	 * Sent if connection attempt has failed, but there are still
+	 * additional addresses to try.
+	 * Errors can be ignored for this type.
+	 */
 	connection_next,
 
+	/**
+	 * If no error is set, the connection has been established.
+	 * If an error is set, the connection could not be established.
+	 */
 	connection,
+
+	/**
+	 * If no error is set, data has become available.
+	 * If an error is set, the connection has failed.
+	 */
 	read,
+
+	/**
+	 * If no error is set, data can be written.
+	 * If an error is set, the connection has failed.
+	 */
 	write
 };
 
@@ -107,8 +125,7 @@ void FZ_PUBLIC_SYMBOL remove_socket_events(event_handler * handler, socket_event
  *
  * This function is called by socket::set_event_handler().
  *
- * \example Possible use-cases: Handoff after proxy handshakes, or handoff to TLS classes in
-			case of STARTTLS mechanism
+ * Example use-cases: Handoff after proxy handshakes, or handoff to TLS classes in case of STARTTLS mechanism
  */
 void FZ_PUBLIC_SYMBOL change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source);
 
@@ -589,7 +606,7 @@ protected:
 /**
  * \brief Gets a symbolic name for socket errors.
  *
- * \example error_string(EAGAIN) == "EAGAIN"
+ * For example, <tt>error_string(EAGAIN) == "EAGAIN"</tt>
  *
  * \return name if the error code is known
  * \return number as string if the error code is not known
