@@ -9,8 +9,9 @@
 namespace fz {
 
 namespace rate {
-enum : size_t {
-	unlimited = static_cast<size_t>(-1)
+using type = uint64_t;
+enum : type {
+	unlimited = static_cast<type>(-1)
 };
 }
 
@@ -53,14 +54,13 @@ private:
 class FZ_PUBLIC_SYMBOL bucket_base
 {
 public:
-	virtual ~bucket_base() = default;
+	virtual ~bucket_base() noexcept = default;
 
 	/// Must be called in the most-received class
 	void remove_bucket();
 
 protected:
 	friend class rate_limiter;
-
 
 	virtual void lock_tree() { mtx_.lock(); }
 
@@ -70,8 +70,8 @@ protected:
 	virtual size_t unsaturated(direction::type const /*d*/) const { return 0; }
 	virtual void set_mgr_recursive(rate_limit_manager * mgr);
 
-	virtual size_t add_tokens(direction::type const /*d*/, size_t /*tokens*/, size_t /*limit*/) = 0;
-	virtual size_t distribute_overflow(direction::type const /*d*/, size_t /*tokens*/) { return 0; }
+	virtual rate::type add_tokens(direction::type const /*d*/, rate::type /*tokens*/, rate::type /*limit*/) = 0;
+	virtual rate::type distribute_overflow(direction::type const /*d*/, rate::type /*tokens*/) { return 0; }
 
 	virtual void unlock_tree() { mtx_.unlock(); }
 
@@ -88,8 +88,8 @@ public:
 
 	void add(bucket_base* bucket);
 
-	void set_limits(size_t download_limit, size_t upload_limit);
-	size_t limit(direction::type const d);
+	void set_limits(rate::type download_limit, rate::type upload_limit);
+	rate::type limit(direction::type const d);
 
 private:
 	friend class bucket_base;
@@ -97,32 +97,32 @@ private:
 
 	virtual void lock_tree() override;
 
-	bool do_set_limit(direction::type const d, size_t limit);
+	bool do_set_limit(direction::type const d, rate::type limit);
 
 	virtual void update_stats(bool & active) override;
 	virtual size_t weight() const override { return weight_; }
 	virtual size_t unsaturated(direction::type const d) const override { return unused_capacity_[d] ? unsaturated_[d] : 0; }
 	virtual void set_mgr_recursive(rate_limit_manager * mgr) override;
 
-	virtual size_t add_tokens(direction::type const d, size_t tokens, size_t limit) override;
-	virtual size_t distribute_overflow(direction::type const d, size_t tokens) override;
+	virtual rate::type add_tokens(direction::type const d, rate::type tokens, rate::type limit) override;
+	virtual rate::type distribute_overflow(direction::type const d, rate::type tokens) override;
 
 	virtual void unlock_tree() override;
 
 	void pay_debt(direction::type const d);
 
-	size_t limit_[2] = {rate::unlimited, rate::unlimited};
+	rate::type limit_[2] = {rate::unlimited, rate::unlimited};
 
 	std::vector<bucket_base*> buckets_;
 	size_t weight_{};
 
 	size_t unsaturated_[2]{};
 	std::vector<size_t> scratch_buffer_;
-	size_t overflow_[2]{};
-	size_t merged_tokens_[2]{};
-	size_t debt_[2]{};
-	size_t unused_capacity_[2]{};
-	size_t carry_[2]{};
+	rate::type overflow_[2]{};
+	rate::type merged_tokens_[2]{};
+	rate::type debt_[2]{};
+	rate::type unused_capacity_[2]{};
+	rate::type carry_[2]{};
 };
 
 class FZ_PUBLIC_SYMBOL bucket : public bucket_base
@@ -130,8 +130,8 @@ class FZ_PUBLIC_SYMBOL bucket : public bucket_base
 public:
 	virtual ~bucket();
 
-	size_t available(direction::type const d);
-	void consume(direction::type const d, size_t amount);
+	rate::type available(direction::type const d);
+	void consume(direction::type const d, rate::type amount);
 
 protected:
 	virtual void wakeup(direction::type /*d*/) {}
@@ -140,17 +140,16 @@ private:
 	virtual void update_stats(bool & active) override;
 	virtual size_t unsaturated(direction::type const d) const override { return unsaturated_[d] ? 1 : 0; }
 
-	virtual size_t add_tokens(direction::type const d, size_t tokens, size_t limit) override;
-	virtual size_t distribute_overflow(direction::type const d, size_t tokens) override;
+	virtual rate::type add_tokens(direction::type const d, rate::type tokens, rate::type limit) override;
+	virtual rate::type distribute_overflow(direction::type const d, rate::type tokens) override;
 
 	virtual void unlock_tree() override;
 
-	size_t available_[2] = {rate::unlimited, rate::unlimited};
-	size_t overflow_multiplier_[2]{1, 1};
+	rate::type available_[2] = {rate::unlimited, rate::unlimited};
+	rate::type overflow_multiplier_[2]{1, 1};
+	rate::type bucket_size_[2]{rate::unlimited, rate::unlimited};
 	bool waiting_[2]{};
 	bool unsaturated_[2]{};
-
-	size_t bucket_size_[2]{rate::unlimited, rate::unlimited};
 };
 
 }
