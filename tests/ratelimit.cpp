@@ -49,7 +49,7 @@ struct handler : public fz::event_handler
 		int const delay = 3;
 		int const duration = 5;
 		if (elapsed >= delay + duration) {
-			size_t sum{};
+			fz::rate::type sum{};
 			for (size_t i = 0; i < buckets_.size(); ++i) {
 				sum += consumed_[i];
 				std::cout << "Bucket " << i << " has rate of " << consumed_[i] / duration << " bytes/s\n";
@@ -72,8 +72,8 @@ struct handler : public fz::event_handler
 		}
 
 		for (size_t i = 0; i < buckets_.size(); ++i) {
-			size_t amount = rates_[i];
-			size_t available = buckets_[i].available(fz::direction::inbound);
+			fz::rate::type amount = rates_[i];
+			fz::rate::type available = buckets_[i].available(fz::direction::inbound);
 			if (available != fz::rate::unlimited && available < amount) {
 				amount = available;
 			}
@@ -90,9 +90,9 @@ struct handler : public fz::event_handler
 	fz::rate_limiter limiter_;
 	fz::rate_limiter sub_limiter_[3];
 
-	std::array<size_t, 7> rates_{1, 2, 1000, 3, 1000, 100000, 100000};
+	std::array<fz::rate::type, 7> rates_{1, 2, 1000, 3, 1000, 100000, 100000};
 	std::array<fz::bucket, 7> buckets_;
-	std::array<size_t, 7> consumed_{};
+	std::array<fz::rate::type, 7> consumed_{};
 
 	fz::monotonic_clock start_;
 };

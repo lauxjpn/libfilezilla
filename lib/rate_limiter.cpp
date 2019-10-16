@@ -184,7 +184,7 @@ void rate_limiter::set_mgr_recursive(rate_limit_manager * mgr)
 	}
 }
 
-void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
+void rate_limiter::set_limits(rate::type download_limit, rate::type upload_limit)
 {
 	scoped_lock l(mtx_);
 	bool changed = do_set_limit(direction::inbound, download_limit);
@@ -194,7 +194,7 @@ void rate_limiter::set_limits(size_t download_limit, size_t upload_limit)
 	}
 }
 
-bool rate_limiter::do_set_limit(direction::type const d, size_t limit)
+bool rate_limiter::do_set_limit(direction::type const d, rate::type limit)
 {
 	if (limit_[d] == limit) {
 		return false;
@@ -209,7 +209,7 @@ bool rate_limiter::do_set_limit(direction::type const d, size_t limit)
 	return true;
 }
 
-size_t rate_limiter::limit(direction::type const d)
+rate::type rate_limiter::limit(direction::type const d)
 {
 	scoped_lock l(mtx_);
 	return limit_[d ? 1 : 0];
@@ -224,7 +224,6 @@ void rate_limiter::add(bucket_base* bucket)
 	bucket->remove_bucket();
 
 	scoped_lock l(mtx_);
-
 
 	bucket->lock_tree();
 
@@ -246,7 +245,7 @@ void rate_limiter::add(bucket_base* bucket)
 	weight_ += bucket_weight;
 
 	for (auto const& d : directions) {
-		size_t tokens;
+		rate::type tokens;
 		if (merged_tokens_[d] == rate::unlimited) {
 			tokens = rate::unlimited;
 		}
@@ -284,7 +283,7 @@ void rate_limiter::pay_debt(direction::type const d)
 {
 	if (merged_tokens_[d] != rate::unlimited) {
 		size_t weight = weight_ ? weight_ : 1;
-		size_t debt_reduction = std::min(merged_tokens_[d], debt_[d] / weight);
+		rate::type debt_reduction = std::min(merged_tokens_[d], debt_[d] / weight);
 		merged_tokens_[d] -= debt_reduction;
 		debt_[d] -= debt_reduction;
 	}
@@ -293,7 +292,7 @@ void rate_limiter::pay_debt(direction::type const d)
 	}
 }
 
-size_t rate_limiter::add_tokens(direction::type const d, size_t tokens, size_t limit)
+rate::type rate_limiter::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
 	if (!weight_) {
 		merged_tokens_[d] = std::min(limit_[d], tokens);
@@ -301,9 +300,9 @@ size_t rate_limiter::add_tokens(direction::type const d, size_t tokens, size_t l
 		return (tokens == rate::unlimited) ? 0 : tokens;
 	}
 
-	size_t merged_limit = limit;
+	rate::type merged_limit = limit;
 	if (limit_[d] != rate::unlimited) {
-		size_t my_limit = (carry_[d] + limit_[d]) / weight_;
+		rate::type my_limit = (carry_[d] + limit_[d]) / weight_;
 		carry_[d] = (carry_[d] + limit_[d]) % weight_;
 		if (my_limit < merged_limit) {
 			merged_limit = my_limit;
@@ -369,17 +368,17 @@ size_t rate_limiter::add_tokens(direction::type const d, size_t tokens, size_t l
 }
 
 
-size_t rate_limiter::distribute_overflow(direction::type const d, size_t overflow)
+rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type overflow)
 {
-	size_t usable_external_overflow;
+	rate::type usable_external_overflow;
 	if (unused_capacity_[d] == rate::unlimited) {
 		usable_external_overflow = overflow;
 	}
 	else {
 		usable_external_overflow = std::min(overflow, unused_capacity_[d]);
 	}
-	size_t const overflow_sum = overflow_[d] + usable_external_overflow;
-	size_t remaining = overflow_sum;
+	rate::type const overflow_sum = overflow_[d] + usable_external_overflow;
+	rate::type remaining = overflow_sum;
 
 	while (true) {
 		size_t size{};
@@ -392,10 +391,10 @@ size_t rate_limiter::distribute_overflow(direction::type const d, size_t overflo
 			break;
 		}
 
-		size_t const extra_tokens = remaining / size;
+		rate::type const extra_tokens = remaining / size;
 		remaining %= size;
 		for (size_t i = 0; i < scratch_buffer_.size(); ) {
-			size_t sub_overflow = buckets_[scratch_buffer_[i]]->distribute_overflow(d, extra_tokens);
+			rate::type sub_overflow = buckets_[scratch_buffer_[i]]->distribute_overflow(d, extra_tokens);
 			if (sub_overflow) {
 				remaining += sub_overflow;
 				scratch_buffer_[i] = scratch_buffer_.back();
@@ -444,7 +443,7 @@ bucket::~bucket()
 	remove_bucket();
 }
 
-size_t bucket::add_tokens(direction::type const d, size_t tokens, size_t limit)
+rate::type bucket::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
 	if (limit == rate::unlimited) {
 		bucket_size_[d] = rate::unlimited;
@@ -462,7 +461,7 @@ size_t bucket::add_tokens(direction::type const d, size_t tokens, size_t limit)
 			return tokens;
 		}
 		else {
-			size_t capacity = bucket_size_[d] - available_[d];
+			rate::type capacity = bucket_size_[d] - available_[d];
 			if (capacity < tokens && unsaturated_[d]) {
 				unsaturated_[d] = false;
 				if (overflow_multiplier_[d] < 1024*1024) {
@@ -471,21 +470,21 @@ size_t bucket::add_tokens(direction::type const d, size_t tokens, size_t limit)
 					overflow_multiplier_[d] *= 2;
 				}
 			}
-			size_t added = std::min(tokens, capacity);
-			size_t ret = tokens - added;
+			rate::type added = std::min(tokens, capacity);
+			rate::type ret = tokens - added;
 			available_[d] += added;
 			return ret;
 		}
 	}
 }
 
-size_t bucket::distribute_overflow(direction::type const d, size_t tokens)
+rate::type bucket::distribute_overflow(direction::type const d, rate::type tokens)
 {
 	if (available_[d] == rate::unlimited) {
 		return 0;
 	}
 
-	size_t capacity = bucket_size_[d] - available_[d];
+	rate::type capacity = bucket_size_[d] - available_[d];
 	if (capacity < tokens && unsaturated_[d]) {
 		unsaturated_[d] = false;
 		if (overflow_multiplier_[d] < 1024*1024) {
@@ -494,8 +493,8 @@ size_t bucket::distribute_overflow(direction::type const d, size_t tokens)
 			overflow_multiplier_[d] *= 2;
 		}
 	}
-	size_t added = std::min(tokens, capacity);
-	size_t ret = tokens - added;
+	rate::type added = std::min(tokens, capacity);
+	rate::type ret = tokens - added;
 	available_[d] += added;
 	return ret;
 }
@@ -531,7 +530,7 @@ void bucket::update_stats(bool & active)
 	}
 }
 
-size_t bucket::available(direction::type const d)
+rate::type bucket::available(direction::type const d)
 {
 	if (d != direction::inbound && d != direction::outbound) {
 		return rate::unlimited;
@@ -547,7 +546,7 @@ size_t bucket::available(direction::type const d)
 	return available_[d];
 }
 
-void bucket::consume(direction::type const d, size_t amount)
+void bucket::consume(direction::type const d, rate::type amount)
 {
 	if (!amount) {
 		return;
