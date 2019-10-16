@@ -160,6 +160,13 @@ void bucket_base::set_mgr_recursive(rate_limit_manager * mgr)
 	mgr_ = mgr;
 }
 
+rate_limiter::rate_limiter(rate_limit_manager *mgr)
+{
+	if (mgr) {
+		mgr->add(this);
+	}
+}
+
 rate_limiter::~rate_limiter()
 {
 	{

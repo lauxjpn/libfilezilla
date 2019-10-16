@@ -457,7 +457,7 @@ inline void rtrim(String & s, std::wstring_view const& chars = L" \r\n\t")
 
 /** \brief Tests whether the first string starts with the second string
  *
- * \param insensitive_ascii If true, comparison is case-insensitive
+ * \tparam insensitive_ascii If true, comparison is case-insensitive
  */
 template<bool insensitive_ascii = false, typename String>
 bool starts_with(String const& s, String const& beginning)
@@ -477,7 +477,7 @@ bool starts_with(String const& s, String const& beginning)
 
 /** \brief Tests whether the first string ends with the second string
  *
- * \param insensitive_ascii If true, comparison is case-insensitive
+ * \tparam insensitive_ascii If true, comparison is case-insensitive
  */
 template<bool insensitive_ascii = false, typename String>
 bool ends_with(String const& s, String const& ending)

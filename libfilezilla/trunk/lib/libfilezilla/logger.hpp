@@ -1,6 +1,10 @@
 #ifndef LIBFILEZILLA_LOGGER_HEADER
 #define LIBFILEZILLA_LOGGER_HEADER
 
+/** \file
+ * Interface for logging
+ */
+
 #include "format.hpp"
 
 #include <atomic>
@@ -34,6 +38,14 @@ namespace logmsg
 	};
 }
 
+/**
+ * \brief Abstract interface for logging strings.
+ *
+ * Each log message has a type. Logging can be enabled or disabled for each type.
+ *
+ * The actual string to log gets assembled from the format string and its
+ * arguments only if the type is supposed to be logged.
+ */
 class logger_interface
 {
 public:
@@ -47,6 +59,7 @@ public:
 	/// The one thing you need to override
 	virtual void do_log(logmsg::type t, std::wstring && msg) = 0;
 
+	/// The \arg fmt argument is a format string suitable for fz::sprintf
 	template<typename String, typename...Args>
 	void log(logmsg::type t, String&& fmt, Args&& ...args)
 	{
@@ -56,6 +69,7 @@ public:
 		}
 	}
 
+	/// Logs the raw string, it is not treated as format string
 	template<typename String>
 	void log_raw(logmsg::type t, String&& msg)
 	{
@@ -69,10 +83,12 @@ public:
 		return level_ & t;
 	}
 
+	/// Sets which message types should be logged
 	void set_all(logmsg::type t) {
 		level_ = t;
 	}
 
+	/// Sets whether the given types should be logged
 	void set(logmsg::type t, bool flag) {
 		if (flag) {
 			enable(t);
@@ -82,13 +98,15 @@ public:
 		}
 	}
 
+	/// Enables logging for the passed message types
 	void enable(logmsg::type t) {
 		level_ |= t;
 	}
+
+	/// Disables logging for the passed message types
 	void disable(logmsg::type t) {
 		level_ &= ~t;
 	}
-
 
 protected:
 	std::atomic<uint64_t> level_{logmsg::status | logmsg::error | logmsg::command | logmsg::reply};

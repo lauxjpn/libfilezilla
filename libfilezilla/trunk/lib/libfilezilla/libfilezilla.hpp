@@ -40,7 +40,8 @@
  * \li A typesafe, multi-threaded event system that's very simple to use yet extremely efficient
  * \li Timers for periodic events
  * \li A \ref fz::socket class for TCP communication with infrastructure to easily add layers on top
- * \li A TLS layer to secure communication
+ * \li A \ref fz::tls_layer "TLS layer" to secure communication
+ * \li A \ref fz::rate_limited_layer "rate-limited socket layer" to control traffic flow
  * \li A \ref fz::datetime "datetime" class that not only tracks timestamp but also their accuracy, which simplifies dealing with timestamps originating from different sources
  * \li Simple \ref fz::process "process" handling for spawning child processes with redirected I/O
  *
