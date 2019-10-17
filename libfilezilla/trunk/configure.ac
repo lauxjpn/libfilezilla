@@ -1,4 +1,14 @@
 AC_INIT([libfilezilla],[0.18.2],[tim.kosse@filezilla-project.org],[],[https://lib.filezilla-project.org/])
+
+# Update the version information only immediately before a public release of your software
+# If the library source code has changed at all since the last update, then increment revision (‘c:r:a’ becomes ‘c:r+1:a’).
+# If any interfaces have been added, removed, or changed since the last update, increment current, and set revision to 0.
+# If any interfaces have been added since the last public release, then increment age.
+# If any interfaces have been removed or changed since the last public release, then set age to 0.
+# CURRENT:REVISION:AGE
+LIBRARY_VERSION=1:0:1
+
+
 AC_CONFIG_HEADERS([lib/libfilezilla/private/config.hpp])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
@@ -12,6 +22,7 @@ AC_PROG_INSTALL
 
 LT_INIT([win32-dll])
 LT_LANG([C++])
+AC_SUBST(LIBRARY_VERSION)
 
 AC_CACHE_SAVE
 

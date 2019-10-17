@@ -114,6 +114,7 @@ libfilezilla_la_CXXFLAGS = $(AM_CXXFLAGS)
 libfilezilla_la_CXXFLAGS += -fvisibility=hidden
 
 libfilezilla_la_LDFLAGS += -no-undefined
+libfilezilla_la_LDFLAGS += -version-info $(LIBRARY_VERSION)
 
 libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS) $(GNUTLS_LIBS)
 
