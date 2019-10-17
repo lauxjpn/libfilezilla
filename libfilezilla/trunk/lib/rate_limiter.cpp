@@ -116,6 +116,17 @@ void rate_limit_manager::process(rate_limiter* limiter, bool locked)
 	}
 }
 
+void rate_limit_manager::set_burst_tolerance(rate::type tolerance)
+{
+	if (tolerance < 1) {
+		tolerance = 1;
+	}
+	else if (tolerance > 10) {
+		tolerance = 10;
+	}
+	burst_tolerance_ = tolerance;
+}
+
 void bucket_base::remove_bucket()
 {
 	scoped_lock l(mtx_);
@@ -466,7 +477,10 @@ rate::type bucket::add_tokens(direction::type const d, rate::type tokens, rate::
 		return 0;
 	}
 	else {
-		data.bucket_size_ = limit * data.overflow_multiplier_; // TODO: Tolerance
+		data.bucket_size_ = limit * data.overflow_multiplier_;
+		if (mgr_) {
+			data.bucket_size_ *= mgr_->burst_tolerance_;
+		}
 		if (data.available_ == rate::unlimited) {
 			data.available_ = tokens;
 			return 0;
