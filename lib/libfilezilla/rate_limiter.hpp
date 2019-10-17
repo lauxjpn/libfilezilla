@@ -56,6 +56,9 @@ public:
 	 */
 	void add(rate_limiter* limiter);
 
+	/// Burst tolerance, a multiplier to bucket size, helps achieving the average rate on bursty connections.
+	void set_burst_tolerance(rate::type tolerance);
+
 private:
 	friend class rate_limiter;
 	friend class bucket_base;
@@ -74,6 +77,8 @@ private:
 	std::atomic<timer_id> timer_{};
 
 	std::atomic<int> activity_{2};
+
+	std::atomic<rate::type> burst_tolerance_{1};
 };
 
 /// Base class for buckets
