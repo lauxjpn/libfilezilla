@@ -207,7 +207,7 @@ private:
 
 	virtual void update_stats(bool & active) override;
 	virtual size_t weight() const override { return weight_; }
-	virtual size_t unsaturated(direction::type const d) const override { return unused_capacity_[d] ? unsaturated_[d] : 0; }
+	virtual size_t unsaturated(direction::type const d) const override { return data_[d].unused_capacity_ ? data_[d].unsaturated_ : 0; }
 	virtual void set_mgr_recursive(rate_limit_manager * mgr) override;
 
 	virtual rate::type add_tokens(direction::type const d, rate::type tokens, rate::type limit) override;
@@ -217,18 +217,20 @@ private:
 
 	void pay_debt(direction::type const d);
 
-	rate::type limit_[2] = {rate::unlimited, rate::unlimited};
 
 	std::vector<bucket_base*> buckets_;
+	std::vector<size_t> scratch_buffer_;
 	size_t weight_{};
 
-	size_t unsaturated_[2]{};
-	std::vector<size_t> scratch_buffer_;
-	rate::type overflow_[2]{};
-	rate::type merged_tokens_[2]{};
-	rate::type debt_[2]{};
-	rate::type unused_capacity_[2]{};
-	rate::type carry_[2]{};
+	struct data_t {
+		rate::type limit_{rate::unlimited};
+		rate::type merged_tokens_;
+		rate::type overflow_{};
+		rate::type debt_{};
+		rate::type unused_capacity_{};
+		rate::type carry_{};
+		size_t unsaturated_{};
+	} data_[2];
 };
 
 /**
@@ -264,18 +266,20 @@ protected:
 
 private:
 	virtual void update_stats(bool & active) override;
-	virtual size_t unsaturated(direction::type const d) const override { return unsaturated_[d] ? 1 : 0; }
+	virtual size_t unsaturated(direction::type const d) const override { return data_[d].unsaturated_ ? 1 : 0; }
 
 	virtual rate::type add_tokens(direction::type const d, rate::type tokens, rate::type limit) override;
 	virtual rate::type distribute_overflow(direction::type const d, rate::type tokens) override;
 
 	virtual void unlock_tree() override;
 
-	rate::type available_[2] = {rate::unlimited, rate::unlimited};
-	rate::type overflow_multiplier_[2]{1, 1};
-	rate::type bucket_size_[2]{rate::unlimited, rate::unlimited};
-	bool waiting_[2]{};
-	bool unsaturated_[2]{};
+	struct data_t {
+		rate::type available_{rate::unlimited};
+		rate::type overflow_multiplier_{1};
+		rate::type bucket_size_{rate::unlimited};
+		bool waiting_{};
+		bool unsaturated_{};
+	} data_[2];
 };
 
 }
