@@ -205,15 +205,16 @@ void rate_limiter::set_limits(rate::type download_limit, rate::type upload_limit
 
 bool rate_limiter::do_set_limit(direction::type const d, rate::type limit)
 {
-	if (limit_[d] == limit) {
+	auto & data = data_[d];
+	if (data.limit_ == limit) {
 		return false;
 	}
 
-	limit_[d] = limit;
+	data.limit_ = limit;
 
 	size_t weight = weight_ ? weight_ : 1;
-	if (limit_[d] != rate::unlimited) {
-		merged_tokens_[d] = std::min(merged_tokens_[d], limit_[d] / weight);
+	if (data.limit_ != rate::unlimited) {
+		data.merged_tokens_ = std::min(data.merged_tokens_, data.limit_ / weight);
 	}
 	return true;
 }
@@ -221,7 +222,7 @@ bool rate_limiter::do_set_limit(direction::type const d, rate::type limit)
 rate::type rate_limiter::limit(direction::type const d)
 {
 	scoped_lock l(mtx_);
-	return limit_[d ? 1 : 0];
+	return data_[d ? 1 : 0].limit_;
 }
 
 void rate_limiter::add(bucket_base* bucket)
@@ -254,18 +255,19 @@ void rate_limiter::add(bucket_base* bucket)
 	weight_ += bucket_weight;
 
 	for (auto const& d : directions) {
+		auto & data = data_[d];
 		rate::type tokens;
-		if (merged_tokens_[d] == rate::unlimited) {
+		if (data.merged_tokens_ == rate::unlimited) {
 			tokens = rate::unlimited;
 		}
 		else {
-			tokens = merged_tokens_[d] / (bucket_weight * 2);
+			tokens = data.merged_tokens_ / (bucket_weight * 2);
 		}
 		bucket->add_tokens(d, tokens, tokens);
 		bucket->distribute_overflow(d, 0);
 
 		if (tokens != rate::unlimited) {
-			debt_[d] += tokens * bucket_weight;
+			data.debt_ += tokens * bucket_weight;
 		}
 	}
 
@@ -290,103 +292,106 @@ void rate_limiter::unlock_tree()
 
 void rate_limiter::pay_debt(direction::type const d)
 {
-	if (merged_tokens_[d] != rate::unlimited) {
+	auto & data = data_[d];
+	if (data.merged_tokens_ != rate::unlimited) {
 		size_t weight = weight_ ? weight_ : 1;
-		rate::type debt_reduction = std::min(merged_tokens_[d], debt_[d] / weight);
-		merged_tokens_[d] -= debt_reduction;
-		debt_[d] -= debt_reduction;
+		rate::type debt_reduction = std::min(data.merged_tokens_, data.debt_ / weight);
+		data.merged_tokens_ -= debt_reduction;
+		data.debt_ -= debt_reduction;
 	}
 	else {
-		debt_[d] = 0;
+		data.debt_ = 0;
 	}
 }
 
 rate::type rate_limiter::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
+	auto & data = data_[d];
 	if (!weight_) {
-		merged_tokens_[d] = std::min(limit_[d], tokens);
+		data.merged_tokens_ = std::min(data.limit_, tokens);
 		pay_debt(d);
 		return (tokens == rate::unlimited) ? 0 : tokens;
 	}
 
 	rate::type merged_limit = limit;
-	if (limit_[d] != rate::unlimited) {
-		rate::type my_limit = (carry_[d] + limit_[d]) / weight_;
-		carry_[d] = (carry_[d] + limit_[d]) % weight_;
+	if (data.limit_ != rate::unlimited) {
+		rate::type my_limit = (data.carry_ + data.limit_) / weight_;
+		data.carry_ = (data.carry_ + data.limit_) % weight_;
 		if (my_limit < merged_limit) {
 			merged_limit = my_limit;
 		}
-		carry_[d] += (merged_limit % frequency) * weight_;
+		data.carry_ += (merged_limit % frequency) * weight_;
 	}
 
-	unused_capacity_[d] = 0;
+	data.unused_capacity_ = 0;
 
 	if (merged_limit != rate::unlimited) {
-		merged_tokens_[d] = merged_limit / frequency;
+		data.merged_tokens_ = merged_limit / frequency;
 	}
 	else {
-		merged_tokens_[d] = rate::unlimited;
+		data.merged_tokens_ = rate::unlimited;
 	}
 
-	if (tokens < merged_tokens_[d]) {
-		merged_tokens_[d] = tokens;
+	if (tokens < data.merged_tokens_) {
+		data.merged_tokens_ = tokens;
 	}
 
 	pay_debt(d);
 
-	if (limit_[d] == rate::unlimited) {
-		unused_capacity_[d] = rate::unlimited;
+	if (data.limit_ == rate::unlimited) {
+		data.unused_capacity_ = rate::unlimited;
 	}
 	else {
-		if (merged_tokens_[d] * weight_ * frequency < limit_[d]) {
-			unused_capacity_[d] = limit_[d] - merged_tokens_[d] * weight_ * frequency;
-			unused_capacity_[d] /= frequency;
+		if (data.merged_tokens_ * weight_ * frequency < data.limit_) {
+			data.unused_capacity_ = data.limit_ - data.merged_tokens_ * weight_ * frequency;
+			data.unused_capacity_ /= frequency;
 		}
 		else {
-			unused_capacity_[d] = 0;
+			data.unused_capacity_ = 0;
 		}
 	}
 
-	overflow_[d] = 0;
+	data.overflow_ = 0;
 	scratch_buffer_.clear();
 	for (size_t i = 0; i < buckets_.size(); ++i) {
-		size_t overflow = buckets_[i]->add_tokens(d, merged_tokens_[d], merged_limit);
+		size_t overflow = buckets_[i]->add_tokens(d, data.merged_tokens_, merged_limit);
 		if (overflow) {
-			overflow_[d] += overflow;
+			data.overflow_ += overflow;
 		}
 		if (buckets_[i]->unsaturated(d)) {
 			scratch_buffer_.push_back(i);
 		}
 		else {
-			overflow_[d] += buckets_[i]->distribute_overflow(d, 0);
+			data.overflow_ += buckets_[i]->distribute_overflow(d, 0);
 		}
 	}
-	if (overflow_[d] >= unused_capacity_[d]) {
-		unused_capacity_[d] = 0;
+	if (data.overflow_ >= data.unused_capacity_) {
+		data.unused_capacity_ = 0;
 	}
-	else if (unused_capacity_[d] != rate::unlimited) {
-		unused_capacity_[d] -= overflow_[d];
+	else if (data.unused_capacity_ != rate::unlimited) {
+		data.unused_capacity_ -= data.overflow_;
 	}
 
 	if (tokens == rate::unlimited) {
 		return 0;
 	}
 	else {
-		return (tokens - merged_tokens_[d]) * weight_;
+		return (tokens - data.merged_tokens_) * weight_;
 	}
 }
 
 
 rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type overflow)
 {
+	auto & data = data_[d];
 	rate::type usable_external_overflow;
-	if (unused_capacity_[d] == rate::unlimited) {
+	if (data.unused_capacity_ == rate::unlimited) {
 		usable_external_overflow = overflow;
 	}
 	else {
-		usable_external_overflow = std::min(overflow, unused_capacity_[d]);
+		usable_external_overflow = std::min(overflow, data.unused_capacity_);
 	}
-	rate::type const overflow_sum = overflow_[d] + usable_external_overflow;
+	rate::type const overflow_sum = data.overflow_ + usable_external_overflow;
 	rate::type remaining = overflow_sum;
 
 	while (true) {
@@ -394,7 +399,7 @@ rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type
 		for (auto idx : scratch_buffer_) {
 			size += buckets_[idx]->unsaturated(d);
 		}
-		unsaturated_[d] = size;
+		data.unsaturated_ = size;
 
 		if (!remaining || scratch_buffer_.empty()) {
 			break;
@@ -420,13 +425,13 @@ rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type
 
 	if (usable_external_overflow > remaining) {
 		// Exhausted internal overflow
-		unused_capacity_[d] -= usable_external_overflow - remaining;
-		overflow_[d] = 0;
+		data.unused_capacity_ -= usable_external_overflow - remaining;
+		data.overflow_ = 0;
 		return remaining + overflow - usable_external_overflow;
 	}
 	else {
 		// Internal overflow not exhausted
-		overflow_[d] = remaining - usable_external_overflow;
+		data.overflow_ = remaining - usable_external_overflow;
 		return overflow;
 	}
 }
@@ -435,13 +440,13 @@ void rate_limiter::update_stats(bool & active)
 {
 	weight_ = 0;
 
-	unsaturated_[0] = 0;
-	unsaturated_[1] = 0;
+	data_[0].unsaturated_ = 0;
+	data_[1].unsaturated_ = 0;
 	for (size_t i = 0; i < buckets_.size(); ++i) {
 		buckets_[i]->update_stats(active);
 		weight_ += buckets_[i]->weight();
 		for (auto const d : directions) {
-			unsaturated_[d] += buckets_[i]->unsaturated(d);
+			data_[d].unsaturated_ += buckets_[i]->unsaturated(d);
 		}
 	}
 }
@@ -454,34 +459,35 @@ bucket::~bucket()
 
 rate::type bucket::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
+	auto & data = data_[d];
 	if (limit == rate::unlimited) {
-		bucket_size_[d] = rate::unlimited;
-		available_[d] = rate::unlimited;
+		data.bucket_size_ = rate::unlimited;
+		data.available_ = rate::unlimited;
 		return 0;
 	}
 	else {
-		bucket_size_[d] = limit * overflow_multiplier_[d]; // TODO: Tolerance
-		if (available_[d] == rate::unlimited) {
-			available_[d] = tokens;
+		data.bucket_size_ = limit * data.overflow_multiplier_; // TODO: Tolerance
+		if (data.available_ == rate::unlimited) {
+			data.available_ = tokens;
 			return 0;
 		}
-		else if (bucket_size_[d] < available_[d]) {
-			available_[d] = bucket_size_[d];
+		else if (data.bucket_size_ < data.available_) {
+			data.available_ = data.bucket_size_;
 			return tokens;
 		}
 		else {
-			rate::type capacity = bucket_size_[d] - available_[d];
-			if (capacity < tokens && unsaturated_[d]) {
-				unsaturated_[d] = false;
-				if (overflow_multiplier_[d] < 1024*1024) {
-					capacity += bucket_size_[d];
-					bucket_size_[d] *= 2;
-					overflow_multiplier_[d] *= 2;
+			rate::type capacity = data.bucket_size_ - data.available_;
+			if (capacity < tokens && data.unsaturated_) {
+				data.unsaturated_ = false;
+				if (data.overflow_multiplier_ < 1024*1024) {
+					capacity += data.bucket_size_;
+					data.bucket_size_ *= 2;
+					data.overflow_multiplier_ *= 2;
 				}
 			}
 			rate::type added = std::min(tokens, capacity);
 			rate::type ret = tokens - added;
-			available_[d] += added;
+			data.available_ += added;
 			return ret;
 		}
 	}
@@ -489,30 +495,32 @@ rate::type bucket::add_tokens(direction::type const d, rate::type tokens, rate::
 
 rate::type bucket::distribute_overflow(direction::type const d, rate::type tokens)
 {
-	if (available_[d] == rate::unlimited) {
+	auto & data = data_[d];
+	if (data.available_ == rate::unlimited) {
 		return 0;
 	}
 
-	rate::type capacity = bucket_size_[d] - available_[d];
-	if (capacity < tokens && unsaturated_[d]) {
-		unsaturated_[d] = false;
-		if (overflow_multiplier_[d] < 1024*1024) {
-			capacity += bucket_size_[d];
-			bucket_size_[d] *= 2;
-			overflow_multiplier_[d] *= 2;
+	rate::type capacity = data.bucket_size_ - data.available_;
+	if (capacity < tokens && data.unsaturated_) {
+		data.unsaturated_ = false;
+		if (data.overflow_multiplier_ < 1024*1024) {
+			capacity += data.bucket_size_;
+			data.bucket_size_ *= 2;
+			data.overflow_multiplier_ *= 2;
 		}
 	}
 	rate::type added = std::min(tokens, capacity);
 	rate::type ret = tokens - added;
-	available_[d] += added;
+	data.available_ += added;
 	return ret;
 }
 
 void bucket::unlock_tree()
 {
 	for (auto const& d : directions) {
-		if (waiting_[d] && available_[d]) {
-			waiting_[d] = false;
+		auto & data = data_[d];
+		if (data.waiting_ && data.available_) {
+			data.waiting_ = false;
 			wakeup(static_cast<direction::type>(d));
 		}
 	}
@@ -522,16 +530,17 @@ void bucket::unlock_tree()
 void bucket::update_stats(bool & active)
 {
 	for (auto const& d : directions) {
-		if (bucket_size_[d] == rate::unlimited) {
-			overflow_multiplier_[d] = 1;
+		auto & data = data_[d];
+		if (data.bucket_size_ == rate::unlimited) {
+			data.overflow_multiplier_ = 1;
 		}
 		else {
-			if (available_[d] > bucket_size_[d] / 2 && overflow_multiplier_[d] > 1) {
-				overflow_multiplier_[d] /= 2;
+			if (data.available_ > data.bucket_size_ / 2 && data.overflow_multiplier_ > 1) {
+				data.overflow_multiplier_ /= 2;
 			}
 			else {
-				unsaturated_[d] = waiting_[d];
-				if (waiting_[d]) {
+				data.unsaturated_ = data.waiting_;
+				if (data.waiting_) {
 					active = true;
 				}
 			}
@@ -546,13 +555,14 @@ rate::type bucket::available(direction::type const d)
 	}
 
 	scoped_lock l(mtx_);
-	if (!available_[d]) {
-		waiting_[d] = true;
+	auto & data = data_[d];
+	if (!data.available_) {
+		data.waiting_ = true;
 		if (mgr_) {
 			mgr_->record_activity();
 		}
 	}
-	return available_[d];
+	return data.available_;
 }
 
 void bucket::consume(direction::type const d, rate::type amount)
@@ -564,15 +574,16 @@ void bucket::consume(direction::type const d, rate::type amount)
 		return;
 	}
 	scoped_lock l(mtx_);
-	if (available_[d] != rate::unlimited) {
+	auto & data = data_[d];
+	if (data.available_ != rate::unlimited) {
 		if (mgr_) {
 			mgr_->record_activity();
 		}
-		if (available_[d] > amount) {
-			available_[d] -= amount;
+		if (data.available_ > amount) {
+			data.available_ -= amount;
 		}
 		else {
-			available_[d] = 0;
+			data.available_ = 0;
 		}
 	}
 }
