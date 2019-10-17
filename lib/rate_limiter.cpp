@@ -1,6 +1,8 @@
 #include "libfilezilla/rate_limiter.hpp"
 #include "libfilezilla/util.hpp"
 
+#include <array>
+
 #include <assert.h>
 
 /*
