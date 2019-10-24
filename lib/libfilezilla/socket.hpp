@@ -247,7 +247,7 @@ private:
 };
 
 /**
- * /brief Simple Listen socket
+ * \brief Simple Listen socket
  *
  * When a client connects, a socket event with the connection flag is send.
  *
