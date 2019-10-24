@@ -14,6 +14,7 @@ namespace fz {
 class x509_certificate final
 {
 public:
+	/// A subject name, typically a DNS hostname
 	class subject_name final
 	{
 	public:
