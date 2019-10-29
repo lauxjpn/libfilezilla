@@ -144,7 +144,7 @@ bool dispatch(event_base const& ev, F&& f)
 	bool const same = same_type<T>(ev);
 	if (same) {
 		T const* e = static_cast<T const*>(&ev);
-		apply(std::forward<F>(f), e->v_);
+		std::apply(std::forward<F>(f), e->v_);
 	}
 	return same;
 }
