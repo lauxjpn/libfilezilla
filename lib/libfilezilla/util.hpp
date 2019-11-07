@@ -22,6 +22,12 @@ namespace fz {
  */
 void FZ_PUBLIC_SYMBOL sleep(duration const& d);
 
+/** \brief Relinquish control for a brief amount of time.
+ *
+ * The exact duration is unspecified.
+ */
+void FZ_PUBLIC_SYMBOL yield();
+
 /** \brief Get a secure random integer uniformly distributed in the closed interval [min, max]
  */
 int64_t FZ_PUBLIC_SYMBOL random_number(int64_t min, int64_t max);
