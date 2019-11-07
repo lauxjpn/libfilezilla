@@ -26,6 +26,17 @@ void sleep(duration const& d)
 #endif
 }
 
+void yield()
+{
+#ifdef FZ_WINDOWS
+	Sleep(static_cast<DWORD>(1); // Nothing smaller on MSW?
+#else
+	timespec ts{};
+	ts.tv_nsec = 100000; // 0.1ms
+	nanosleep(&ts, nullptr);
+#endif
+}
+
 namespace {
 #if defined(FZ_WINDOWS) && !defined(_MSC_VER)
 // Unfortunately MiNGW does not have a working random_device

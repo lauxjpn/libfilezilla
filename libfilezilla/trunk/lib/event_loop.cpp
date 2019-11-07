@@ -81,7 +81,7 @@ void event_loop::remove_handler(event_handler* handler)
 		if (thread::own_id() != thread_id_) {
 			while (active_handler_ == handler) {
 				l.unlock();
-				sleep(duration::from_milliseconds(1));
+				yield();
 				l.lock();
 			}
 		}

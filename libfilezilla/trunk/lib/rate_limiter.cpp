@@ -161,7 +161,7 @@ void bucket_base::remove_bucket()
 
 		// Break deadlock
 		l.unlock();
-		sleep(duration::from_milliseconds(1));
+		yield();
 		l.lock();
 	}
 	parent_ = nullptr;
