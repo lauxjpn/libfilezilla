@@ -1,3 +1,8 @@
+0.19.1 (2019-11-15)
+
++ Return error information to fz::local_filesys::begin_find_files
+- Fix for version.hpp not getting installed
+
 0.19.0 (2019-11-07)
 
 + Addded rate limiting code and a new rate-limited socket layer
