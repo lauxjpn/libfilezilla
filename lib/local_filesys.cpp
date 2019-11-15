@@ -285,10 +285,10 @@ local_filesys::type local_filesys::get_file_info(native_string const& path, bool
 #endif
 }
 
-bool local_filesys::begin_find_files(native_string path, bool dirs_only)
+result local_filesys::begin_find_files(native_string path, bool dirs_only)
 {
 	if (path.empty()) {
-		return false;
+		return result{result::nodir};
 	}
 
 	end_find_files();
@@ -307,11 +307,11 @@ bool local_filesys::begin_find_files(native_string path, bool dirs_only)
 	m_hFind = FindFirstFileEx(path.c_str(), FindExInfoStandard, &m_find_data, dirs_only ? FindExSearchLimitToDirectories : FindExSearchNameMatch, nullptr, 0);
 	if (m_hFind == INVALID_HANDLE_VALUE) {
 		has_next_ = false;
-		return false;
+		return result{result::other};
 	}
 
 	has_next_ = true;
-	return true;
+	return result{result::ok};
 #else
 	if (path.size() > 1 && path.back() == '/') {
 		path.pop_back();
@@ -319,10 +319,18 @@ bool local_filesys::begin_find_files(native_string path, bool dirs_only)
 
 	dir_ = opendir(path.c_str());
 	if (!dir_) {
-		return false;
+		switch (errno) {
+			case EACCES:
+				return result{result::noperm};
+			case ENOTDIR:
+			case ENOENT:
+				return result{result::nodir};
+			default:
+				return result{result::other};
+		}
 	}
 
-	return true;
+	return result{result::ok};
 #endif
 }
 

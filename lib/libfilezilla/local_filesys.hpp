@@ -16,6 +16,33 @@
 namespace fz {
 
 /**
+ * \ brief Small class to return filesystem errors
+ */
+class FZ_PUBLIC_SYMBOL result final
+{
+public:
+	enum error {
+		ok,
+
+		/// Permission denied
+		noperm,
+
+		/// Requested file does not exist or is not a file
+		nofile,
+
+		/// Requested dir does not exist or is not a dir
+		nodir,
+
+		/// Some other error
+		other
+	};
+
+	explicit operator bool() const { return error_ == 0; }
+
+	error error_{};
+};
+
+/**
  * \brief This class can be used to enumerate the contents of local directories and to query
  * the metadata of files.
  *
@@ -67,7 +94,7 @@ public:
 	/// \brief Begins enumerating a directory.
 	///
 	/// \param dirs_only If true, only directories are enumerated.
-	bool begin_find_files(native_string path, bool dirs_only = false);
+	result begin_find_files(native_string path, bool dirs_only = false);
 
 	/// Gets the next file in the directory. Call until it returns false.
 	bool get_next_file(native_string& name);
