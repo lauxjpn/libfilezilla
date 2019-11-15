@@ -205,6 +205,8 @@
     <ClCompile Include="local_filesys.cpp" />
     <ClCompile Include="mutex.cpp" />
     <ClCompile Include="process.cpp" />
+    <ClCompile Include="rate_limited_layer.cpp" />
+    <ClCompile Include="rate_limiter.cpp" />
     <ClCompile Include="recursive_remove.cpp" />
     <ClCompile Include="signature.cpp" />
     <ClCompile Include="socket.cpp" />
@@ -243,6 +245,8 @@
     <ClInclude Include="libfilezilla\private\visibility.hpp" />
     <ClInclude Include="libfilezilla\private\windows.hpp" />
     <ClInclude Include="libfilezilla\process.hpp" />
+    <ClInclude Include="libfilezilla\rate_limited_layer.hpp" />
+    <ClInclude Include="libfilezilla\rate_limiter.hpp" />
     <ClInclude Include="libfilezilla\recursive_remove.hpp" />
     <ClInclude Include="libfilezilla\shared.hpp" />
     <ClInclude Include="libfilezilla\signature.hpp" />
