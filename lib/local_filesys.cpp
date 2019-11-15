@@ -1,5 +1,6 @@
 #include "libfilezilla/local_filesys.hpp"
 #ifndef FZ_WINDOWS
+#include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -321,6 +322,7 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only)
 	if (!dir_) {
 		switch (errno) {
 			case EACCES:
+			case EPERM:
 				return result{result::noperm};
 			case ENOTDIR:
 			case ENOENT:
