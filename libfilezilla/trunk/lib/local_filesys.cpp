@@ -308,7 +308,12 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only)
 	m_hFind = FindFirstFileEx(path.c_str(), FindExInfoStandard, &m_find_data, dirs_only ? FindExSearchLimitToDirectories : FindExSearchNameMatch, nullptr, 0);
 	if (m_hFind == INVALID_HANDLE_VALUE) {
 		has_next_ = false;
-		return result{result::other};
+		switch (GetLastError()) {
+			case ERROR_ACCESS_DENIED:
+				return result{result::noperm };
+			default:
+				return result{result::other};
+		}
 	}
 
 	has_next_ = true;
