@@ -92,13 +92,18 @@ struct socket_event_type;
  *
  * If the error value is non-zero for the connection, read and write events,
  * the socket has failed and needs to be closed. Doing anything else with
- * failed sockets is undefined behavior. 
+ * failed sockets is undefined behavior.
  * Failure events can be received at any time.
  *
  * Read and write events are edge-triggered:
- * - After receiving a read event for a socket, it will not be sent again unless
- * a subsequent call to socket::read has returned EAGAIN.
- * - The same holds for the write event and socket::write
+ * - After receiving a read event for a socket, it will not be sent again
+ *   unless a subsequent call to socket_interface::read or
+ *   socket_interface::shutdown_read has returned EAGAIN.
+ * - The same holds for the write event and socket_interface::write and
+ *   socket_interface::shutdown
+ *
+ * It is a grave violation to call the read/write/shutdown functions
+ * again after they returned EAGAIN without first waiting for the event.
  */
 typedef simple_event<socket_event_type, socket_event_source*, socket_event_flag, int> socket_event;
 
@@ -352,9 +357,14 @@ public:
 	 *
 	 * Only disallows further sends, does not affect reading from the
 	 * socket.
+	 *
+	 * Returns 0 on success, an erorr code otherwise.
+	 * If it returns EGAIN, shutdown is not yet complete. Call shutdown
+	 * again after the next write event.
 	 */
 	virtual int shutdown() = 0;
 
+	/// \see socket_layer::shutdown_read
 	virtual int shutdown_read() = 0;
 
 protected:
@@ -524,6 +534,8 @@ private:
  *
  * For safe closing of a layer hierarchy, both the write and read side
  * should be shut down first, otherwise pending data might get discarded.
+ * The shutdown and shutdown_read functions may return EAGAIN, in which
+ * case they must be called again after the next write/read event.
  */
 class FZ_PUBLIC_SYMBOL socket_layer : public socket_interface
 {
