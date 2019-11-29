@@ -7,7 +7,7 @@
 
   // Two cases when building: Windows, other platform
   #ifdef FZ_WINDOWS
- 
+
     // Under Windows we can either use Visual Studio or a proper compiler
     #ifdef _MSC_VER
       #ifdef DLL_EXPORT

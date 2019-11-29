@@ -13,7 +13,7 @@ namespace fz {
  * \brief The buffer class is a simple buffer where data can be appended at the end and consumed at the front.
  * Think of it as a deque with contiguous storage.
  *
- * This class is useful when buffering data for sending over the network, or for buffering data for further 
+ * This class is useful when buffering data for sending over the network, or for buffering data for further
  * piecemeal processing after having received it.
  *
  * In general, copying/moving data around is expensive and allocations are even more expensive. Using this

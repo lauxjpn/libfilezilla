@@ -8,7 +8,7 @@
 */
 namespace fz {
 
-/** \brief shared_optional is like std::shared_ptr but with relational operators acting like 
+/** \brief shared_optional is like std::shared_ptr but with relational operators acting like
  * C++17's std::optional
  *
  * \tparam T that can be stored in the shared_optional

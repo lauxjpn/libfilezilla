@@ -85,7 +85,7 @@ native_string escape_argument(native_string const& arg)
 
 	// Treat newlines as whitespace just to be sure, even if MSDN doesn't mention it
 	if (arg.find_first_of(fzT(" \"\t\r\n\v")) != native_string::npos) {
-		// Quite horrible, as per MSDN: 
+		// Quite horrible, as per MSDN:
 		// Backslashes are interpreted literally, unless they immediately precede a double quotation mark.
 		// If an even number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is interpreted as a string delimiter.
 		// If an odd number of backslashes is followed by a double quotation mark, one backslash is placed in the argv array for every pair of backslashes, and the double quotation mark is "escaped" by the remaining backslash, causing a literal double quotation mark (") to be placed in argv.
