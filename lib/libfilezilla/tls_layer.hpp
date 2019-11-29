@@ -39,8 +39,8 @@ public:
 	 *
 	 * If the handshake is started, wait for a connection event for the result.
 	 *
-	 * The certificate negotiated that eventually gets negotiated for the session]
-	 * must match the passed required_certificate, either in DER or PEM, 
+	 * The certificate negotiated that eventually gets negotiated for the session
+	 * must match the passed required_certificate, either in DER or PEM,
 	 * or the handshake will fail.
 	 */
 	bool client_handshake(std::vector<uint8_t> const& required_certificate, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());
@@ -52,7 +52,7 @@ public:
 	 *
 	 * If the handshake is started, wait for a connection event for the result.
 	 *
-	 * If a verification handler is passed, it will receive a 
+	 * If a verification handler is passed, it will receive a
 	 * certificate_verification_event event upon which it must call
 	 * set_verification_result.
 	 * If no verification handler is passed, verification is done soley using the system
