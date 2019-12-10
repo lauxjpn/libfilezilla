@@ -154,6 +154,10 @@ void bucket_base::remove_bucket()
 					parent->buckets_[idx_] = other;
 				}
 				parent->buckets_.pop_back();
+				std::array<size_t, 2> unspent = gather_unspent_for_removal();
+				for (size_t i = 0; i < 2; ++i) {
+					parent->data_[i].debt_ -= std::min(parent->data_[i].debt_, unspent[i]);
+				}
 				parent->mtx_.unlock();
 				break;
 			}
@@ -308,7 +312,7 @@ void rate_limiter::pay_debt(direction::type const d)
 		size_t weight = weight_ ? weight_ : 1;
 		rate::type debt_reduction = std::min(data.merged_tokens_, data.debt_ / weight);
 		data.merged_tokens_ -= debt_reduction;
-		data.debt_ -= debt_reduction;
+		data.debt_ -= debt_reduction * weight;
 	}
 	else {
 		data.debt_ = 0;
@@ -462,6 +466,25 @@ void rate_limiter::update_stats(bool & active)
 	}
 }
 
+std::array<size_t, 2> rate_limiter::gather_unspent_for_removal()
+{
+	std::array<size_t, 2> ret = {0, 0};
+
+	for (auto & bucket : buckets_) {
+		scoped_lock l(bucket->mtx_);
+		auto u = bucket->gather_unspent_for_removal();
+		ret[0] += u[0];
+		ret[1] += u[1];
+	}
+
+	for (size_t i = 0; i < 2; ++i) {
+		size_t debt_reduction = std::min(ret[i], data_[i].debt_);
+		ret[i] -= debt_reduction;
+		data_[i].debt_ -= debt_reduction;
+	}
+
+	return ret;
+}
 
 bucket::~bucket()
 {
@@ -600,6 +623,19 @@ void bucket::consume(direction::type const d, rate::type amount)
 			data.available_ = 0;
 		}
 	}
+}
+
+std::array<size_t, 2> bucket::gather_unspent_for_removal()
+{
+	std::array<size_t, 2> ret = {0, 0};
+	for (size_t i = 0; i < 2; ++i) {
+		if (data_[i].available_ != rate::unlimited) {
+			ret[i] = data_[i].available_;
+			data_[i].available_ = 0;
+		}
+	}
+
+	return ret;
 }
 
 }

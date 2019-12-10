@@ -159,6 +159,13 @@ protected:
 	 */
 	virtual void unlock_tree() { mtx_.unlock(); }
 
+	/**
+	 * \brief Gather unspent tokens during removal to repay debt
+	 *
+	 * When called, this is locked, children are not.
+	 */
+	virtual std::array<size_t, 2> gather_unspent_for_removal() = 0;
+
 	mutex mtx_{false};
 	rate_limit_manager * mgr_{};
 	void * parent_{};
@@ -222,6 +229,7 @@ private:
 
 	void pay_debt(direction::type const d);
 
+	virtual std::array<size_t, 2> gather_unspent_for_removal();
 
 	std::vector<bucket_base*> buckets_;
 	std::vector<size_t> scratch_buffer_;
@@ -277,6 +285,8 @@ private:
 	virtual rate::type distribute_overflow(direction::type const d, rate::type tokens) override;
 
 	virtual void unlock_tree() override;
+
+	virtual std::array<size_t, 2> gather_unspent_for_removal();
 
 	struct data_t {
 		rate::type available_{rate::unlimited};
