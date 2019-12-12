@@ -229,7 +229,7 @@ private:
 
 	void pay_debt(direction::type const d);
 
-	virtual std::array<rate::type, 2> gather_unspent_for_removal();
+	virtual std::array<rate::type, 2> gather_unspent_for_removal() override;
 
 	std::vector<bucket_base*> buckets_;
 	std::vector<size_t> scratch_buffer_;
@@ -286,7 +286,7 @@ private:
 
 	virtual void unlock_tree() override;
 
-	virtual std::array<rate::type, 2> gather_unspent_for_removal();
+	virtual std::array<rate::type, 2> gather_unspent_for_removal() override;
 
 	struct data_t {
 		rate::type available_{rate::unlimited};
