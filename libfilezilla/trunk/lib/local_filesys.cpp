@@ -147,7 +147,7 @@ local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char con
 	}
 
 	if (mode) {
-		*mode = buf.st_mode & 0x777;
+		*mode = buf.st_mode & 0777;
 	}
 
 	if (S_ISDIR(buf.st_mode)) {
