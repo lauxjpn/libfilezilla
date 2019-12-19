@@ -1,3 +1,8 @@
+0.19.2 (2019-12-19)
+
++ Rate limiting: Added debt repay mechanism to bucket removal
+- *nix: Fix returned permissions in fz::local_filesys::get_file_info/get_next_file
+
 0.19.1 (2019-11-15)
 
 + Return error information to fz::local_filesys::begin_find_files
