@@ -1,3 +1,7 @@
+0.19.3 (2019-12-19)
+
+- Rate limiting: Fix a divide by zero when distributing overflow
+
 0.19.2 (2019-12-19)
 
 + Rate limiting: Added debt repay mechanism to bucket removal
