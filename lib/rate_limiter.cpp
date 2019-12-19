@@ -410,21 +410,19 @@ rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type
 	rate::type remaining = overflow_sum;
 
 	while (true) {
-		size_t size{};
+		data.unsaturated_ = 0;
 		for (auto idx : scratch_buffer_) {
-			size += buckets_[idx]->unsaturated(d);
-		}
-		data.unsaturated_ = size;
-
-		if (!remaining || scratch_buffer_.empty()) {
-			break;
+			data.unsaturated_ += buckets_[idx]->unsaturated(d);
 		}
 
-		rate::type const extra_tokens = remaining / size;
-		remaining %= size;
+		rate::type const extra_tokens = data.unsaturated_ ? (remaining / data.unsaturated_) : 0;
+		if (data.unsaturated_) {
+			remaining %= data.unsaturated_;
+		}
 		for (size_t i = 0; i < scratch_buffer_.size(); ) {
-			rate::type sub_overflow = buckets_[scratch_buffer_[i]]->distribute_overflow(d, extra_tokens);
-			if (sub_overflow) {
+			auto & bucket = *buckets_[scratch_buffer_[i]];
+			rate::type sub_overflow = bucket.distribute_overflow(d, extra_tokens);
+			if (sub_overflow || !bucket.unsaturated(d)) {
 				remaining += sub_overflow;
 				scratch_buffer_[i] = scratch_buffer_.back();
 				scratch_buffer_.pop_back();
@@ -434,6 +432,10 @@ rate::type rate_limiter::distribute_overflow(direction::type const d, rate::type
 			}
 		}
 		if (!extra_tokens) {
+			data.unsaturated_ = 0;
+			for (auto idx : scratch_buffer_) {
+				data.unsaturated_ += buckets_[idx]->unsaturated(d);
+			}
 			break;
 		}
 	}
