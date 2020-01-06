@@ -122,6 +122,25 @@ std::string FZ_PUBLIC_SYMBOL base64_decode(std::string_view const& in);
 
 
 /**
+ * \brief Alphabet variations for base32, as per RFC4648
+ */
+enum class base32_type {
+	standard, /// A-Z2-7
+	base32hex /// Tricontakaidecimal, natural extension of hex with letters G through V
+};
+
+/// \brief Encodes raw input string to base32
+std::string FZ_PUBLIC_SYMBOL base32_encode(std::string_view const& in, base32_type type = base32_type::standard, bool pad = true);
+std::string FZ_PUBLIC_SYMBOL base32_encode(std::vector<uint8_t> const& in, base32_type type = base32_type::standard, bool pad = true);
+
+/**
+ * \brief Decodes base32, ignores whitespace. Returns empty string on invalid input.
+ *
+ * Padding is optional.
+ */
+std::string FZ_PUBLIC_SYMBOL base32_decode(std::string_view const& in, base32_type type = base32_type::standard);
+
+/**
  * \brief Percent-enodes string.
  *
  * The characters A-Z, a-z, 0-9, hyphen, underscore, period, tilde are not percent-encoded, optionally slashes arne't encoded either.
