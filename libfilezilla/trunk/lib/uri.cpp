@@ -65,7 +65,7 @@ bool uri::parse(std::string in)
 	}
 
 	if (!in.empty()) {
-		path_ = percent_decode(in);
+		path_ = percent_decode_s(in);
 		if (path_.empty()) {
 			return false;
 		}
@@ -83,11 +83,11 @@ bool uri::parse_authority(std::string && authority)
 		authority = authority.substr(pos + 1);
 		pos = userinfo.find(':');
 		if (pos != std::string::npos) { // Slight inaccuracy: Empty password isn't handled well
-			user_ = percent_decode(userinfo.substr(0, pos));
+			user_ = percent_decode_s(userinfo.substr(0, pos));
 			if (user_.empty() && pos != 0) {
 				return false;
 			}
-			pass_ = percent_decode(userinfo.substr(pos + 1));
+			pass_ = percent_decode_s(userinfo.substr(pos + 1));
 			if (pass_.empty() && pos + 1 != userinfo.size()) {
 				return false;
 			}
@@ -114,7 +114,7 @@ bool uri::parse_authority(std::string && authority)
 			return false;
 		}
 	}
-	host_ = percent_decode(authority);
+	host_ = percent_decode_s(authority);
 	if (host_.empty() && !authority.empty()) {
 		return false;
 	}
@@ -257,13 +257,13 @@ bool query_string::set(std::string const& raw)
 			return false;
 		}
 
-		std::string key = percent_decode(token.substr(0, pos));
+		std::string key = percent_decode_s(token.substr(0, pos));
 		if (key.empty()) {
 			return false;
 		}
 		std::string value;
 		if (pos != std::string::npos) {
-			value = percent_decode(token.substr(pos + 1));
+			value = percent_decode_s(token.substr(pos + 1));
 			if (value.empty() && pos + 1 != token.size()) {
 				return false;
 			}

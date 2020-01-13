@@ -65,8 +65,8 @@ std::string base64_encode(std::vector<uint8_t> const& in, base64_type type, bool
 }
 
 namespace {
-template<typename View>
-std::string base64_decode_impl(View const& in)
+template<typename Ret, typename View>
+Ret base64_decode_impl(View const& in)
 {
 	using Unsigned = std::make_unsigned_t<typename View::value_type>;
 
@@ -90,7 +90,7 @@ std::string base64_decode_impl(View const& in)
 	    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	};
 
-	std::string ret;
+	Ret ret;
 	ret.reserve((in.size() / 4) * 3);
 
 	size_t pos{};
@@ -123,30 +123,30 @@ std::string base64_decode_impl(View const& in)
 		    c3 == 0xff || c4 == 0xff)
 		{
 			// Bad input
-			return std::string();
+			return Ret();
 		}
 
 		if (c4 == 0x40) {
 			// Pad
 			if (pos < len) {
 				// Not at end of string
-				return std::string();
+				return Ret();
 			}
-			ret += (c1 << 2) | ((c2 >> 4) & 0x3);
+			ret.push_back((c1 << 2) | ((c2 >> 4) & 0x3));
 
 			if (c3 != 0x40) {
-				ret += ((c2 & 0xf) << 4) | ((c3 >> 2) & 0xf);
+				ret.push_back(((c2 & 0xf) << 4) | ((c3 >> 2) & 0xf));
 			}
 		}
 		else {
 			if (c3 == 0x40) {
 				// Bad input
-				return std::string();
+				return Ret();
 			}
 
-			ret += (c1 << 2) | ((c2 >> 4) & 0x3);
-			ret += ((c2 & 0xf) << 4) | ((c3 >> 2) & 0xf);
-			ret += ((c3 & 0x3) << 6) | c4;
+			ret.push_back((c1 << 2) | ((c2 >> 4) & 0x3));
+			ret.push_back(((c2 & 0xf) << 4) | ((c3 >> 2) & 0xf));
+			ret.push_back(((c3 & 0x3) << 6) | c4);
 		}
 	}
 
@@ -154,15 +154,26 @@ std::string base64_decode_impl(View const& in)
 }
 }
 
-std::string base64_decode(std::string_view const& in)
+std::vector<uint8_t> base64_decode(std::string_view const& in)
 {
-	return base64_decode_impl(in);
+	return base64_decode_impl<std::vector<uint8_t>>(in);
 }
 
-std::string base64_decode(std::wstring_view const& in)
+std::vector<uint8_t> base64_decode(std::wstring_view const& in)
 {
-	return base64_decode_impl(in);
+	return base64_decode_impl<std::vector<uint8_t>>(in);
 }
+
+std::string base64_decode_s(std::string_view const& in)
+{
+	return base64_decode_impl<std::string>(in);
+}
+
+std::string base64_decode_s(std::wstring_view const& in)
+{
+	return base64_decode_impl<std::string>(in);
+}
+
 
 namespace {
 template<typename DataContainer>
@@ -254,8 +265,8 @@ std::string base32_encode(std::vector<uint8_t> const& in, base32_type type, bool
 
 
 namespace {
-template<typename View>
-std::string base32_decode_impl(View const& in, base32_type type)
+template<typename Ret, typename View>
+Ret base32_decode_impl(View const& in, base32_type type)
 {
 	using Unsigned = std::make_unsigned_t<typename View::value_type>;
 
@@ -301,7 +312,7 @@ std::string base32_decode_impl(View const& in, base32_type type)
 
 	auto const chars = (type == base32_type::standard) ? chars_s : chars_h;
 
-	std::string ret;
+	Ret ret;
 	ret.reserve((in.size() / 8) * 5);
 
 	size_t pos{};
@@ -348,30 +359,30 @@ std::string base32_decode_impl(View const& in, base32_type type)
 
 		if (c2 == 0x40 || c8 == 0xff) {
 			// Bad input
-			return std::string();
+			return Ret();
 		}
 
-		ret += (c1 << 3) | ((c2 >> 2) & 0x7);
+		ret.push_back((c1 << 3) | ((c2 >> 2) & 0x7));
 
 		if (c3 != 0x40) {
 			if (c4 == 0x40) {
 				// Bad input
-				return std::string();
+				return Ret();
 			}
-			ret += ((c2 & 0x3) << 6) | (c3 << 1) | ((c4 >> 4) & 0x1);
+			ret.push_back(((c2 & 0x3) << 6) | (c3 << 1) | ((c4 >> 4) & 0x1));
 
 			if (c5 != 0x40) {
-				ret += ((c4 & 0xf) << 4) | (c5 >> 1);
+				ret.push_back(((c4 & 0xf) << 4) | (c5 >> 1));
 
 				if (c6 != 0x40) {
 					if (c7 == 0x40) {
 						// Bad input
-						return std::string();
+						return Ret();
 					}
-					ret += ((c5 & 0x1) << 7) | (c6 << 2) | ((c7 >> 3) & 0x3);
+					ret.push_back(((c5 & 0x1) << 7) | (c6 << 2) | ((c7 >> 3) & 0x3));
 
 					if (c8 != 0x40) {
-						ret += ((c7 & 0x7) << 5) | c8;
+						ret.push_back(((c7 & 0x7) << 5) | c8);
 					}
 				}
 			}
@@ -382,14 +393,24 @@ std::string base32_decode_impl(View const& in, base32_type type)
 }
 }
 
-std::string base32_decode_impl(std::string_view const& in, base32_type type)
+std::vector<uint8_t> base32_decode(std::string_view const& in, base32_type type)
 {
-	return base32_decode_impl(in, type);
+	return base32_decode_impl<std::vector<uint8_t>>(in, type);
 }
 
-std::string base32_decode(std::wstring_view const& in, base32_type type)
+std::vector<uint8_t> base32_decode(std::wstring_view const& in, base32_type type)
 {
-	return base32_decode_impl(in, type);
+	return base32_decode_impl<std::vector<uint8_t>>(in, type);
+}
+
+std::string base32_decode_s(std::string_view const& in, base32_type type)
+{
+	return base32_decode_impl<std::string>(in, type);
+}
+
+std::string base32_decode_s(std::wstring_view const& in, base32_type type)
+{
+	return base32_decode_impl<std::string>(in, type);
 }
 
 
@@ -433,10 +454,10 @@ std::wstring percent_encode_w(std::wstring_view const& s, bool keep_slashes)
 }
 
 namespace {
-template<typename View>
-std::string percent_decode_impl(View const & s, bool allow_embedded_null)
+template<typename Ret, typename View>
+Ret percent_decode_impl(View const & s, bool allow_embedded_null)
 {
-	std::string ret;
+	Ret ret;
 	ret.reserve(s.size());
 
 	auto const* c = s.data();
@@ -444,35 +465,35 @@ std::string percent_decode_impl(View const & s, bool allow_embedded_null)
 	while (c < end) {
 		if (*c == '%') {
 			if (++c == end) {
-				return std::string();
+				return Ret();
 			}
 			int const high = hex_char_to_int(*c);
 			if (high == -1) {
-				return std::string();
+				return Ret();
 			}
 			if (++c == end) {
-				return std::string();
+				return Ret();
 			}
 			int const low = hex_char_to_int(*c);
 			if (low == -1) {
-				return std::string();
+				return Ret();
 			}
 
 			if (!high && !low && !allow_embedded_null) {
-				return std::string();
+				return Ret();
 			}
-			ret.push_back(static_cast<char>(static_cast<uint8_t>((high << 4) + low)));
+			ret.push_back(static_cast<typename Ret::value_type>(static_cast<uint8_t>((high << 4) + low)));
 		}
 		else {
 			if (!*c && !allow_embedded_null) {
-				return std::string();
+				return Ret();
 			}
 			using Unsigned = std::make_unsigned_t<typename View::value_type>;
 			auto const u = static_cast<Unsigned>(*c);
 			if (u > 255) {
-				return std::string();
+				return Ret();
 			}
-			ret.push_back(static_cast<char>(u));
+			ret.push_back(static_cast<typename Ret::value_type>(u));
 		}
 		++c;
 	}
@@ -481,14 +502,24 @@ std::string percent_decode_impl(View const & s, bool allow_embedded_null)
 }
 }
 
-std::string percent_decode(std::string_view const& s, bool allow_embedded_null)
+std::vector<uint8_t> percent_decode(std::string_view const& s, bool allow_embedded_null)
 {
-	return percent_decode_impl(s, allow_embedded_null);
+	return percent_decode_impl<std::vector<uint8_t>>(s, allow_embedded_null);
 }
 
-std::string percent_decode(std::wstring_view const& s, bool allow_embedded_null)
+std::vector<uint8_t> percent_decode(std::wstring_view const& s, bool allow_embedded_null)
 {
-	return percent_decode_impl(s, allow_embedded_null);
+	return percent_decode_impl<std::vector<uint8_t>>(s, allow_embedded_null);
+}
+
+std::string percent_decode_s(std::string_view const& s, bool allow_embedded_null)
+{
+	return percent_decode_impl<std::string>(s, allow_embedded_null);
+}
+
+std::string percent_decode_s(std::wstring_view const& s, bool allow_embedded_null)
+{
+	return percent_decode_impl<std::string>(s, allow_embedded_null);
 }
 
 }

@@ -118,8 +118,10 @@ std::string FZ_PUBLIC_SYMBOL base64_encode(std::vector<uint8_t> const& in, base6
  *
  * Padding is optional, alphabet is auto-detected.
  */
-std::string FZ_PUBLIC_SYMBOL base64_decode(std::string_view const& in);
-std::string FZ_PUBLIC_SYMBOL base64_decode(std::wstring_view const& in);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL base64_decode(std::string_view const& in);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL base64_decode(std::wstring_view const& in);
+std::string FZ_PUBLIC_SYMBOL base64_decode_s(std::string_view const& in);
+std::string FZ_PUBLIC_SYMBOL base64_decode_s(std::wstring_view const& in);
 
 
 /**
@@ -139,8 +141,10 @@ std::string FZ_PUBLIC_SYMBOL base32_encode(std::vector<uint8_t> const& in, base3
  *
  * Padding is optional.
  */
-std::string FZ_PUBLIC_SYMBOL base32_decode(std::string_view const& in, base32_type type = base32_type::standard);
-std::string FZ_PUBLIC_SYMBOL base32_decode(std::wstring_view const& in, base32_type type = base32_type::standard);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL base32_decode(std::string_view const& in, base32_type type = base32_type::standard);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL base32_decode(std::wstring_view const& in, base32_type type = base32_type::standard);
+std::string FZ_PUBLIC_SYMBOL base32_decode_s(std::string_view const& in, base32_type type = base32_type::standard);
+std::string FZ_PUBLIC_SYMBOL base32_decode_s(std::wstring_view const& in, base32_type type = base32_type::standard);
 
 /**
  * \brief Percent-enodes string.
@@ -165,8 +169,10 @@ std::wstring FZ_PUBLIC_SYMBOL percent_encode_w(std::wstring_view const& s, bool 
  *
  * If the string cannot be decoded, an empty string is returned.
  */
-std::string FZ_PUBLIC_SYMBOL percent_decode(std::string_view const& s, bool allow_embedded_null = false);
-std::string FZ_PUBLIC_SYMBOL percent_decode(std::wstring_view const& s, bool allow_embedded_null = false);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL percent_decode(std::string_view const& s, bool allow_embedded_null = false);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL percent_decode(std::wstring_view const& s, bool allow_embedded_null = false);
+std::string FZ_PUBLIC_SYMBOL percent_decode_s(std::string_view const& s, bool allow_embedded_null = false);
+std::string FZ_PUBLIC_SYMBOL percent_decode_s(std::wstring_view const& s, bool allow_embedded_null = false);
 
 }
 

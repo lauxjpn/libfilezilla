@@ -136,29 +136,29 @@ void string_test::test_base64()
 	CPPUNIT_ASSERT_EQUAL(std::string("AAECA_3-_w=="), fz::base64_encode(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_type::url));
 
 	// decode
-	CPPUNIT_ASSERT_EQUAL(std::string(""),      fz::base64_decode(""));
-	CPPUNIT_ASSERT_EQUAL(std::string("f"),     fz::base64_decode("Zg=="));
-	CPPUNIT_ASSERT_EQUAL(std::string("fo"),    fz::base64_decode("Zm8="));
-	CPPUNIT_ASSERT_EQUAL(std::string("foo"),   fz::base64_decode("Zm9v"));
-	CPPUNIT_ASSERT_EQUAL(std::string("fool"),  fz::base64_decode("Zm9vbA=="));
-	CPPUNIT_ASSERT_EQUAL(std::string("fools"), fz::base64_decode("Zm9vbHM="));
+	CPPUNIT_ASSERT_EQUAL(std::string(""),      fz::base64_decode_s(""));
+	CPPUNIT_ASSERT_EQUAL(std::string("f"),     fz::base64_decode_s("Zg=="));
+	CPPUNIT_ASSERT_EQUAL(std::string("fo"),    fz::base64_decode_s("Zm8="));
+	CPPUNIT_ASSERT_EQUAL(std::string("foo"),   fz::base64_decode_s("Zm9v"));
+	CPPUNIT_ASSERT_EQUAL(std::string("fool"),  fz::base64_decode_s("Zm9vbA=="));
+	CPPUNIT_ASSERT_EQUAL(std::string("fools"), fz::base64_decode_s("Zm9vbHM="));
 
-	CPPUNIT_ASSERT_EQUAL(std::string("f"),     fz::base64_decode("Zg"));
-	CPPUNIT_ASSERT_EQUAL(std::string("fo"),    fz::base64_decode("Zm8"));
-	CPPUNIT_ASSERT_EQUAL(std::string("fool"),  fz::base64_decode("Zm9vbA"));
-	CPPUNIT_ASSERT_EQUAL(std::string("fools"), fz::base64_decode("Zm9vbHM"));
+	CPPUNIT_ASSERT_EQUAL(std::string("f"),     fz::base64_decode_s("Zg"));
+	CPPUNIT_ASSERT_EQUAL(std::string("fo"),    fz::base64_decode_s("Zm8"));
+	CPPUNIT_ASSERT_EQUAL(std::string("fool"),  fz::base64_decode_s("Zm9vbA"));
+	CPPUNIT_ASSERT_EQUAL(std::string("fools"), fz::base64_decode_s("Zm9vbHM"));
 
-	CPPUNIT_ASSERT_EQUAL(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_decode("AAECA/3+/w=="));
-	CPPUNIT_ASSERT_EQUAL(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_decode("AAECA_3-_w"));
+	CPPUNIT_ASSERT_EQUAL(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_decode_s("AAECA/3+/w=="));
+	CPPUNIT_ASSERT_EQUAL(std::string({0, 1, 2, 3, '\xfd', '\xfe', '\xff'}), fz::base64_decode_s("AAECA_3-_w"));
 
 	// with whitespace
 	CPPUNIT_ASSERT_EQUAL(std::string("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."),
-						 fz::base64_decode(" TG9yZW0gaXBzdW0gZG9sb3Igc2l0I\nGFtZXQsIGNvbnNlY3Rld\rHVyIGFkaXBpc2NpbmcgZWxpd \tCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEu "));
+						 fz::base64_decode_s(" TG9yZW0gaXBzdW0gZG9sb3Igc2l0I\nGFtZXQsIGNvbnNlY3Rld\rHVyIGFkaXBpc2NpbmcgZWxpd \tCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEu "));
 
 	// invalid
-	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode("Zm9vbHM=="));
-	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode("Zm9vb==="));
-	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode("Zm9vbHM=Zg=="));
+	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode_s("Zm9vbHM=="));
+	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode_s("Zm9vb==="));
+	CPPUNIT_ASSERT_EQUAL(std::string(""), fz::base64_decode_s("Zm9vbHM=Zg=="));
 }
 
 void string_test::test_trim()
