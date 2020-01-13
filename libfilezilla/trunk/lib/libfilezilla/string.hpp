@@ -135,11 +135,18 @@ struct FZ_PUBLIC_SYMBOL less_insensitive_ascii final
  *
  * Equivalent to str_tolower_ascii(a).compare(str_tolower_ascii(b));
  */
-template<typename String>
-bool equal_insensitive_ascii(String const& a, String const& b)
+inline bool equal_insensitive_ascii(std::string_view a, std::string_view b)
 {
 	return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend(),
-	    [](typename String::value_type const& a, typename String::value_type const& b) {
+	    [](auto const& a, auto const& b) {
+		    return tolower_ascii(a) == tolower_ascii(b);
+	    }
+	);
+}
+inline bool equal_insensitive_ascii(std::wstring_view a, std::wstring_view b)
+{
+	return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend(),
+	    [](auto const& a, auto const& b) {
 		    return tolower_ascii(a) == tolower_ascii(b);
 	    }
 	);
