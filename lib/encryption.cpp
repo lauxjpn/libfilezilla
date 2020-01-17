@@ -10,13 +10,10 @@
 #include <nettle/ctr.h>
 #include <nettle/curve25519.h>
 #include <nettle/gcm.h>
+#include <nettle/memops.h>
 #include <nettle/pbkdf2.h>
 #include <nettle/sha2.h>
 #include <nettle/version.h>
-
-#if NETTLE_VERSION_MAJOR > 3 || (NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 3)
-#include <nettle/memops.h>
-#endif
 
 namespace fz {
 
@@ -133,7 +130,8 @@ std::vector<uint8_t> private_key::shared_secret(public_key const& pub) const
 	return ret;
 }
 
-std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const& pub, bool authenticated)
+namespace {
+std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const& pub, uint8_t const* authenticated_data, size_t authenticated_data_size, bool authenticated)
 {
 	std::vector<uint8_t> ret;
 
@@ -155,6 +153,10 @@ std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const
 			gcm_aes256_ctx ctx;
 			nettle_gcm_aes256_set_key(&ctx, aes_key.data());
 			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
+
+			if (authenticated_data_size) {
+				nettle_gcm_aes256_update(&ctx, authenticated_data_size, authenticated_data);
+			}
 
 			// Encrypt plaintext with AES256-GCM
 			ret.resize(public_key::key_size + public_key::salt_size + size + GCM_DIGEST_SIZE);
@@ -187,18 +189,40 @@ std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const
 
 	return ret;
 }
+}
+
+std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const& pub, bool authenticated)
+{
+	return encrypt(plain, size, pub, nullptr, 0, authenticated);
+}
 
 std::vector<uint8_t> encrypt(std::vector<uint8_t> const& plain, public_key const& pub, bool authenticated)
 {
-	return encrypt(plain.data(), plain.size(), pub, authenticated);
+	return encrypt(plain.data(), plain.size(), pub, nullptr, 0, authenticated);
 }
 
 std::vector<uint8_t> encrypt(std::string_view const& plain, public_key const& pub, bool authenticated)
 {
-	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), pub, authenticated);
+	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), pub, nullptr, 0, authenticated);
 }
 
-std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key const& priv, bool authenticated)
+std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, public_key const& pub, uint8_t const* authenticated_data, size_t authenticated_data_size)
+{
+	return encrypt(plain, size, pub, authenticated_data, authenticated_data_size, true);
+}
+
+std::vector<uint8_t> encrypt(std::vector<uint8_t> const& plain, public_key const& pub, std::vector<uint8_t> const& authenticated_data)
+{
+	return encrypt(plain.data(), plain.size(), pub, authenticated_data.data(), authenticated_data.size(), true);
+}
+
+std::vector<uint8_t> encrypt(std::string_view const& plain, public_key const& pub, std::string_view const& authenticated_data)
+{
+	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), pub, reinterpret_cast<uint8_t const*>(authenticated_data.data()), authenticated_data.size(), true);
+}
+
+namespace {
+std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key const& priv, uint8_t const* authenticated_data, size_t authenticated_data_size, bool authenticated)
 {
 	size_t const overhead = public_key::key_size + public_key::salt_size + (authenticated ? GCM_DIGEST_SIZE : 0);
 
@@ -230,6 +254,10 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 			nettle_gcm_aes256_set_key(&ctx, aes_key.data());
 			nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
 
+			if (authenticated_data_size) {
+				nettle_gcm_aes256_update(&ctx, authenticated_data_size, authenticated_data);
+			}
+
 			// Decrypt ciphertext with AES256-GCM
 			ret.resize(message_size);
 			if (message_size) {
@@ -239,11 +267,7 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 			// Last but not least, verify the tag
 			uint8_t tag[GCM_DIGEST_SIZE];
 			nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, tag);
-#if NETTLE_VERSION_MAJOR > 3 || (NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 3)
 			if (!nettle_memeql_sec(tag, cipher + size - GCM_DIGEST_SIZE, GCM_DIGEST_SIZE)) {
-#else
-			if (memcmp(tag, cipher + size - GCM_DIGEST_SIZE, GCM_DIGEST_SIZE)) {
-#endif
 				ret.clear();
 			}
 		}
@@ -265,15 +289,238 @@ std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key con
 	// Return the plaintext
 	return ret;
 }
+}
+
+std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key const& priv, bool authenticated)
+{
+	return decrypt(cipher, size, priv, nullptr, 0, authenticated);
+}
 
 std::vector<uint8_t> decrypt(std::vector<uint8_t> const& cipher, private_key const& priv, bool authenticated)
 {
-	return decrypt(cipher.data(), cipher.size(), priv, authenticated);
+	return decrypt(cipher.data(), cipher.size(), priv, nullptr, 0, authenticated);
 }
 
 std::vector<uint8_t> decrypt(std::string_view const& cipher, private_key const& priv, bool authenticated)
 {
-	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), priv, authenticated);
+	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), priv, nullptr, 0, authenticated);
+}
+
+std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, private_key const& priv, uint8_t const* authenticated_data, size_t authenticated_data_size)
+{
+	return decrypt(cipher, size, priv, authenticated_data, authenticated_data_size, true);
+}
+
+std::vector<uint8_t> decrypt(std::vector<uint8_t> const& cipher, private_key const& priv, std::vector<uint8_t> const& authenticated_data)
+{
+	return decrypt(cipher.data(), cipher.size(), priv, authenticated_data.data(), authenticated_data.size(), true);
+}
+
+std::vector<uint8_t> decrypt(std::string_view const& cipher, private_key const& priv, std::string_view const& authenticated_data)
+{
+	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), priv, reinterpret_cast<uint8_t const*>(authenticated_data.data()), authenticated_data.size(), true);
+}
+
+
+symmetric_key symmetric_key::generate()
+{
+	symmetric_key ret;
+
+	ret.key_ = fz::random_bytes(key_size);
+	ret.salt_ = fz::random_bytes(salt_size);
+
+	return ret;
+}
+
+symmetric_key symmetric_key::from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt)
+{
+	symmetric_key ret;
+
+	if (!password.empty() && salt.size() == salt_size) {
+
+		std::vector<uint8_t> key;
+		key.resize(key_size);
+		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), 100000, salt_size, salt.data(), 32, key.data());
+		ret.key_ = std::move(key);
+		ret.salt_ = salt;
+	}
+
+	return ret;
+}
+
+std::string symmetric_key::to_base64() const
+{
+	auto raw = std::string(key_.cbegin(), key_.cend());
+	raw += std::string(salt_.cbegin(), salt_.cend());
+	return fz::base64_encode(raw);
+}
+
+symmetric_key symmetric_key::from_base64(std::string_view const& base64)
+{
+	symmetric_key ret;
+
+	auto raw = fz::base64_decode(base64);
+	if (raw.size() == key_size + salt_size) {
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
+		ret.key_.assign(p, p + key_size);
+		ret.salt_.assign(p + key_size, p + key_size + salt_size);
+	}
+
+	return ret;
+}
+
+symmetric_key symmetric_key::from_base64(std::wstring_view const& base64)
+{
+	symmetric_key ret;
+
+	auto raw = fz::base64_decode(base64);
+	if (raw.size() == key_size + salt_size) {
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
+		ret.key_.assign(p, p + key_size);
+		ret.salt_.assign(p + key_size, p + key_size + salt_size);
+	}
+
+	return ret;
+}
+
+std::vector<uint8_t> const& symmetric_key::key() const
+{
+	return key_;
+}
+
+size_t symmetric_key::encryption_overhead()
+{
+	return symmetric_key::salt_size + GCM_DIGEST_SIZE;
+}
+
+std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, symmetric_key const& key, uint8_t const* authenticated_data, size_t authenticated_data_size)
+{
+	std::vector<uint8_t> ret;
+
+	if (key) {
+		// Generate per-message nonce
+		auto nonce = random_bytes(symmetric_key::salt_size);
+
+		// Derive AES2556 key and IV from symmetric key and nonce
+		std::vector<uint8_t> const aes_key = hash_accumulator(hash_algorithm::sha256) << key.salt() << 3 << key.key() << nonce;
+		std::vector<uint8_t> iv = hash_accumulator(hash_algorithm::sha256) << key.salt() << 4 << key.key() << nonce;
+		static_assert(SHA256_DIGEST_SIZE >= GCM_IV_SIZE, "iv too small");
+		iv.resize(GCM_IV_SIZE);
+
+		gcm_aes256_ctx ctx;
+		nettle_gcm_aes256_set_key(&ctx, aes_key.data());
+		nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
+
+		if (authenticated_data_size) {
+			nettle_gcm_aes256_update(&ctx, authenticated_data_size, authenticated_data);
+		}
+
+		// Encrypt plaintext with AES256-GCM
+		ret.resize(symmetric_key::salt_size + size + GCM_DIGEST_SIZE);
+		if (size) {
+			nettle_gcm_aes256_encrypt(&ctx, size, ret.data() + symmetric_key::salt_size, plain);
+		}
+
+		// Return nonce||ciphertext||tag
+		memcpy(ret.data(), nonce.data(), symmetric_key::salt_size);
+		nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, ret.data() + symmetric_key::salt_size + size);
+	}
+
+	return ret;
+}
+
+std::vector<uint8_t> encrypt(uint8_t const* plain, size_t size, symmetric_key const& key)
+{
+	return encrypt(plain, size, key, nullptr, 0);
+}
+
+std::vector<uint8_t> encrypt(std::vector<uint8_t> const& plain, symmetric_key const& key)
+{
+	return encrypt(plain.data(), plain.size(), key, nullptr, 0);
+}
+
+std::vector<uint8_t> encrypt(std::string_view const& plain, symmetric_key const& key)
+{
+	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), key, nullptr, 0);
+}
+
+std::vector<uint8_t> encrypt(std::vector<uint8_t> const& plain, symmetric_key const& key, std::vector<uint8_t> const& authenticated_data)
+{
+	return encrypt(plain.data(), plain.size(), key, authenticated_data.data(), authenticated_data.size());
+}
+
+std::vector<uint8_t> encrypt(std::string_view const& plain, symmetric_key const& key, std::string_view const& authenticated_data)
+{
+	return encrypt(reinterpret_cast<uint8_t const*>(plain.data()), plain.size(), key, reinterpret_cast<uint8_t const*>(authenticated_data.data()), authenticated_data.size());
+}
+
+
+std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, symmetric_key const& key, uint8_t const* authenticated_data, size_t authenticated_data_size)
+{
+	std::vector<uint8_t> ret;
+
+	size_t const overhead = symmetric_key::encryption_overhead();
+	if (key && size >= overhead && cipher) {
+		size_t const message_size = size - overhead;
+
+		// Extract per-message nonce from cipher
+		std::basic_string_view<uint8_t> const nonce(cipher, symmetric_key::salt_size);
+
+		// Derive AES2556 key and IV from symmetric key and nonce
+		std::vector<uint8_t> const aes_key = hash_accumulator(hash_algorithm::sha256) << key.salt() << 3 << key.key() << nonce;
+		std::vector<uint8_t> iv = hash_accumulator(hash_algorithm::sha256) << key.salt() << 4 << key.key() << nonce;
+		static_assert(SHA256_DIGEST_SIZE >= GCM_IV_SIZE, "iv too small");
+		iv.resize(GCM_IV_SIZE);
+
+		gcm_aes256_ctx ctx;
+		nettle_gcm_aes256_set_key(&ctx, aes_key.data());
+		nettle_gcm_aes256_set_iv(&ctx, GCM_IV_SIZE, iv.data());
+
+		if (authenticated_data_size) {
+			nettle_gcm_aes256_update(&ctx, authenticated_data_size, authenticated_data);
+		}
+
+		// Decrypt ciphertext with AES256-GCM
+		ret.resize(message_size);
+		if (message_size) {
+			nettle_gcm_aes256_decrypt(&ctx, message_size, ret.data(), cipher + symmetric_key::salt_size);
+		}
+
+		// Last but not least, verify the tag
+		uint8_t tag[GCM_DIGEST_SIZE];
+		nettle_gcm_aes256_digest(&ctx, GCM_DIGEST_SIZE, tag);
+		if (!nettle_memeql_sec(tag, cipher + size - GCM_DIGEST_SIZE, GCM_DIGEST_SIZE)) {
+			ret.clear();
+		}
+	}
+
+	// Return the plaintext
+	return ret;
+}
+
+std::vector<uint8_t> decrypt(uint8_t const* cipher, size_t size, symmetric_key const& key)
+{
+	return decrypt(cipher, size, key, nullptr, 0);
+}
+
+std::vector<uint8_t> decrypt(std::vector<uint8_t> const& cipher, symmetric_key const& key)
+{
+	return decrypt(cipher.data(), cipher.size(), key, nullptr, 0);
+}
+
+std::vector<uint8_t> decrypt(std::string_view const& cipher, symmetric_key const& key)
+{
+	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), key, nullptr, 0);
+}
+
+std::vector<uint8_t> decrypt(std::vector<uint8_t> const& cipher, symmetric_key const& key, std::vector<uint8_t> const& authenticated_data)
+{
+	return decrypt(cipher.data(), cipher.size(), key, authenticated_data.data(), authenticated_data.size());
+}
+
+std::vector<uint8_t> decrypt(std::string_view const& cipher, symmetric_key const& key, std::string_view const& authenticated_data)
+{
+	return decrypt(reinterpret_cast<uint8_t const*>(cipher.data()), cipher.size(), key, reinterpret_cast<uint8_t const*>(authenticated_data.data()), authenticated_data.size());
 }
 
 }

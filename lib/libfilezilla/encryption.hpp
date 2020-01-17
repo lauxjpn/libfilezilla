@@ -119,6 +119,9 @@ private:
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::vector<uint8_t> const& plain, public_key const& pub, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string_view const& plain, public_key const& pub, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size, public_key const& pub, bool authenticated = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::vector<uint8_t> const& plain, public_key const& pub, std::vector<uint8_t> const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string_view const& plain, public_key const& pub, std::string_view const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size, public_key const& pub, uint8_t const* authenticated_data, size_t authenticated_data_size);
 
 /** \brief Decrypt the ciphertext using the given private key.
  *
@@ -148,6 +151,62 @@ std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size,
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::vector<uint8_t> const& chiper, private_key const& priv, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string_view const& chiper, private_key const& priv, bool authenticated = true);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(uint8_t const* cipher, size_t size, private_key const& priv, bool authenticated = true);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::vector<uint8_t> const& cipher, private_key const& priv, std::vector<uint8_t> const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string_view const& cipher, private_key const& priv, std::string_view const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(uint8_t const* cipher, size_t size, private_key const& priv, uint8_t const* authenticated_data, size_t authenticated_data_size);
+
+class FZ_PUBLIC_SYMBOL symmetric_key
+{
+public:
+	/// Size in octets of key an salt.
+	enum {
+		key_size = 32,
+		salt_size = 32
+	};
+
+	/// Generates a random symmetric key
+	static symmetric_key generate();
+
+	/// Derives a symmetric key using PKBDF2-SHA256 from the given password and salt
+	static symmetric_key from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt);
+	static symmetric_key from_password(std::string_view const& password, std::vector<uint8_t> const& salt)
+	{
+		return from_password(std::vector<uint8_t>(password.begin(), password.end()), salt);
+	}
+
+	explicit operator bool() const {
+		return key_.size() == key_size && salt_.size() == salt_size;
+	}
+
+	std::vector<uint8_t> const& salt() const {
+		return salt_;
+	}
+
+	std::string to_base64() const;
+	static symmetric_key from_base64(std::string_view const& base64);
+	static symmetric_key from_base64(std::wstring_view const& base64);
+
+	FZ_PRIVATE_SYMBOL std::vector<uint8_t> const& key() const;
+
+	static size_t encryption_overhead();
+private:
+	std::vector<uint8_t> key_;
+	std::vector<uint8_t> salt_;
+};
+
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::vector<uint8_t> const& plain, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string_view const& plain, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::vector<uint8_t> const& plain, symmetric_key const& key, std::vector<uint8_t> const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(std::string_view const& plain, symmetric_key const& key, std::string_view const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL encrypt(uint8_t const* plain, size_t size, symmetric_key const& key, uint8_t const* authenticated_data, size_t authenticated_data_size);
+
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::vector<uint8_t> const& chiper, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string_view const& chiper, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(uint8_t const* cipher, size_t size, symmetric_key const& key);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::vector<uint8_t> const& cipher, symmetric_key const& key, std::vector<uint8_t> const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(std::string_view const& cipher, symmetric_key const& key, std::string_view const& authenticated_data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL decrypt(uint8_t const* cipher, size_t size, symmetric_key const& key, uint8_t const* authenticated_data, size_t authenticated_data_size);
 
 }
 #endif
