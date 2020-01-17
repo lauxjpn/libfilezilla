@@ -6,8 +6,8 @@ Installation instructions
 ---------------
 
 FileZilla depends on the following libraries:
-- Nettle >= 3.1
-- GnuTLS 3.5.7
+- Nettle >= 3.3
+- GnuTLS >= 3.5.8
 
 To compile libfilezilla, the following tools need to be installed:
 - A C++17 compiler, e.g. a recent GCC or Clang

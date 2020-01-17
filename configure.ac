@@ -133,15 +133,15 @@ fi
 # Nettle
 # ------
 
-PKG_CHECK_MODULES([NETTLE], [nettle >= 3.1],, [
-  AC_MSG_ERROR([nettle 3.1 greater was not found. You can get it from https://www.lysator.liu.se/~nisse/nettle/])
+PKG_CHECK_MODULES([NETTLE], [nettle >= 3.3],, [
+  AC_MSG_ERROR([nettle 3.3 greater was not found. You can get it from https://www.lysator.liu.se/~nisse/nettle/])
 ])
 
 AC_SUBST(NETTLE_LIBS)
 AC_SUBST(NETTLE_CFLAGS)
 
-PKG_CHECK_MODULES([HOGWEED], [hogweed >= 3.1],, [
-  AC_MSG_ERROR([hogweed 3.1 greater was not found. You can get it from https://www.lysator.liu.se/~nisse/nettle/])
+PKG_CHECK_MODULES([HOGWEED], [hogweed >= 3.3],, [
+  AC_MSG_ERROR([hogweed 3.3 greater was not found. You can get it from https://www.lysator.liu.se/~nisse/nettle/])
 ])
 
 AC_SUBST(HOGWEED_LIBS)
@@ -151,8 +151,8 @@ AC_SUBST(HOGWEED_CFLAGS)
 # GnuTLS
 # ------
 
-PKG_CHECK_MODULES([GNUTLS], [gnutls >= 3.5.7],, [
-  AC_MSG_ERROR([GnuTLS 3.5.7 or greater was not found. You can get it from https://gnutls.org/])
+PKG_CHECK_MODULES([GNUTLS], [gnutls >= 3.5.8],, [
+  AC_MSG_ERROR([GnuTLS 3.5.8 or greater was not found. You can get it from https://gnutls.org/])
 ])
 
 AC_SUBST(GNUTLS_LIBS)
