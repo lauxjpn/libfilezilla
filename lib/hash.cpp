@@ -155,6 +155,13 @@ void hash_accumulator::update(std::string_view const& data)
 	}
 }
 
+void hash_accumulator::update(std::basic_string_view<uint8_t> const& data)
+{
+	if (!data.empty()) {
+		impl_->update(data.data(), data.size());
+	}
+}
+
 void hash_accumulator::update(std::vector<uint8_t> const& data)
 {
 	if (!data.empty()) {
