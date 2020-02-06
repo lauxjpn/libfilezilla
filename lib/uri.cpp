@@ -5,12 +5,12 @@
 namespace fz {
 
 namespace uri_chars {
-std::string const alpha{ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" };
-std::string const digit{ "01234567890" };
-std::string const scheme{ alpha + digit + "+-." };
+constexpr std::string_view alpha{ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" };
+constexpr std::string_view digit{ "01234567890" };
+constexpr std::string_view scheme{ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-." };
 }
 
-uri::uri(std::string const& in)
+uri::uri(std::string_view const& in)
 {
 	if (!parse(in)) {
 		clear();
@@ -22,7 +22,7 @@ void uri::clear()
 	*this = uri();
 }
 
-bool uri::parse(std::string in)
+bool uri::parse(std::string_view in)
 {
 	// Look for fragment
 	size_t pos = in.find('#');
@@ -57,7 +57,7 @@ bool uri::parse(std::string in)
 		}
 		else {
 			authority = in.substr(2);
-			in.clear();
+			in = std::string_view();
 		}
 		if (!parse_authority(std::move(authority))) {
 			return false;
@@ -227,7 +227,7 @@ bool uri::operator==(uri const& arg) const
 }
 
 
-query_string::query_string(std::string const& raw)
+query_string::query_string(std::string_view const& raw)
 {
 	set(raw);
 }
@@ -246,7 +246,7 @@ query_string::query_string(std::initializer_list<std::pair<std::string, std::str
 	}
 }
 
-bool query_string::set(std::string const& raw)
+bool query_string::set(std::string_view const& raw)
 {
 	segments_.clear();
 
