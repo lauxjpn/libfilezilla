@@ -129,7 +129,8 @@ std::string FZ_PUBLIC_SYMBOL base64_decode_s(std::wstring_view const& in);
  */
 enum class base32_type {
 	standard, /// A-Z2-7
-	base32hex /// Tricontakaidecimal, natural extension of hex with letters G through V
+	base32hex, /// Tricontakaidecimal, natural extension of hex with letters G through V
+	locale_safe /// Does not include the letter i
 };
 
 /// \brief Encodes raw input string to base32
