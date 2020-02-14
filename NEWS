@@ -1,3 +1,11 @@
+0.20.0 (2020-02-14)
+
++ Added fz::symmetric_key
++ Added itertions parameter to fz::private_key::from_password
++ Added fz::base32_encode and fz::base32_decode
++ Unified all decode functions to always return a vector, added alternatives returning string with a _s suffix in the function name
++ Changed equal_insensitive_ascii to take (w)string_view
+
 0.19.3 (2019-12-19)
 
 - Rate limiting: Fix a divide by zero when distributing overflow
