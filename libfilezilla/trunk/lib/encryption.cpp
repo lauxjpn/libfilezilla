@@ -17,37 +17,50 @@
 
 namespace fz {
 
-std::string public_key::to_base64() const
+std::string public_key::to_base64(bool pad) const
 {
 	auto raw = std::string(key_.cbegin(), key_.cend());
 	raw += std::string(salt_.cbegin(), salt_.cend());
-	return fz::base64_encode(raw);
+	return base64_encode(raw, base64_type::standard, pad);
+}
+
+namespace {
+template<typename T>
+public_key from_base64_impl(T const& base64)
+{
+	public_key ret;
+
+	auto raw = base64_decode(base64);
+	if (raw.size() == public_key::key_size + public_key::salt_size) {
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
+		ret.key_.assign(p, p + public_key::key_size);
+		ret.salt_.assign(p + public_key::key_size, p + public_key::key_size + public_key::salt_size);
+	}
+
+	return ret;
+}
 }
 
 public_key public_key::from_base64(std::string_view const& base64)
 {
-	public_key ret;
+	return from_base64_impl(base64);
+}
 
-	auto raw = fz::base64_decode(base64);
-	if (raw.size() == key_size + salt_size) {
-		auto p = reinterpret_cast<uint8_t const*>(raw.data());
-		ret.key_.assign(p, p + key_size);
-		ret.salt_.assign(p + key_size, p + key_size + salt_size);
-	}
-
-	return ret;
+public_key public_key::from_base64(std::wstring_view const& base64)
+{
+	return from_base64_impl(base64);
 }
 
 private_key private_key::generate()
 {
 	private_key ret;
 
-	ret.key_ = fz::random_bytes(key_size);
+	ret.key_ = random_bytes(key_size);
 	ret.key_[0] &= 248;
 	ret.key_[31] &= 127;
 	ret.key_[31] |= 64;
 
-	ret.salt_ = fz::random_bytes(salt_size);
+	ret.salt_ = random_bytes(salt_size);
 
 	return ret;
 }
@@ -72,15 +85,15 @@ public_key private_key::pubkey() const
 	return ret;
 }
 
-private_key private_key::from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt)
+private_key private_key::from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, unsigned int iterations)
 {
 	private_key ret;
 
-	if (!password.empty() && salt.size() == salt_size) {
+	if (!password.empty() && salt.size() == salt_size && iterations >= min_iterations) {
 
 		std::vector<uint8_t> key;
 		key.resize(key_size);
-		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), 100000, salt_size, salt.data(), 32, key.data());
+		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), iterations, salt_size, salt.data(), 32, key.data());
 		key[0] &= 248;
 		key[31] &= 127;
 		key[31] |= 64;
@@ -92,18 +105,18 @@ private_key private_key::from_password(std::vector<uint8_t> const& password, std
 	return ret;
 }
 
-std::string private_key::to_base64() const
+std::string private_key::to_base64(bool pad) const
 {
 	auto raw = std::string(key_.cbegin(), key_.cend());
 	raw += std::string(salt_.cbegin(), salt_.cend());
-	return fz::base64_encode(raw);
+	return base64_encode(raw, base64_type::standard, pad);
 }
 
 private_key private_key::from_base64(std::string_view const& base64)
 {
 	private_key ret;
 
-	auto raw = fz::base64_decode(base64);
+	auto raw = base64_decode(base64);
 	if (raw.size() == key_size + salt_size) {
 		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
@@ -326,21 +339,21 @@ symmetric_key symmetric_key::generate()
 {
 	symmetric_key ret;
 
-	ret.key_ = fz::random_bytes(key_size);
-	ret.salt_ = fz::random_bytes(salt_size);
+	ret.key_ = random_bytes(key_size);
+	ret.salt_ = random_bytes(salt_size);
 
 	return ret;
 }
 
-symmetric_key symmetric_key::from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt)
+symmetric_key symmetric_key::from_password(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, unsigned int iterations)
 {
 	symmetric_key ret;
 
-	if (!password.empty() && salt.size() == salt_size) {
+	if (!password.empty() && salt.size() == salt_size && iterations >= min_iterations) {
 
 		std::vector<uint8_t> key;
 		key.resize(key_size);
-		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), 100000, salt_size, salt.data(), 32, key.data());
+		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), iterations, salt_size, salt.data(), 32, key.data());
 		ret.key_ = std::move(key);
 		ret.salt_ = salt;
 	}
@@ -348,18 +361,18 @@ symmetric_key symmetric_key::from_password(std::vector<uint8_t> const& password,
 	return ret;
 }
 
-std::string symmetric_key::to_base64() const
+std::string symmetric_key::to_base64(bool pad) const
 {
 	auto raw = std::string(key_.cbegin(), key_.cend());
 	raw += std::string(salt_.cbegin(), salt_.cend());
-	return fz::base64_encode(raw);
+	return base64_encode(raw, base64_type::standard, pad);
 }
 
 symmetric_key symmetric_key::from_base64(std::string_view const& base64)
 {
 	symmetric_key ret;
 
-	auto raw = fz::base64_decode(base64);
+	auto raw = base64_decode(base64);
 	if (raw.size() == key_size + salt_size) {
 		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
@@ -373,7 +386,7 @@ symmetric_key symmetric_key::from_base64(std::wstring_view const& base64)
 {
 	symmetric_key ret;
 
-	auto raw = fz::base64_decode(base64);
+	auto raw = base64_decode(base64);
 	if (raw.size() == key_size + salt_size) {
 		auto p = reinterpret_cast<uint8_t const*>(raw.data());
 		ret.key_.assign(p, p + key_size);
