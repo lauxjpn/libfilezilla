@@ -125,12 +125,15 @@ std::string FZ_PUBLIC_SYMBOL base64_decode_s(std::wstring_view const& in);
 
 
 /**
- * \brief Alphabet variations for base32, as per RFC4648
+ * \brief Alphabet variations for base32
+ * - standard: A-Z2-7 as per RFC4648
+ * - base32hex: Tricontakaidecimal, natural extension of hex with letters G through V
+ * - locale_safe: Does not contain the letter i
  */
 enum class base32_type {
-	standard, /// A-Z2-7
-	base32hex, /// Tricontakaidecimal, natural extension of hex with letters G through V
-	locale_safe /// Does not include the letter i
+	standard,
+	base32hex,
+	locale_safe
 };
 
 /// \brief Encodes raw input string to base32
