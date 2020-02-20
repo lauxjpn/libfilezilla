@@ -1609,10 +1609,30 @@ std::string tls_layer_impl::get_key_exchange() const
 {
 	std::string ret;
 
-	char const* s = gnutls_kx_get_name(gnutls_kx_get(session_));
-	if (s && *s) {
-		ret = s;
+	char const* s{};
+	gnutls_kx_algorithm_t alg = gnutls_kx_get(session_);
+	bool const dh = (alg == GNUTLS_KX_DHE_RSA || alg == GNUTLS_KX_DHE_DSS);
+	bool const ecdh = (alg == GNUTLS_KX_ECDHE_RSA || alg == GNUTLS_KX_ECDHE_ECDSA);
+	if (dh || ecdh) {
+		char const* const signature_name = gnutls_sign_get_name(static_cast<gnutls_sign_algorithm_t>(gnutls_sign_algorithm_get(session_)));
+		ret = (ecdh ? "ECDHE" : "DHE");
+		s = gnutls_group_get_name(gnutls_group_get(session_));
+		if (s && *s) {
+			ret += "-";
+			ret += s;
+		}
+		if (signature_name && *signature_name) {
+			ret += "-";
+			ret += signature_name;
+		}
 	}
+	else {
+		s = gnutls_kx_get_name(alg);
+		if (s && *s) {
+			ret = s;
+		}
+	}
+
 
 	if (ret.empty()) {
 		ret = to_utf8(fztranslate("unknown"));
