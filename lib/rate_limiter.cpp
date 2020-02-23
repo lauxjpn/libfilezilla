@@ -321,7 +321,11 @@ void rate_limiter::pay_debt(direction::type const d)
 
 rate::type rate_limiter::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
+	scratch_buffer_.clear();
+	
 	auto & data = data_[d];
+	data.overflow_ = 0;
+
 	if (!weight_) {
 		data.merged_tokens_ = std::min(data.limit_, tokens);
 		pay_debt(d);
@@ -366,8 +370,6 @@ rate::type rate_limiter::add_tokens(direction::type const d, rate::type tokens, 
 		}
 	}
 
-	data.overflow_ = 0;
-	scratch_buffer_.clear();
 	for (size_t i = 0; i < buckets_.size(); ++i) {
 		rate::type overflow = buckets_[i]->add_tokens(d, data.merged_tokens_, merged_limit);
 		if (overflow) {
