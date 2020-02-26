@@ -401,6 +401,34 @@ std::vector<uint8_t> const& symmetric_key::key() const
 	return key_;
 }
 
+std::vector<uint8_t> symmetric_key::encrypt_key(fz::public_key const& kek)
+{
+	if (key_.empty() || salt_.empty() || !kek) {
+		return std::vector<uint8_t>();
+	}
+
+	std::vector<uint8_t> tmp;
+	tmp.resize(key_.size() + salt_.size());
+	memcpy(tmp.data(), key_.data(), key_.size());
+	memcpy(tmp.data() + key_.size(), salt_.data(), salt_.size());
+	return fz::encrypt(tmp, kek);
+}
+
+symmetric_key symmetric_key::decrypt_key(std::vector<uint8_t> const& encrypted, fz::private_key const& kek)
+{
+	symmetric_key ret;
+
+	auto raw = fz::decrypt(encrypted, kek);
+	if (raw.size() == key_size + salt_size) {
+		auto p = reinterpret_cast<uint8_t const*>(raw.data());
+		ret.key_.assign(p, p + key_size);
+		ret.salt_.assign(p + key_size, p + key_size + salt_size);
+	}
+
+	return ret;
+}
+
+
 size_t symmetric_key::encryption_overhead()
 {
 	return symmetric_key::salt_size + GCM_DIGEST_SIZE;
