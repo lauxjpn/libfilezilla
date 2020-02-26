@@ -207,6 +207,9 @@ public:
 	static symmetric_key from_base64(std::string_view const& base64);
 	static symmetric_key from_base64(std::wstring_view const& base64);
 
+	std::vector<uint8_t> encrypt_key(fz::public_key const& kek);
+	static symmetric_key decrypt_key(std::vector<uint8_t> const& encrypted, fz::private_key const& kek);
+
 	FZ_PRIVATE_SYMBOL std::vector<uint8_t> const& key() const;
 
 	static size_t encryption_overhead();
