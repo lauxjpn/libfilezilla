@@ -846,7 +846,21 @@ bool do_set_rfc822(datetime& dt, String const& str)
 			second = to_integral<int>(tokens[5]);
 		}
 
-		return dt.set(datetime::utc, year, month, day, hour, minute, second);
+		bool set = dt.set(datetime::utc, year, month, day, hour, minute, second);
+		if (set && tokens.size() >= 8) {
+			int minutes{};
+			if (tokens[7].size() == 5 && tokens[7][0] == '+') {
+				minutes = -fz::to_integral<int>(tokens[7].substr(1, 2), -10000) * 60 + fz::to_integral<int>(tokens[7].substr(3), -10000);
+			}
+			else if (tokens[7].size() == 4) {
+				minutes = fz::to_integral<int>(tokens[7].substr(0, 2), 10000) * 60 + fz::to_integral<int>(tokens[7].substr(2), 10000);
+			}
+			if (minutes < 10000) {
+				dt += fz::duration::from_minutes(minutes);
+			}
+		}
+
+		return set;
 	}
 	else {
 		dt.clear();
