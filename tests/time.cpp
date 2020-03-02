@@ -11,6 +11,7 @@ class TimeTest final : public CppUnit::TestFixture
 	CPPUNIT_TEST(testNow);
 	CPPUNIT_TEST(testPreEpoch);
 	CPPUNIT_TEST(testAlternateMidnight);
+	CPPUNIT_TEST(testRFC822);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -21,6 +22,8 @@ public:
 	void testPreEpoch();
 
 	void testAlternateMidnight();
+
+	void testRFC822();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(TimeTest);
@@ -100,4 +103,24 @@ void TimeTest::testAlternateMidnight()
 	CPPUNIT_ASSERT(imbue.imbue_time(24, 0, 0));
 	CPPUNIT_ASSERT(t1 == imbue);
 
+}
+
+void TimeTest::testRFC822()
+{
+	fz::datetime const t1(fz::datetime::utc, 2020, 3, 2, 12, 35, 0);
+
+	std::string s = t1.get_rfc822();
+	CPPUNIT_ASSERT(!s.empty());
+
+	fz::datetime t;
+	CPPUNIT_ASSERT(t.set_rfc822(s));
+	CPPUNIT_ASSERT(t == t1);
+
+	std::string const offset1 = "Mon, 02 Mar 2020 13:35:00 +0100";
+	std::string const offset2 = "Mon, 02 Mar 2020 07:35:00 -0500";
+
+	CPPUNIT_ASSERT(t.set_rfc822(offset1));
+	CPPUNIT_ASSERT(t == t1);
+	CPPUNIT_ASSERT(t.set_rfc822(offset2));
+	CPPUNIT_ASSERT(t == t1);
 }
