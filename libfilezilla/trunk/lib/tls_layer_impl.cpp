@@ -1385,7 +1385,12 @@ void tls_layer_impl::log_verification_error(int status)
 	}
 #endif
 	if (status) {
-		logger_.log(logmsg::error, fztranslate("Received certificate chain could not be verified. Verification status is %d."), status);
+		if (status == GNUTLS_CERT_INVALID) {
+			logger_.log(logmsg::error, fztranslate("Received certificate chain could not be verified."));
+		}
+		else {
+			logger_.log(logmsg::error, fztranslate("Received certificate chain could not be verified. Verification status is %d."), status);
+		}
 	}
 
 }
