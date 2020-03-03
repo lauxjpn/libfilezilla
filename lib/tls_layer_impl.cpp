@@ -790,8 +790,9 @@ bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_res
 int tls_layer_impl::continue_handshake()
 {
 	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::continue_handshake()");
-	assert(session_);
-	assert(state_ == socket_state::connecting);
+	if (!session_ || state_ != socket_state::connecting) {
+		return ENOTCONN;
+	}
 
 	int res = gnutls_handshake(session_);
 	while (res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) {
