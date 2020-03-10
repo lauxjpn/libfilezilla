@@ -1,3 +1,9 @@
+0.20.2 (2020-03-10)
+
++ Add encrypt_key and decrypt_key to fz::symmetric key
+- fz::datetime::set_rfc822 now parses the zone offset
+- Removed unneeded asserts from format.hpp
+
 0.20.1 (2020-02-24)
 
 - Fix potential crash after removing the last speed limit bucket
