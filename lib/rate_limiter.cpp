@@ -130,7 +130,7 @@ void rate_limit_manager::set_burst_tolerance(rate::type tolerance)
 void bucket_base::remove_bucket()
 {
 	scoped_lock l(mtx_);
-	while (idx_ != rate::unlimited && parent_) {
+	while (idx_ != size_t(-1) && parent_) {
 		if (parent_ == mgr_) {
 			if (mgr_->mtx_.try_lock()) {
 				auto * other = mgr_->limiters_.back();
@@ -169,7 +169,7 @@ void bucket_base::remove_bucket()
 		l.lock();
 	}
 	parent_ = nullptr;
-	idx_ = rate::unlimited;
+	idx_ = size_t(-1);
 }
 
 void bucket_base::set_mgr_recursive(rate_limit_manager * mgr)
@@ -190,7 +190,7 @@ rate_limiter::~rate_limiter()
 		scoped_lock l(mtx_);
 		for (auto * bucket : buckets_) {
 			bucket->parent_ = nullptr;
-			bucket->idx_ = rate::unlimited;
+			bucket->idx_ = size_t(-1);
 		}
 		buckets_.clear();
 	}
