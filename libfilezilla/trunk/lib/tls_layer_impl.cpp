@@ -1622,11 +1622,13 @@ std::string tls_layer_impl::get_key_exchange() const
 	if (dh || ecdh) {
 		char const* const signature_name = gnutls_sign_get_name(static_cast<gnutls_sign_algorithm_t>(gnutls_sign_algorithm_get(session_)));
 		ret = (ecdh ? "ECDHE" : "DHE");
+#if GNUTLS_VERSION_NUMBER >= 0x030600
 		s = gnutls_group_get_name(gnutls_group_get(session_));
 		if (s && *s) {
 			ret += "-";
 			ret += s;
 		}
+#endif
 		if (signature_name && *signature_name) {
 			ret += "-";
 			ret += signature_name;
