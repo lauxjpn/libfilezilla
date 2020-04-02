@@ -22,7 +22,7 @@ bool FZ_PUBLIC_SYMBOL set_cloexec(int fd);
  *
  * On failure sets fds to -1.
  */
-bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2]);
+bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2], bool require_atomic_creation = false);
 
 }
 
