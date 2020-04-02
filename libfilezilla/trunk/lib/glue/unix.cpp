@@ -21,16 +21,26 @@ bool set_cloexec(int fd)
 	return false;
 }
 
-bool create_pipe(int fds[2])
+bool create_pipe(int fds[2], bool require_atomic_creation)
 {
 	fds[0] = -1;
 	fds[1] = -1;
 
 #if HAVE_PIPE2
 	int res = pipe2(fds, O_CLOEXEC);
-	if (res != 0 && errno == ENOSYS)
+	if (!res) {
+		return true;
+	}
+	else if (errno != ENOSYS) {
+		return false;
+	}
+	else
 #endif
 	{
+		if (require_atomic_creation) {
+			return false;
+		}
+
 		if (pipe(fds) != 0) {
 			return false;
 		}

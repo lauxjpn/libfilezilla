@@ -250,6 +250,7 @@ private:
 #include "libfilezilla/glue/unix.hpp"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <string.h>
@@ -282,12 +283,12 @@ public:
 	pipe(pipe const&) = delete;
 	pipe& operator=(pipe const&) = delete;
 
-	bool create()
+	bool create(bool require_atomic_creation = false)
 	{
 		reset();
 
 		int fds[2];
-		if (!create_pipe(fds)) {
+		if (!create_pipe(fds, require_atomic_creation)) {
 			return false;
 		}
 
@@ -545,27 +546,66 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 
 	pid_t const parent = getppid();
 	pid_t const ppgid = getpgid(parent);
+
+	// We're using a pipe created with O_CLOEXEC to signal failure from execv.
+	// Note that this flags must be set atomically, setting FD_CLOEXEC after creation
+	// leads to a deadlock if a different thread calls exec in-between.
+	// Unfortunately even in early 2020, macOS does not have pipe2.
+	pipe errpipe;
+	errpipe.create(true);
+
 	pid_t pid = fork();
 	if (!pid) {
+		reset_fd(errpipe.read_);
+
+		// We're the child
 		pid_t inner_pid = fork();
 		if (!inner_pid) {
 			// Change the process group ID of the new process so that terminating the outer process does not terminate the child
 			setpgid(0, ppgid);
 			execv(argV.get()[0], argV.get());
+
+			if (errpipe.write_ != -1) {
+				ssize_t w;
+				do {
+					w = ::write(errpipe.write_, "", 1);
+				} while (w == -1 && (errno == EAGAIN || errno == EINTR));
+			}
+
 			_exit(-1);
 		}
 		else {
 			_exit(0);
 		}
+
+		return false;
 	}
 	else {
+		reset_fd(errpipe.write_);
+
+		// We're the parent
 		int ret;
 		do {
 		} while ((ret = waitpid(pid, nullptr, 0)) == -1 && errno == EINTR);
 
-		return ret != -1;
+		if (ret == -1) {
+			return false;
+		}
+
+		if (errpipe.read_ != -1) {
+			ssize_t r;
+			char tmp;
+			do {
+				r = ::read(errpipe.read_, &tmp, 1);
+			} while (r == -1 && (errno == EAGAIN || errno == EINTR));
+			if (r == 1) {
+				// execv failed in the child.
+				return false;
+			}
+		}
+
+		return true;
 	}
-	return false;
 #endif
 }
 }
