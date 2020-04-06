@@ -259,6 +259,16 @@ private:
 #include <memory>
 #include <vector>
 
+#if FZ_MAC
+#include "libfilezilla/local_filesys.hpp"
+
+#include <CoreFoundation/CFArray.h>
+#include <CoreFoundation/CFUrl.h>
+#include <CoreFoundation/CFBundle.h>
+
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
 namespace fz {
 
 namespace {
@@ -508,9 +518,150 @@ bool process::write(char const* buffer, unsigned int len)
 	return impl_ ? impl_->write(buffer, len) : false;
 }
 
+#if FZ_MAC
+namespace {
+template<typename T>
+class cfref final
+{
+public:
+	cfref() = default;
+	~cfref() {
+		if (ref_) {
+			CFRelease(ref_);
+		}
+	}
+
+	explicit cfref(T ref, bool fromCreate = true)
+		: ref_(ref)
+	{
+		if (ref_ && !fromCreate) {
+			CFRetain(ref_);
+		}
+	}
+
+	cfref(cfref const& op)
+		: ref_(op.ref)
+	{
+		if (ref_) {
+			CFRetain(ref_);
+		}
+	}
+
+	cfref& operator=(cfref const& op)
+	{
+		if (this != &op) {
+			if (ref_) {
+				CFRelease(ref_);
+			}
+			ref_ = op.ref_;
+			if (ref_) {
+				CFRetain(ref_);
+			}
+		}
+
+		return *this;
+
+	}
+
+	explicit operator bool() const { return ref_ != nullptr; }
+
+	operator T& () { return ref_; }
+	operator T const& () const { return ref_; }
+
+private:
+	T ref_{};
+};
+
+typedef cfref<CFStringRef> cfsr;
+typedef cfref<CFURLRef> cfurl;
+typedef cfref<CFBundleRef> cfbundle;
+typedef cfref<CFMutableArrayRef> cfma;
+
+cfsr cfsr_view(std::string_view const& v)
+{
+	return cfsr(CFStringCreateWithBytesNoCopy(nullptr, reinterpret_cast<uint8_t const*>(v.data()), v.size(), kCFStringEncodingUTF8, false, kCFAllocatorNull), true);
+}
+
+int try_launch_bundle(std::vector<std::string> const& cmd_with_args)
+{
+	std::string_view cmd(cmd_with_args[0]);
+	if (!cmd.empty() && cmd.back() == '/') {
+		cmd = cmd.substr(0, cmd.size() - 1);
+	}
+	if (!ends_with(cmd, std::string_view(".app"))) {
+		return -1;
+	}
+
+	if (local_filesys::get_file_type(cmd_with_args[0], true) != local_filesys::dir) {
+		return -1;
+	}
+
+	// Treat it as a bundle
+
+
+	cfurl bundle_url(CFURLCreateWithFileSystemPath(nullptr, cfsr_view(cmd), kCFURLPOSIXPathStyle, true));
+	if (!bundle_url) {
+		return 0;
+	}
+
+	cfbundle bundle(CFBundleCreate(nullptr, bundle_url));
+	if (!bundle) {
+		return 0;
+	}
+
+	// Require the bundle to be an application
+	uint32_t type, creator;
+	CFBundleGetPackageInfo(bundle, &type, &creator);
+	if (type != 'APPL') {
+		return 0;
+	}
+
+	cfma args(CFArrayCreateMutable(nullptr, 0, &kCFTypeArrayCallBacks));
+	if (!args) {
+		return 0;
+	}
+
+	for (size_t i = 1; i < cmd_with_args.size(); ++i) {
+		cfurl arg_url;
+
+		auto const& arg = cmd_with_args[i];
+
+		if (!arg.empty() && arg.front() == '/') {
+			auto t = local_filesys::get_file_type(cmd_with_args[i], true);
+			if (t != local_filesys::unknown) {
+				arg_url = cfurl(CFURLCreateWithFileSystemPath(nullptr, cfsr_view(arg), kCFURLPOSIXPathStyle, t == local_filesys::dir));
+				if (!arg_url) {
+					return 0;
+				}
+			}
+		}
+
+		if (!arg_url) {
+			arg_url = cfurl(CFURLCreateWithString(nullptr, cfsr_view(arg), nullptr));
+		}
+
+		if (!arg_url) {
+			return 0;
+		}
+		CFArrayAppendValue(args, arg_url);
+	}
+
+	LSLaunchURLSpec ls{};
+	ls.appURL = bundle_url;
+	ls.launchFlags = kLSLaunchDefaults;
+	ls.itemURLs = args;
+	if (LSOpenFromURLSpec(&ls, nullptr) != noErr) {
+		return 0;
+	}
+
+	return 1;
+}
+}
+#endif
+
 bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 {
-	if (cmd_with_args.empty()) {
+	if (cmd_with_args.empty() || cmd_with_args[0].empty()) {
 		return false;
 	}
 
@@ -538,6 +689,14 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 	if (cmd_with_args[0][0] != '/') {
 		return false;
 	}
+
+#if FZ_MAC
+	// Special handling for application bundles if passed a single file name
+	int res = try_launch_bundle(cmd_with_args);
+	if (res != -1) {
+		return res == 1;
+	}
+#endif
 
 	std::vector<std::unique_ptr<char[]>> argList;
 	std::unique_ptr<char *[]> argV;

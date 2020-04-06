@@ -96,7 +96,10 @@ libfilezilla_la_SOURCES += \
 nobase_include_HEADERS += \
 	libfilezilla/glue/unix.hpp
 
+endif
 
+if FZ_MAC
+libfilezilla_la_LDFLAGS += -framework CoreServices
 endif
 
 dist_noinst_HEADERS = \
