@@ -103,6 +103,13 @@ else
   windows=0
 fi
 
+# Check if we're on Mac
+if test "$host_vendor" = "apple"; then
+  mac=1
+else
+  mac=0
+fi
+
 if test "$windows" = "1"; then
   libdeps=-lws2_32
 else
@@ -322,6 +329,7 @@ AC_SUBST(LIBFILEZILLA_LINGUAS_MO)
 # ----------------------------
 
 AM_CONDITIONAL(FZ_WINDOWS, test "$windows" = "1")
+AM_CONDITIONAL(FZ_MAC, test "$mac" = "1")
 AM_CONDITIONAL(HAVE_CPPUNIT, [test "$have_cppunit" = "yes"])
 AM_CONDITIONAL([LOCALES_ONLY], [test "$localesonly" = "yes"])
 AM_CONDITIONAL([LOCALES], [test "$locales" = "yes"])
