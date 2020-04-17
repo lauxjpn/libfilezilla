@@ -79,7 +79,7 @@ public:
 #endif
 	}
 
-	/// \brief GetFileType return the type of the passed path.
+	/// \brief get_file_type return the type of the passed path.
 	///
 	/// Can optionally follow symbolic links.
 	static type get_file_type(native_string const& path, bool follow_links = false);
