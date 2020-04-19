@@ -26,11 +26,13 @@ int main(int argc, char *argv[])
 	int64_t size;
 	fz::datetime time;
 	bool is_link;
-	bool is_dir;
+	fz::local_filesys::type t;
 	int mode;
 
 	// Iterate over it
-	while (fs.get_next_file(name, is_link, is_dir, &size, &time, &mode)) {
+	while (fs.get_next_file(name, is_link, t, &size, &time, &mode)) {
+
+		bool is_dir = t == fz::local_filesys::dir;
 
 		// Print results
 		std::cout << fz::to_string(name) << "\n";
