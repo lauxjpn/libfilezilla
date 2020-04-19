@@ -84,9 +84,15 @@ public:
 	/// Can optionally follow symbolic links.
 	static type get_file_type(native_string const& path, bool follow_links = false);
 
-	/// Gets the info for the passed arguments. Follows symbolic links and stats the target, sets is_link to true if path was
-	/// a link.
-	static type get_file_info(native_string const& path, bool &is_link, int64_t* size, datetime* modification_time, int* mode);
+	/**
+	 * \brief Gets the info for the passed arguments.
+	 *
+	 * Follows symbolic links and stats the target by default, sets is_link to true if path was
+	 * a link.
+	 *
+	 * The returned type can only be \c type::link if \c follow_links is \c false.
+	 */
+	static type get_file_info(native_string const& path, bool &is_link, int64_t* size, datetime* modification_time, int* mode, bool follow_links = true);
 
 	/// Gets size of file, returns -1 on error.
 	static int64_t get_size(native_string const& path, bool *is_link = nullptr);
@@ -99,10 +105,16 @@ public:
 	/// Gets the next file in the directory. Call until it returns false.
 	bool get_next_file(native_string& name);
 
-	/// Gets the next file in the directory. Call until it returns false.
-	///
-	/// Stores the metadata in any non-null arguments.
-	bool get_next_file(native_string& name, bool &is_link, bool &is_dir, int64_t* size, datetime* modification_time, int* mode);
+	/**
+	 * \brief Gets the next file in the directory. Call until it returns false.
+	 *
+	 * Stores the metadata in any non-null arguments. Follows symbolic links.
+	 *
+	 * \param is_link will be set to true iff file is a symbolic link.
+	 * \param t will receive the type of file, after following any symbolic links. Cannot return \c type::link.
+	 *
+	 */
+	bool get_next_file(native_string& name, bool &is_link, type & t, int64_t* size, datetime* modification_time, int* mode);
 
 	/// Ends enumerating files. Automatically called in the destructor.
 	void end_find_files();

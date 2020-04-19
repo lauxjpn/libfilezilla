@@ -101,7 +101,7 @@ local_filesys::type local_filesys::get_file_type(native_string const& path, bool
 
 #ifndef FZ_WINDOWS
 namespace {
-local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char const* path, DIR* dir, bool follow), char const* path, DIR* dir, bool &is_link, int64_t* size, datetime* modification_time, int *mode)
+local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char const* path, DIR* dir, bool follow), char const* path, DIR* dir, bool &is_link, int64_t* size, datetime* modification_time, int *mode, bool follow_links)
 {
 	struct stat buf;
 	static_assert(sizeof(buf.st_size) >= 8, "The st_size member of struct stat must be 8 bytes or larger.");
@@ -124,18 +124,34 @@ local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char con
 #ifdef S_ISLNK
 	if (S_ISLNK(buf.st_mode)) {
 		is_link = true;
-		result = do_stat(buf, path, dir, true);
-		if (result) {
+
+		if (follow_links) {
+			result = do_stat(buf, path, dir, true);
+			if (result) {
+				if (size) {
+					*size = -1;
+				}
+				if (mode) {
+					*mode = -1;
+				}
+				if (modification_time) {
+					*modification_time = datetime();
+				}
+				return local_filesys::unknown;
+			}
+		}
+		else {
+			if (modification_time) {
+				*modification_time = datetime(buf.st_mtime, datetime::seconds);
+			}
+
+			if (mode) {
+				*mode = buf.st_mode & 0777;
+			}
 			if (size) {
 				*size = -1;
 			}
-			if (mode) {
-				*mode = -1;
-			}
-			if (modification_time) {
-				*modification_time = datetime();
-			}
-			return local_filesys::unknown;
+			return local_filesys::link;
 		}
 	}
 	else
@@ -170,12 +186,12 @@ local_filesys::type get_file_info_at(char const* path, DIR* dir, bool &is_link, 
 	{
 		return fstatat(dirfd(dir), path, &buf, follow ? 0 : AT_SYMLINK_NOFOLLOW);
 	};
-	return get_file_info_impl(do_stat, path, dir, is_link, size, modification_time, mode);
+	return get_file_info_impl(do_stat, path, dir, is_link, size, modification_time, mode, true);
 }
 }
 #endif
 
-local_filesys::type local_filesys::get_file_info(native_string const& path, bool &is_link, int64_t* size, datetime* modification_time, int *mode)
+local_filesys::type local_filesys::get_file_info(native_string const& path, bool &is_link, int64_t* size, datetime* modification_time, int *mode, bool follow_links)
 {
 	if (path.size() > 1 && is_separator(path.back())) {
 		native_string tmp = path;
@@ -205,6 +221,25 @@ local_filesys::type local_filesys::get_file_info(native_string const& path, bool
 
 	if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && IsReparseTagNameSurrogate(data.dwReserved0)) {
 		is_link = true;
+
+		if (!follow_links) {
+			if (modification_time) {
+				*modification_time = datetime(data.ftLastWriteTime, datetime::milliseconds);
+				if (modification_time->empty()) {
+					*modification_time = datetime(data.ftCreationTime, datetime::milliseconds);
+				}
+			}
+
+			if (mode) {
+				*mode = (int)data.dwFileAttributes;
+			}
+
+			if (size) {
+				*size = -1;
+			}
+
+			return link;
+		}
 
 		HANDLE hFile = is_dir ? INVALID_HANDLE_VALUE : CreateFile(path.c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 		if (hFile != INVALID_HANDLE_VALUE) {
@@ -282,7 +317,7 @@ local_filesys::type local_filesys::get_file_info(native_string const& path, bool
 			return lstat(path, &buf);
 		}
 	};
-	return get_file_info_impl(do_stat, path.c_str(), nullptr, is_link, size, modification_time, mode);
+	return get_file_info_impl(do_stat, path.c_str(), nullptr, is_link, size, modification_time, mode, follow_links);
 #endif
 }
 
@@ -423,7 +458,7 @@ bool local_filesys::get_next_file(native_string& name)
 #endif
 }
 
-bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_dir, int64_t* size, datetime* modification_time, int* mode)
+bool local_filesys::get_next_file(native_string& name, bool &is_link, local_filesys::type & t, int64_t* size, datetime* modification_time, int* mode)
 {
 #ifdef FZ_WINDOWS
 	if (!has_next_) {
@@ -442,12 +477,12 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 		}
 		name = m_find_data.cFileName;
 
-		is_dir = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+		t = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
 
 		is_link = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsReparseTagNameSurrogate(m_find_data.dwReserved0);
 		if (is_link) {
 			// Follow the reparse point
-			HANDLE hFile = is_dir ? INVALID_HANDLE_VALUE : CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+			HANDLE hFile = (t == dir) ? INVALID_HANDLE_VALUE : CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 			if (hFile != INVALID_HANDLE_VALUE) {
 				BY_HANDLE_FILE_INFORMATION info{};
 				int ret = GetFileInformationByHandle(hFile, &info);
@@ -465,9 +500,9 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 						*mode = (int)info.dwFileAttributes;
 					}
 
-					is_dir = (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+					t = (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
 					if (size) {
-						if (is_dir) {
+						if (t == dir) {
 							*size = -1;
 						}
 						else {
@@ -480,7 +515,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 				}
 			}
 
-			if (dirs_only_ && !is_dir) {
+			if (dirs_only_ && t != dir) {
 				continue;
 			}
 
@@ -507,7 +542,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 			}
 
 			if (size) {
-				if (is_dir) {
+				if (t == dir) {
 					*size = -1;
 				}
 				else {
@@ -540,7 +575,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 				}
 
 				name = entry->d_name;
-				is_dir = true;
+				t = dir;
 				return true;
 			}
 			else if (entry->d_type != DT_DIR) {
@@ -549,12 +584,10 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 		}
 #endif
 
-		type t = get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode);
+		t = get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode);
 		if (t == unknown) { // Happens for example in case of permission denied
 #if HAVE_STRUCT_DIRENT_D_TYPE
 			t = (entry->d_type == DT_DIR) ? dir : file;
-#else
-			t = file;
 #endif
 			is_link = false;
 			if (size) {
@@ -570,8 +603,6 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, bool &is_d
 		if (dirs_only_ && t != dir) {
 			continue;
 		}
-
-		is_dir = t == dir;
 
 		name = entry->d_name;
 
