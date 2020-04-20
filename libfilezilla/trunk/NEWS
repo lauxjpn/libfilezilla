@@ -1,3 +1,9 @@
+0.21.0 (2020-04-20)
+
++ macOS: fz::spawn_detached_process can now start application bundles
++ Changed arguments of fz::local_filesys::get_next_file to be consistent with fz::local_filesys::get_file_info
+- Improved error detection for fz::spawn_detached-process on *nix systems that support the pipe2 syscall with O_CLOEXEC
+
 0.20.2 (2020-03-10)
 
 + Add encrypt_key and decrypt_key to fz::symmetric key
