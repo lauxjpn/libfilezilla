@@ -39,8 +39,8 @@ public:
 	 *
 	 * If the handshake is started, wait for a connection event for the result.
 	 *
-	 * The certificate negotiated that eventually gets negotiated for the session
-	 * must match the passed required_certificate, either in DER or PEM,
+	 * The certificate that eventually gets negotiated for the session
+	 * must match the passed \c required_certificate, either in DER or PEM,
 	 * or the handshake will fail.
 	 */
 	bool client_handshake(std::vector<uint8_t> const& required_certificate, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());
