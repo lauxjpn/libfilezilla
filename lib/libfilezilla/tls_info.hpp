@@ -9,7 +9,7 @@
 
 namespace fz {
 /**
- * Represents all relevant information of a X.509 certificate as used by TLS.
+ * \brief Represents all relevant information of a X.509 certificate as used by TLS.
  */
 class x509_certificate final
 {
@@ -112,7 +112,15 @@ private:
 	std::vector<subject_name> alt_subject_names_;
 };
 
-/// Information about a TLS session
+/**
+ * \brief Information about a TLS session
+ *
+ * Includes information about the used ciphers and details on the certificates
+ * sent by the server.
+ *
+ * Includes flags whether the certificate chain is trusted by the system
+ * trust store and whether the expected hostname matches.
+ */
 class tls_session_info final
 {
 public:

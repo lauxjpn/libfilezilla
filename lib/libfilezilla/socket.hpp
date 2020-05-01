@@ -223,6 +223,7 @@ enum class listen_socket_state
 	listening,
 };
 
+/// Lightweight holder for socket descriptors
 class FZ_PUBLIC_SYMBOL socket_descriptor final
 {
 public:

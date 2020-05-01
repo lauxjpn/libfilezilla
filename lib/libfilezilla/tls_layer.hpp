@@ -16,6 +16,11 @@ class tls_layer;
 class tls_layer_impl;
 
 struct certificate_verification_event_type;
+
+/** \brief This event gets sent during the handshake with details about the session and the used certificate
+ *
+ * After receiving this event, \ref tls_layer::set_verification_result needs to be called eventually.
+ */
 typedef simple_event<certificate_verification_event_type, tls_layer*, tls_session_info> certificate_verification_event;
 
 /**
@@ -25,6 +30,10 @@ typedef simple_event<certificate_verification_event_type, tls_layer*, tls_sessio
  *
  * This class also supports TLS session resumption. Resumption has to be requested
  * explicitly, there is no shared state between unrelated sessions.
+ *
+ * Two trust models are possible with this class for client-side TLS: Certificates
+ * can either be evaluated against the system trust store, or you can implement a
+ * custom trust model such as TOFU.
  */
 class FZ_PUBLIC_SYMBOL tls_layer final : protected event_handler, public socket_layer
 {
@@ -52,11 +61,14 @@ public:
 	 *
 	 * If the handshake is started, wait for a connection event for the result.
 	 *
-	 * If a verification handler is passed, it will receive a
-	 * certificate_verification_event event upon which it must call
-	 * set_verification_result.
 	 * If no verification handler is passed, verification is done soley using the system
 	 * trust store.
+	 *
+	 * If a verification handler is passed, it will receive a
+	 * \ref certificate_verification_event event upon which the handshake is paused until
+	 * \ref set_verification_result gets called including a \ref tls_session_info structure.
+	 * The handler is called even for certifates not trusted by the system trust store, allowing
+	 * the following impairments: Unknown issuer, wrong hostname and certificates used outside their validity time.
 	 */
 	bool client_handshake(event_handler *const verification_handler, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());
 
@@ -90,7 +102,11 @@ public:
 	/// Gets the session's peer certificate in DER
 	std::vector<uint8_t> get_raw_certificate() const;
 
-	/// Must be called after having received certificate_verification_event
+	/**
+	 * \brief Must be called after having received certificate_verification_event
+	 *
+	 * Can be used to trust a certificate even if it is not trusted via the system trust store.
+	 */
 	void set_verification_result(bool trusted);
 
 	std::string get_protocol() const;
@@ -126,6 +142,7 @@ public:
 	 */
 	bool set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem = true);
 
+	/// Returns the version of the loaded GnuTLS library, may be different than the version used at compile-time.
 	static std::string get_gnutls_version();
 
 	/** \brief Creates a new private key and a self-signed certificate.

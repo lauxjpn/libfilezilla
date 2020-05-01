@@ -16,7 +16,7 @@
 namespace fz {
 
 /**
- * \ brief Small class to return filesystem errors
+ * \brief Small class to return filesystem errors
  */
 class FZ_PUBLIC_SYMBOL result final
 {
