@@ -50,7 +50,7 @@ bool uri::parse(std::string_view in)
 	// Do we have authority?
 	if (in.size() >= 2 && in[0] == '/' && in[1] == '/') {
 		size_t auth_delim = in.find('/', 2);
-		std::string authority;
+		std::string_view authority;
 		if (auth_delim != std::string::npos) {
 			authority = in.substr(2, auth_delim - 2);
 			in = in.substr(auth_delim);
@@ -59,7 +59,7 @@ bool uri::parse(std::string_view in)
 			authority = in.substr(2);
 			in = std::string_view();
 		}
-		if (!parse_authority(std::move(authority))) {
+		if (!parse_authority(authority)) {
 			return false;
 		}
 	}
@@ -74,12 +74,12 @@ bool uri::parse(std::string_view in)
 	return true;
 }
 
-bool uri::parse_authority(std::string && authority)
+bool uri::parse_authority(std::string_view authority)
 {
 	// Do we have userinfo?
 	size_t pos = authority.find('@');
 	if (pos != std::string::npos) {
-		std::string userinfo = authority.substr(0, pos);
+		std::string_view userinfo = authority.substr(0, pos);
 		authority = authority.substr(pos + 1);
 		pos = userinfo.find(':');
 		if (pos != std::string::npos) { // Slight inaccuracy: Empty password isn't handled well
