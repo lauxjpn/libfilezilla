@@ -100,7 +100,7 @@ public:
 	bool operator!=(uri const& arg) const { return !(*this == arg); }
 
 private:
-	bool FZ_PRIVATE_SYMBOL parse_authority(std::string && authority);
+	bool FZ_PRIVATE_SYMBOL parse_authority(std::string_view authority);
 };
 
 /**
