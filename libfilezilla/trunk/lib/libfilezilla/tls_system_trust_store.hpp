@@ -17,9 +17,14 @@ class tls_system_trust_store_impl;
 class tls_layer_impl;
 
 /**
+ * \brief Opaque class to load the system trust store asynchronously
+ *
  * Loading system trust store can take a significant amount of time
  * if there are large CRLs.
- * Use it as shared resource that is loaded asynchronously
+ *
+ * Use it as shared resource that is loaded asynchronously.
+ * This class is thread-safe and can be passed concurrently to
+ * multiple instances of \ref fz::tls_layer.
  */
 class FZ_PUBLIC_SYMBOL tls_system_trust_store final
 {

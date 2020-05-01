@@ -16,9 +16,10 @@ namespace fz {
 
 class thread_pool;
 
+class async_task_impl;
+
 /** \brief Handle for asynchronous tasks
  */
-class async_task_impl;
 class FZ_PUBLIC_SYMBOL async_task final {
 public:
 	async_task() = default;
@@ -47,6 +48,9 @@ private:
 	async_task_impl* impl_{};
 };
 
+/// \private
+class pooled_thread_impl;
+
 /** \brief A dumb thread-pool for asynchronous tasks
  *
  * If there are no idle threads, threads are created on-demand if spawning an asynchronous task.
@@ -55,7 +59,6 @@ private:
  *
  * Any number of tasks can be run concurrently.
  */
-class pooled_thread_impl;
 class FZ_PUBLIC_SYMBOL thread_pool final
 {
 public:
