@@ -39,7 +39,7 @@ bool uri::parse(std::string_view in)
 	}
 
 	// Do we have a scheme?
-	if (uri_chars::alpha.find(in[0]) != std::string::npos) {
+	if (!in.empty() && uri_chars::alpha.find(in[0]) != std::string::npos) {
 		size_t scheme_delim = in.find_first_not_of(uri_chars::scheme, 1);
 		if (scheme_delim != std::string::npos && in[scheme_delim] == ':') {
 			scheme_ = in.substr(0, scheme_delim);
@@ -48,7 +48,7 @@ bool uri::parse(std::string_view in)
 	}
 
 	// Do we have authority?
-	if (in[0] == '/' && in[1] == '/') {
+	if (in.size() >= 2 && in[0] == '/' && in[1] == '/') {
 		size_t auth_delim = in.find('/', 2);
 		std::string authority;
 		if (auth_delim != std::string::npos) {
