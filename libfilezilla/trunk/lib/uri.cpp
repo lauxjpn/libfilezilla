@@ -106,7 +106,7 @@ bool uri::parse_authority(std::string_view authority)
 		}
 	}
 
-	if (authority[0] == '[') {
+	if (!authority.empty() && authority[0] == '[') {
 		if (authority.back() != ']') {
 			return false;
 		}
