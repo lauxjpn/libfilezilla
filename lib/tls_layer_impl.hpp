@@ -82,6 +82,7 @@ private:
 
 	int verify_certificate();
 	bool certificate_is_blacklisted(cert_list_holder const& certificates);
+	bool certificate_is_blacklisted(gnutls_x509_crt_t const& cert);
 
 	void log_error(int code, std::wstring const& function, logmsg::type logLevel = logmsg::error);
 	void log_alert(logmsg::type logLevel);
