@@ -1217,26 +1217,33 @@ std::vector<x509_certificate::subject_name> tls_layer_impl::get_cert_subject_alt
 
 bool tls_layer_impl::certificate_is_blacklisted(cert_list_holder const& certs)
 {
+	for (size_t i = 0; i < certs.certs_size; ++i) {
+		if (certificate_is_blacklisted(certs.certs[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool tls_layer_impl::certificate_is_blacklisted(gnutls_x509_crt_t const& cert)
+{
 	static std::set<std::string, std::less<>> const bad_authority_key_ids = {
 		std::string("\xF4\x94\xBF\xDE\x50\xB6\xDB\x6B\x24\x3D\x9E\xF7\xBE\x3A\xAE\x36\xD7\xFB\x0E\x05", 20) // Nation-wide MITM in Kazakhstan
 	};
 
 	char buf[256];
 	unsigned int critical{};
-	for (size_t i = 0; i < certs.certs_size; ++i) {
-		auto const& cert = certs.certs[i];
-		size_t size = sizeof(buf);
-		int res = gnutls_x509_crt_get_authority_key_id(cert, buf, &size, &critical);
-		if (!res) {
-			auto it = bad_authority_key_ids.find(std::string_view(buf, size));
-			if (it != bad_authority_key_ids.cend()) {
-				return true;
-			}
+	size_t size = sizeof(buf);
+	int res = gnutls_x509_crt_get_authority_key_id(cert, buf, &size, &critical);
+	if (!res) {
+		auto it = bad_authority_key_ids.find(std::string_view(buf, size));
+		if (it != bad_authority_key_ids.cend()) {
+			return true;
 		}
 	}
+
 	return false;
 }
-
 
 int tls_layer_impl::get_algorithm_warnings() const
 {
@@ -1423,14 +1430,20 @@ int tls_layer_impl::verify_certificate()
 		return EINVAL;
 	}
 
-	datum_holder cert_der{};
-	int res = gnutls_x509_crt_export2(certs.certs[0], GNUTLS_X509_FMT_DER, &cert_der);
-	if (res != GNUTLS_E_SUCCESS) {
-		failure(res, true, L"gnutls_x509_crt_export2");
-		return ECONNABORTED;
+	if (certificate_is_blacklisted(certs)) {
+		logger_.log(logmsg::error, fztranslate("Man-in-the-Middle attack detected, aborting connection."));
+		failure(0, true);
+		return EINVAL;
 	}
 
 	if (!required_certificate_.empty()) {
+		datum_holder cert_der{};
+		int res = gnutls_x509_crt_export2(certs.certs[0], GNUTLS_X509_FMT_DER, &cert_der);
+		if (res != GNUTLS_E_SUCCESS) {
+			failure(res, true, L"gnutls_x509_crt_export2");
+			return ECONNABORTED;
+		}
+
 		if (required_certificate_.size() != cert_der.size ||
 			memcmp(required_certificate_.data(), cert_der.data, cert_der.size))
 		{
@@ -1566,10 +1579,34 @@ int tls_layer_impl::verify_certificate()
 			}
 		}
 
-		if (certificate_is_blacklisted(certs)) {
-			logger_.log(logmsg::error, fztranslate("Man-in-the-Middle attack detected, aborting connection."));
-			failure(0, true);
-			return EINVAL;
+		// Lengthen incomplete chains to the root using the trust store.
+		if (!certificates.empty() && !certificates.back().self_signed() && system_trust_store_) {
+			auto lease = system_trust_store_->impl_->lease();
+			auto cred = std::get<0>(lease);
+			if (cred) {
+				gnutls_x509_crt_t cert = certs.certs[certs.certs_size - 1];
+				while (!certificates.back().self_signed()) {
+					gnutls_x509_crt_t issuer{};
+					if (gnutls_certificate_get_issuer(cred, cert, &issuer, 0) || !issuer) {
+						break;
+					}
+
+					// Why is this cert even in the trust store? Antivirus MITM?
+					if (certificate_is_blacklisted(issuer)) {
+						logger_.log(logmsg::error, fztranslate("Man-in-the-Middle attack detected, aborting connection."));
+						failure(0, true);
+						return EINVAL;
+					}
+
+					x509_certificate out;
+					if (!extract_cert(issuer, out, true)) {
+						failure(0, true);
+						return ECONNABORTED;
+					}
+					certificates.push_back(out);
+					cert = issuer;
+				}
+			}
 		}
 
 		int const algorithmWarnings = get_algorithm_warnings();
