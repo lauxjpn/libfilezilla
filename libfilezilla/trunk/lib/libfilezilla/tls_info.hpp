@@ -39,7 +39,8 @@ public:
 		std::string const& fingerprint_sha1,
 		std::string const& issuer,
 		std::string const& subject,
-	    std::vector<subject_name> const& alt_subject_names);
+	    std::vector<subject_name> const& alt_subject_names,
+		bool const self_signed);
 
 	x509_certificate(
 		std::vector<uint8_t> && rawdata,
@@ -51,7 +52,8 @@ public:
 		std::string const& fingerprint_sha1,
 		std::string const& issuer,
 		std::string const& subject,
-	    std::vector<subject_name> && alt_subject_names);
+	    std::vector<subject_name> && alt_subject_names,
+		bool const self_Signed);
 
 
 	/// The raw, DER-encoded X.509 certificate
@@ -91,6 +93,9 @@ public:
 
 	explicit operator bool() const { return !raw_cert_.empty(); }
 
+	/// Indicates whether the certificate is self-signed
+	bool self_signed() const { return self_signed_; }
+
 private:
 	fz::datetime activation_time_;
 	fz::datetime expiration_time_;
@@ -110,6 +115,8 @@ private:
 	std::string subject_;
 
 	std::vector<subject_name> alt_subject_names_;
+
+	bool self_signed_{};
 };
 
 /**
