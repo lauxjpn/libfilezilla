@@ -100,7 +100,7 @@ private:
 
 	bool get_sorted_peer_certificates(gnutls_x509_crt_t *& certs, unsigned int & certs_size);
 
-	bool extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out);
+	bool extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last);
 	std::vector<x509_certificate::subject_name> get_cert_subject_alt_names(gnutls_x509_crt_t cert);
 
 	void log_verification_error(int status);

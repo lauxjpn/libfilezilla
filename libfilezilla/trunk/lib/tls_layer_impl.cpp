@@ -1078,10 +1078,15 @@ static std::string bin2hex(unsigned char const* in, size_t size)
 }
 
 
-bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out)
+bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last)
 {
 	datetime expiration_time(gnutls_x509_crt_get_expiration_time(cert), datetime::seconds);
 	datetime activation_time(gnutls_x509_crt_get_activation_time(cert), datetime::seconds);
+
+	if (!activation_time || !expiration_time || expiration_time < activation_time) {
+		logger_.log(logmsg::error, fztranslate("Could not extract validity period of certificate"));
+		return false;
+	}
 
 	// Get the serial number of the certificate
 	unsigned char buffer[40];
@@ -1172,7 +1177,8 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 		fingerprint_sha1,
 		issuer,
 		subject,
-		std::move(alt_subject_names));
+		std::move(alt_subject_names),
+		last ? gnutls_x509_crt_check_issuer(cert, cert) : false);
 
 	return true;
 }
@@ -1551,7 +1557,7 @@ int tls_layer_impl::verify_certificate()
 		certificates.reserve(certs.certs_size);
 		for (unsigned int i = 0; i < certs.certs_size; ++i) {
 			x509_certificate cert;
-			if (extract_cert(certs.certs[i], cert)) {
+			if (extract_cert(certs.certs[i], cert, i + 1 == certs.certs_size)) {
 				certificates.push_back(cert);
 			}
 			else {

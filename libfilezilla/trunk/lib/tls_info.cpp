@@ -11,7 +11,8 @@ x509_certificate::x509_certificate(
 		std::string const& fingerprint_sha1,
 		std::string const& issuer,
 		std::string const& subject,
-		std::vector<subject_name> const& alt_subject_names)
+		std::vector<subject_name> const& alt_subject_names,
+		bool const self_signed)
 	: activation_time_(activation_time)
 	, expiration_time_(expiration_time)
 	, raw_cert_(rawData)
@@ -24,6 +25,7 @@ x509_certificate::x509_certificate(
 	, issuer_(issuer)
 	, subject_(subject)
 	, alt_subject_names_(alt_subject_names)
+	, self_signed_(self_signed)
 {
 }
 
@@ -37,7 +39,8 @@ x509_certificate::x509_certificate(
 	std::string const& fingerprint_sha1,
 	std::string const& issuer,
 	std::string const& subject,
-	std::vector<subject_name> && alt_subject_names)
+	std::vector<subject_name> && alt_subject_names,
+	bool const self_signed)
 	: activation_time_(activation_time)
 	, expiration_time_(expiration_time)
 	, raw_cert_(rawData)
@@ -50,6 +53,7 @@ x509_certificate::x509_certificate(
 	, issuer_(issuer)
 	, subject_(subject)
 	, alt_subject_names_(alt_subject_names)
+	, self_signed_(self_signed)
 {
 }
 
