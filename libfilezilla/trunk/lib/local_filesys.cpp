@@ -797,11 +797,11 @@ result do_mkdir(native_string const& path, bool current_user_only)
 		}
 	}
 #else
-	int res = mkdir(path.c_str(), current_user_only ? 0700 : 0777);
+	int res = ::mkdir(path.c_str(), current_user_only ? 0700 : 0777);
 	if (!res) {
 		ret = result{result::ok};
 	}
-	else if (errno == EACCESS || errno == EPERM) {
+	else if (errno == EACCES || errno == EPERM) {
 		ret = result{result::noperm};
 	}
 #endif
@@ -878,7 +878,7 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 			if (pos == native_string::npos) {
 				work.clear();
 			}
-	
+
 			if (pos + 1 < work.size()) {
 				segments.push_back(work.substr(pos + 1));
 				work = work.substr(0, pos);
@@ -910,12 +910,11 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 			}
 		}
 
+		return result{result::ok};
 	}
 	else {
-		result r = do_mkdir(absolute_path, current_user_only);
+		return do_mkdir(absolute_path, current_user_only);
 	}
-
-	return result{result::ok};
 }
 
 }

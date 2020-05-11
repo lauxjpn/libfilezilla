@@ -201,7 +201,7 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 		}
 	}
 	int mode = S_IRUSR | S_IWUSR;
-	if (!(d & current_user_only) {
+	if (!(d & current_user_only)) {
 		mode |= S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 	}
 	fd_ = ::open(f.c_str(), flags, mode);
