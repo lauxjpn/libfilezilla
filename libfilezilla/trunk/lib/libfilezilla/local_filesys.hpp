@@ -139,6 +139,17 @@ private:
 #endif
 };
 
+/**
+ * \brief Creates directory if it doesn't yet exist.
+ *
+ * If current_user_only is set, the directory is created with
+ * permissions so that only the current user has access, otherwise
+ * the default permissions are used.
+ *
+ * This function only works with absolute paths.
+ */
+result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, bool current_user_only = false);
+
 }
 
 #endif
