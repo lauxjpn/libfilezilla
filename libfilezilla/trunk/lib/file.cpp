@@ -44,8 +44,53 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 		shareMode |= FILE_SHARE_WRITE;
 	}
 
-	hFile_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, nullptr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+	if (d & current_user_only) {
+		HANDLE token{INVALID_HANDLE_VALUE};
+		bool res = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token);
+		if (!res) {
+			return false;
+		}
 
+		DWORD needed{};
+		GetTokenInformation(token, TokenUser, NULL, 0, &needed);
+		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+			return false;
+		}
+
+		PTOKEN_USER tu = static_cast<PTOKEN_USER>(malloc(needed));
+		if (tu) {
+			if (GetTokenInformation(token, TokenUser, tu, needed, &needed)) {
+				needed = sizeof(ACL) + ((sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD)) + GetLengthSid(tu->User.Sid));
+				PACL acl = static_cast<PACL>(malloc(needed));
+				if (acl) {
+					if (InitializeAcl(acl, needed, ACL_REVISION)) {
+						if (AddAccessAllowedAce(acl, ACL_REVISION, GENERIC_ALL | STANDARD_RIGHTS_ALL | SPECIFIC_RIGHTS_ALL, tu->User.Sid)) {
+							SECURITY_DESCRIPTOR sd;
+							InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+							SetSecurityDescriptorDacl(&sd, TRUE, acl, FALSE);
+							SetSecurityDescriptorOwner(&sd, tu->User.Sid, FALSE);
+							SetSecurityDescriptorGroup(&sd, NULL, FALSE);
+							SetSecurityDescriptorSacl(&sd, FALSE, NULL, FALSE);
+
+							SECURITY_ATTRIBUTES attr;
+							attr.bInheritHandle = false;
+							attr.nLength = sizeof(SECURITY_ATTRIBUTES);
+							attr.lpSecurityDescriptor = &sd;
+
+							hFile_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, &attr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+						}
+					}
+					free(acl);
+				}
+			}
+			free(tu);
+		}
+		CloseHandle(token);
+	}
+	else {
+		hFile_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, nullptr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+	}
+	
 	return hFile_ != INVALID_HANDLE_VALUE;
 }
 
@@ -155,7 +200,11 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 			flags |= O_TRUNC;
 		}
 	}
-	fd_ = ::open(f.c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+	int mode = S_IRUSR | S_IWUSR;
+	if (!(d & current_user_only) {
+		mode |= S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+	}
+	fd_ = ::open(f.c_str(), flags, mode);
 
 #if HAVE_POSIX_FADVISE
 	if (fd_ != -1) {
