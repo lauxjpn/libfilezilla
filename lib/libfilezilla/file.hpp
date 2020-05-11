@@ -39,10 +39,18 @@ public:
 	 */
 	enum creation_flags {
 		/// Keep existing data if file exists, otherwise create new
-		existing,
+		existing = 0x1,
 
 		/// Truncate file if already existing, otherwise create new
-		empty
+		empty = 0x2,
+
+		/**
+		 * If set and a file is created, its permissions will be so
+		 * that it is only accessible by the current user.
+		 *
+		 * Does not modify permissions if the file already exists.
+		 */
+		current_user_only = 0x4
 	};
 
 	file() = default;
@@ -147,6 +155,10 @@ private:
  * \return true iff the file has been removed or did not exist to begin with.
  */
 bool FZ_PUBLIC_SYMBOL remove_file(native_string const& name);
+
+inline file::creation_flags operator|(file::creation_flags lhs, file::creation_flags rhs) {
+	return static_cast<file::creation_flags>(static_cast<unsigned int>(lhs) | rhs);
+}
 
 }
 #endif
