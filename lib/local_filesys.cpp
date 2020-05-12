@@ -67,7 +67,7 @@ local_filesys::type do_get_file_type(native_string const& path, bool follow_link
 		}
 
 		// Follow the reparse point
-		HANDLE hFile = is_dir ? INVALID_HANDLE_VALUE : CreateFile(path.c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		HANDLE hFile = CreateFile(path.c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
 			return local_filesys::unknown;
 		}
@@ -522,7 +522,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 		is_link = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsReparseTagNameSurrogate(m_find_data.dwReserved0);
 		if (is_link) {
 			// Follow the reparse point
-			HANDLE hFile = (t == dir) ? INVALID_HANDLE_VALUE : CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+			HANDLE hFile = CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 			if (hFile != INVALID_HANDLE_VALUE) {
 				BY_HANDLE_FILE_INFORMATION info{};
 				int ret = GetFileInformationByHandle(hFile, &info);
@@ -710,7 +710,7 @@ native_string local_filesys::get_link_target(native_string const& path)
 	native_string target;
 
 #ifdef FZ_WINDOWS
-	HANDLE hFile = CreateFile(path.c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE hFile = CreateFile(path.c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE) {
 		DWORD const size = 1024;
 		native_string::value_type out[size];
