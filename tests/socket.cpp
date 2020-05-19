@@ -275,15 +275,15 @@ void socket_test::test_duplex()
 	CPPUNIT_ASSERT(!c.si_->connect(ip, port));
 
 	{
-		fz::scoped_lock l(s.m_);
-		s.cond_.wait(l);
-	}
-	{
 		fz::scoped_lock l(c.m_);
-		c.cond_.wait(l);
+		CPPUNIT_ASSERT(c.cond_.wait(l, fz::duration::from_minutes(10)));
 	}
 
 	ASSERT_EQUAL(std::string(), c.failed_);
+	{
+		fz::scoped_lock l(s.m_);
+		CPPUNIT_ASSERT(s.cond_.wait(l, fz::duration::from_minutes(1)));
+	}
 	ASSERT_EQUAL(std::string(), s.failed_);
 
 	CPPUNIT_ASSERT(c.sent_hash_.digest() == s.received_hash_.digest());
@@ -313,15 +313,15 @@ void socket_test::test_duplex_tls()
 	CPPUNIT_ASSERT(!c.si_->connect(ip, port));
 
 	{
-		fz::scoped_lock l(s.m_);
-		s.cond_.wait(l);
-	}
-	{
 		fz::scoped_lock l(c.m_);
-		c.cond_.wait(l);
+		CPPUNIT_ASSERT(c.cond_.wait(l, fz::duration::from_minutes(10)));
 	}
-
 	ASSERT_EQUAL(std::string(), c.failed_);
+
+	{
+		fz::scoped_lock l(s.m_);
+		CPPUNIT_ASSERT(s.cond_.wait(l, fz::duration::from_minutes(1)));
+	}
 	ASSERT_EQUAL(std::string(), s.failed_);
 
 	CPPUNIT_ASSERT(c.sent_ == s.received_);
