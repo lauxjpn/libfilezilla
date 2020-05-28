@@ -112,7 +112,7 @@ libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
 libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS) $(GNUTLS_CFLAGS)
 
 # Needed for version.hpp in out-of-tree builds
-libfilezilla_la_CPPFLAGS += -I$(srcdir)/libfilezilla
+libfilezilla_la_CPPFLAGS += -I. -I$(srcdir)/libfilezilla
 
 libfilezilla_la_CXXFLAGS = $(AM_CXXFLAGS)
 libfilezilla_la_CXXFLAGS += -fvisibility=hidden
