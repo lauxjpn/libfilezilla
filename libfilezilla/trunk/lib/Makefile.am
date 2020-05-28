@@ -107,6 +107,7 @@ dist_noinst_HEADERS = \
 	tls_system_trust_store_impl.hpp
 
 libfilezilla_la_CPPFLAGS = $(AM_CPPFLAGS)
+libfilezilla_la_CPPFLAGS += -I$(top_builddir)/config
 libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
 libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS) $(GNUTLS_CFLAGS)
 

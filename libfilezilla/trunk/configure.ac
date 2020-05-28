@@ -9,10 +9,10 @@
 LIBRARY_VERSION=7:0:0
 
 
-AC_CONFIG_HEADERS([lib/libfilezilla/private/config.hpp])
+AC_CONFIG_HEADERS([config/config.hpp])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR(config)
-AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip subdir-objects])
+AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip subdir-objects nostdinc])
 
 AC_CANONICAL_HOST
 
