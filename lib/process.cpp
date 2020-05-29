@@ -263,7 +263,7 @@ private:
 #include "libfilezilla/local_filesys.hpp"
 
 #include <CoreFoundation/CFArray.h>
-#include <CoreFoundation/CFUrl.h>
+#include <CoreFoundation/CFURL.h>
 #include <CoreFoundation/CFBundle.h>
 
 #include <ApplicationServices/ApplicationServices.h>
