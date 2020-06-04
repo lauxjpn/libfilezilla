@@ -147,8 +147,17 @@ private:
  * the default permissions are used.
  *
  * This function only works with absolute paths.
+ *
+ * \param absolute_path The directory to create
+ * \param recurse If true, creation is recursive. If false, only the last segment gets
+ *                created, all other components already need to exist.
+ * \param current_user_only If true when creating the last component, its permissions will be
+ *                          restricted to the current user. Otherwise default permissions are used.
+ *                          Default permissions on  MSW this means inheriting the parent's permissions,
+ *                          on *nix the current umask is applied.
+ * \param last_created      If non-null, receives the longest sub-path that was created
  */
-result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, bool current_user_only = false);
+result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, bool current_user_only = false, native_string * last_created = nullptr);
 
 }
 

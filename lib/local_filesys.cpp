@@ -810,7 +810,7 @@ result do_mkdir(native_string const& path, bool current_user_only)
 }
 }
 
-result mkdir(native_string const& absolute_path, bool recurse, bool current_user_only)
+result mkdir(native_string const& absolute_path, bool recurse, bool current_user_only, native_string* last_created)
 {
 	// Step 0: Require an absolute path
 #ifdef FZ_WINDOWS
@@ -908,13 +908,21 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 			if (!r) {
 				return r;
 			}
+			if (last_created) {
+				*last_created = work;
+			}
 		}
-
-		return result{result::ok};
 	}
 	else {
-		return do_mkdir(absolute_path, current_user_only);
+		result r = do_mkdir(absolute_path, current_user_only);
+		if (!r) {
+			return r;
+		}
+		if (last_created) {
+			*last_created = absolute_path;
+		}
 	}
-}
 
+	return result{result::ok};
+}
 }
