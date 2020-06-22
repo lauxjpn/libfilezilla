@@ -53,6 +53,7 @@ nobase_include_HEADERS = \
 	libfilezilla/rate_limiter.hpp \
 	libfilezilla/rate_limited_layer.hpp \
 	libfilezilla/recursive_remove.hpp \
+	libfilezilla/rwmutex.hpp \
 	libfilezilla/shared.hpp \
 	libfilezilla/signature.hpp \
 	libfilezilla/socket.hpp \
