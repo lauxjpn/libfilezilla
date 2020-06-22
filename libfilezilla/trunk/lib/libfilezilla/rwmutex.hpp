@@ -67,13 +67,13 @@ public:
 		pthread_rwlock_unlock(&m_);
 #endif
 	}
-	
+
 	void unlock_write()
 	{
 #ifdef FZ_WINDOWS
 		ReleaseSRWLockExclusive(&m_);
 #else
-		pthread_rwlock_unlock(m_);
+		pthread_rwlock_unlock(&m_);
 #endif
 	}
 
@@ -194,7 +194,7 @@ public:
 #ifdef FZ_WINDOWS
 		AcquireSRWLockExclusive(m_);
 #else
-		pthwrite_rwlock_wrlock(m_);
+		pthread_rwlock_wrlock(m_);
 #endif
 	}
 
@@ -204,7 +204,7 @@ public:
 #ifdef FZ_WINDOWS
 			ReleaseSRWLockExclusive(m_);
 #else
-			pthwrite_rwlock_unlock(m_);
+			pthread_rwlock_unlock(m_);
 #endif
 		}
 
@@ -242,7 +242,7 @@ public:
 #ifdef FZ_WINDOWS
 		AcquireSRWLockExclusive(m_);
 #else
-		pthwrite_rwlock_wrlock(m_);
+		pthread_rwlock_wrlock(m_);
 #endif
 	}
 
@@ -256,7 +256,7 @@ public:
 #ifdef FZ_WINDOWS
 		ReleaseSRWLockExclusive(m_);
 #else
-		pthwrite_rwlock_unlock(m_);
+		pthread_rwlock_unlock(m_);
 #endif
 	}
 
@@ -264,7 +264,7 @@ private:
 #ifdef FZ_WINDOWS
 	SRWLOCK* m_;
 #else
-	pthwrite_rwlock_t* m_;
+	pthread_rwlock_t* m_;
 #endif
 	bool locked_{ true };
 };
