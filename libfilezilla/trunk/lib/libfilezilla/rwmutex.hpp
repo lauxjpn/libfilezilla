@@ -82,7 +82,7 @@ private:
 	friend class scoped_write_lock;
 
 #ifdef FZ_WINDOWS
-	SRWLOCK m_{SRWLOCK_INIT};
+	SRWLOCK m_{};
 #else
 	pthread_rwlock_t m_;
 #endif
