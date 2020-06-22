@@ -1,5 +1,5 @@
 #ifndef LIBFILEZILLA_RWMUTEX_HEADER
-#define LIBFILEZILLARW_MUTEX_HEADER
+#define LIBFILEZILLA_RWMUTEX_HEADER
 
 /** \file
  * \brief Thread synchronization primitives: rwmutex, scoped_read_lock and scoped_write_lock
