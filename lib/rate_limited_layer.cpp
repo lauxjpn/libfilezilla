@@ -40,7 +40,7 @@ int rate_limited_layer::read(void* buffer, unsigned int size, int& error)
 	}
 
 	static_assert(sizeof(size) <= sizeof(max));
-	if (max < static_cast<decltype(max)>(size)) {
+	if (max < static_cast<std::decay_t<decltype(max)>>(size)) {
 		size = static_cast<unsigned int>(max);
 	}
 
@@ -61,7 +61,7 @@ int rate_limited_layer::write(void const* buffer, unsigned int size, int& error)
 	}
 
 	static_assert(sizeof(size) <= sizeof(max));
-	if (max < static_cast<decltype(max)>(size)) {
+	if (max < static_cast<std::decay_t<decltype(max)>>(size)) {
 		size = static_cast<unsigned int>(max);
 	}
 
