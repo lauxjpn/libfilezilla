@@ -50,7 +50,7 @@ native_string FZ_PUBLIC_SYMBOL to_native(std::string_view const& in);
  */
 native_string FZ_PUBLIC_SYMBOL to_native(std::wstring_view const& in);
 
-/// Avoid converting native_string to native_string_view and back to string_view
+/// Avoid converting native_string to native_string_view and back to native_string
 template<typename T, typename std::enable_if_t<std::is_same_v<native_string, typename std::decay_t<T>>, int> = 0>
 inline native_string to_native(T const& in) {
 	return in;
@@ -183,7 +183,14 @@ std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(char const* s, size_t len);
 std::string FZ_PUBLIC_SYMBOL to_string(std::wstring_view const& in);
 
 /// Returns identity, that way to_string can be called with native_string.
-inline std::string FZ_PUBLIC_SYMBOL to_string(std::string const& in) { return in; }
+inline std::string FZ_PUBLIC_SYMBOL to_string(std::string_view const& in) { return std::string(in); }
+
+/// Avoid converting std::string to std::string_view and back to std::string
+template<typename T, typename std::enable_if_t<std::is_same_v<std::string, typename std::decay_t<T>>, int> = 0>
+inline std::string to_string(T const& in) {
+	return in;
+}
+
 
 /// Converts from arithmetic type to std::string
 template<typename Arg>
