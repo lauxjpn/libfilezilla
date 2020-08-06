@@ -157,9 +157,16 @@ inline bool equal_insensitive_ascii(std::wstring_view a, std::wstring_view b)
  * \return the converted string on success. On failure an empty string is returned.
  */
 std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::string_view const& in);
+inline std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::wstring_view const& in) { return std::wstring(in); }
 
-/// Returns identity, that way to_wstring can be called with native_string.
-inline std::wstring FZ_PUBLIC_SYMBOL to_wstring(std::wstring const& in) { return in; }
+/** \brief Returns identity, that way to_wstring can be called with native_string.
+ *
+ * This template prevents converting std::wstring to std::wstring_view and back to std::wstring
+ */
+template<typename T, typename std::enable_if_t<std::is_same_v<std::wstring, typename std::decay_t<T>>, int> = 0>
+inline std::wstring to_wstring(T const& in) {
+	return in;
+}
 
 /// Converts from arithmetic type to std::wstring
 template<typename Arg>
@@ -181,11 +188,12 @@ std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(char const* s, size_t len);
  * \return the converted string on success. On failure an empty string is returned.
  */
 std::string FZ_PUBLIC_SYMBOL to_string(std::wstring_view const& in);
-
-/// Returns identity, that way to_string can be called with native_string.
 inline std::string FZ_PUBLIC_SYMBOL to_string(std::string_view const& in) { return std::string(in); }
 
-/// Avoid converting std::string to std::string_view and back to std::string
+/** \brief Returns identity, that way to_wstring can be called with native_string.
+ *
+ * This template prevents converting std::wstring to std::wstring_view and back to std::wstring
+ */
 template<typename T, typename std::enable_if_t<std::is_same_v<std::string, typename std::decay_t<T>>, int> = 0>
 inline std::string to_string(T const& in) {
 	return in;

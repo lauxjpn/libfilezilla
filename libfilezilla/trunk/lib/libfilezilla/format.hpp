@@ -136,7 +136,10 @@ struct has_toString<String, Arg, std::void_t<decltype(toString<String>(std::decl
 template<typename String, typename Arg>
 String arg_to_string(Arg&& arg)
 {
-	if constexpr (has_toString<String, Arg>::value) {
+	if constexpr (std::is_same_v<String, std::decay_t<Arg>>) {
+		return arg;
+	}
+	else if constexpr (has_toString<String, Arg>::value) {
 		// Converts argument to string
 		// if toString(arg) is valid expression
 		return toString<String>(std::forward<Arg>(arg));
