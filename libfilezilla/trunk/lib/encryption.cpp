@@ -428,6 +428,18 @@ symmetric_key symmetric_key::decrypt_key(std::vector<uint8_t> const& encrypted, 
 	return ret;
 }
 
+bool operator==(symmetric_key const& lhs, symmetric_key const& rhs)
+{
+	if (!lhs) {
+		return !rhs;
+	}
+	else if (!rhs) {
+		return false;
+	}
+
+	// By definition both key and salt are non-empty and have the same size in each.
+	return nettle_memeql_sec(lhs.salt().data(), rhs.salt().data(), lhs.salt().size()) && nettle_memeql_sec(lhs.key().data(), rhs.key().data(), lhs.key().size());
+}
 
 size_t symmetric_key::encryption_overhead()
 {
