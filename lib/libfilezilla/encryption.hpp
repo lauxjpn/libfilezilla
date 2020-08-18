@@ -210,13 +210,19 @@ public:
 	std::vector<uint8_t> encrypt_key(fz::public_key const& kek);
 	static symmetric_key decrypt_key(std::vector<uint8_t> const& encrypted, fz::private_key const& kek);
 
-	FZ_PRIVATE_SYMBOL std::vector<uint8_t> const& key() const;
+	std::vector<uint8_t> const& key() const;
 
 	static size_t encryption_overhead();
 private:
 	std::vector<uint8_t> key_;
 	std::vector<uint8_t> salt_;
 };
+
+/// Side-channel safe comparison
+bool FZ_PUBLIC_SYMBOL operator==(symmetric_key const& lhs, symmetric_key const& rhs);
+inline bool FZ_PUBLIC_SYMBOL operator!=(symmetric_key const& lhs, symmetric_key const& rhs) {
+	return !(lhs == rhs);
+}
 
 /** \brief Encrypt the plaintext using the given symmetric key.
  *
