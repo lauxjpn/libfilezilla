@@ -1,3 +1,8 @@
+0.24.0 (2020-08-21)
+
++ Added fz::equal_consttime
+- fz::sprintf now works corrcetly if arguments are passed as (w)string_view
+
 0.23.0 (2020-07-07)
 
 + Added reader/writer locks
