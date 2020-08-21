@@ -133,24 +133,6 @@ struct has_toString : std::false_type {};
 template<typename String, class Arg>
 struct has_toString<String, Arg, std::void_t<decltype(toString<String>(std::declval<Arg>()))>> : std::true_type {};
 
-template<typename String, typename Arg>
-String arg_to_string(Arg&& arg)
-{
-	if constexpr (std::is_same_v<String, std::decay_t<Arg>>) {
-		return arg;
-	}
-	else if constexpr (has_toString<String, Arg>::value) {
-		// Converts argument to string
-		// if toString(arg) is valid expression
-		return toString<String>(std::forward<Arg>(arg));
-	}
-	else {
-		// Otherwise assert
-		format_assert(0);
-		return String();
-	}
-}
-
 // Converts integral type to hex string with desired string type
 template<typename String, bool Lowercase, typename Arg>
 String integral_to_hex_string(Arg && arg) noexcept
@@ -222,7 +204,18 @@ String format_arg(field const& f, Arg&& arg)
 {
 	String ret;
 	if (f.type == 's') {
-		ret = arg_to_string<String>(std::forward<Arg>(arg));
+		if constexpr (std::is_same_v<String, std::decay_t<Arg>>) {
+			ret = arg;
+		}
+		else if constexpr (has_toString<String, Arg>::value) {
+			// Converts argument to string
+			// if toString(arg) is valid expression
+			ret = toString<String>(std::forward<Arg>(arg));
+		}
+		else {
+			// Otherwise assert
+			format_assert(0);
+		}
 		pad_arg(ret, f);
 	}
 	else if (f.type == 'd' || f.type == 'i') {
