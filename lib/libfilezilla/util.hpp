@@ -52,6 +52,22 @@ uint64_t FZ_PUBLIC_SYMBOL bitscan(uint64_t v);
  */
 uint64_t FZ_PUBLIC_SYMBOL bitscan_reverse(uint64_t v);
 
+/** \brief Secure equality test in constant time
+ *
+ * As long as both inputs are of the same size, comparison is done in constant
+ * time to prevent timing attacks.
+ */
+bool FZ_PUBLIC_SYMBOL equal_consttime(std::basic_string_view<uint8_t> const& lhs, std::basic_string_view<uint8_t> const& rhs);
+
+template <typename First, typename Second,
+          std::enable_if_t<sizeof(typename First::value_type) == sizeof(uint8_t) &&
+                          sizeof(typename Second::value_type) == sizeof(uint8_t)>* = nullptr>
+inline bool equal_consttime(First const& lhs, Second const& rhs)
+{
+	return equal_consttime(std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(lhs.data()), rhs.size()),
+	                       std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(lhs.data()), rhs.size()));
+}
+
 }
 
 #endif
