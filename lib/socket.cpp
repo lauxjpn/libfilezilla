@@ -268,6 +268,8 @@ int do_set_flags(socket::socket_t fd, int flags, int flags_mask, duration const&
 		if (res != 0) {
 			return last_socket_error();
 		}
+#else
+		(void)keepalive_interval;
 #endif
 #endif
 	}
