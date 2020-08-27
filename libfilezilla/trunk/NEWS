@@ -1,3 +1,7 @@
+0.24.1 (2020-08-27)
+
+- fz::to_integral can now handle strongly typed enum return types
+
 0.24.0 (2020-08-21)
 
 + Added fz::equal_consttime
