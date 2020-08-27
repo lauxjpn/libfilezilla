@@ -326,30 +326,32 @@ inline auto FZ_PUBLIC_SYMBOL strtok_view(std::wstring_view const& tokens, wchar_
 template<typename T, typename String>
 T to_integral_impl(String const& s, T const errorval = T())
 {
-	T ret{};
-
-	auto it = s.cbegin();
-	if (it != s.cend() && (*it == '-' || *it == '+')) {
-		++it;
-	}
-
-	if (it == s.cend()) {
-		return errorval;
-	}
-
-	for (; it != s.cend(); ++it) {
-		auto const& c = *it;
-		if (c < '0' || c > '9') {
-			return errorval;
-		}
-		ret *= 10;
-		ret += c - '0';
-	}
-
-	if (!s.empty() && s.front() == '-') {
-		return ret *= static_cast<T>(-1);
+	if constexpr (std::is_enum_v<T>) {
+		return static_cast<T>(to_integral_impl<std::underlying_type_t<T>>(s, static_cast<std::underlying_type_t<T>>(errorval)));
 	}
 	else {
+		T ret{};
+		auto it = s.cbegin();
+		if (it != s.cend() && (*it == '-' || *it == '+')) {
+			++it;
+		}
+
+		if (it == s.cend()) {
+			return errorval;
+		}
+
+		for (; it != s.cend(); ++it) {
+			auto const& c = *it;
+			if (c < '0' || c > '9') {
+				return errorval;
+			}
+			ret *= 10;
+			ret += c - '0';
+		}
+
+		if (!s.empty() && s.front() == '-') {
+			ret *= static_cast<T>(-1);
+		}
 		return ret;
 	}
 }
