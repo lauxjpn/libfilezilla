@@ -9,6 +9,7 @@ libfilezilla_la_SOURCES = \
 	event_loop.cpp \
 	file.cpp \
 	hash.cpp \
+	invoker.cpp \
 	iputils.cpp \
 	local_filesys.cpp \
 	mutex.cpp \
@@ -43,6 +44,7 @@ nobase_include_HEADERS = \
 	libfilezilla/file.hpp \
 	libfilezilla/format.hpp \
 	libfilezilla/hash.hpp \
+	libfilezilla/invoker.hpp \
 	libfilezilla/iputils.hpp \
 	libfilezilla/libfilezilla.hpp \
 	libfilezilla/local_filesys.hpp \
@@ -70,7 +72,8 @@ nobase_include_HEADERS = \
 	libfilezilla/private/defs.hpp \
 	libfilezilla/private/visibility.hpp \
 	libfilezilla/private/windows.hpp \
-	libfilezilla/glue/wx.hpp
+	libfilezilla/glue/wx.hpp \
+	libfilezilla/glue/wxinvoker.hpp
 
 nobase_nodist_include_HEADERS = libfilezilla/version.hpp
 
