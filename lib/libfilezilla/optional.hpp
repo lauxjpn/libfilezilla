@@ -103,13 +103,12 @@ template<typename T>
 sparse_optional<T>& sparse_optional<T>::operator=(sparse_optional<T> const& v)
 {
 	if (this != &v) {
-		delete v_;
+		T* value{};
 		if (v.v_) {
-			v_ = new T(*v.v_);
+			value = new T(*v.v_);
 		}
-		else {
-			v_ = nullptr;
-		}
+		delete v_;
+		v_ = value;
 	}
 
 	return *this;
