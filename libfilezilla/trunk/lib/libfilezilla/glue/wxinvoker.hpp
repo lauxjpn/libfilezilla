@@ -6,19 +6,26 @@
 #include <wx/event.h>
 
 namespace fz {
-class wxinvoker final : public wxEvtHandler, public invoker_base
+
+/// \private
+template<typename... Args>
+std::function<void(Args...)> do_make_invoker(wxEvtHandler& handler, std::function<void(Args...)> && f)
 {
-	wxinvoker(wxinvoker const&) = delete;
-	wxinvoker& operator=(wxinvoker const&) = delete;
+	return [&handler, cf = f](Args&&... args) {
+		auto cb = [cf, targs = std::make_tuple(std::forward<Args>(args)...)] {
+			std::apply(cf, targs);
+		};
+		handler.CallAfter(cb);
+	};
+}
 
-	virtual void operator()(std::function<void()> const& cb) override {
-		CallAfter(cb);
-	}
+/// /\brief Alternative version of fz::invoke that accepts wxEvtHandler
+template<typename F>
+auto make_invoker(wxEvtHandler& handler, F && f)
+{
+	return do_make_invoker(handler, std::function(std::forward<F>(f)));
+}
 
-	virtual void operator()(std::function<void()> && cb) override {
-		CallAfter(cb);
-	}
-};
 }
 
 #endif
