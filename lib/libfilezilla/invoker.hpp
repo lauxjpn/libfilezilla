@@ -4,15 +4,6 @@
 #include "event_handler.hpp"
 
 namespace fz {
-class FZ_PUBLIC_SYMBOL invoker_base
-{
-public:
-	virtual ~invoker_base() = default;
-	
-	// Contract: Must be asychronous
-	virtual void operator()(std::function<void()> const& cb) = 0;
-	virtual void operator()(std::function<void()> && cb) = 0;
-};
 
 /// \private
 struct invoker_event_type{};
@@ -20,25 +11,46 @@ struct invoker_event_type{};
 /// \private
 typedef simple_event<invoker_event_type, std::function<void()>> invoker_event;
 
-class FZ_PUBLIC_SYMBOL invoker final : public event_handler, public invoker_base
+/// \private
+class FZ_PUBLIC_SYMBOL thread_invoker final : public event_handler
 {
-	invoker(fz::event_loop const& loop);
-	virtual ~invoker();
-
-	invoker(invoker const&) = delete;
-	invoker& operator=(invoker const&) = delete;
-
-	virtual void operator()(std::function<void()> const& cb) override {
-		send_event<invoker_event>(cb);
-	}
-
-	virtual void operator()(std::function<void()> && cb) override {
-		send_event<invoker_event>(cb);
-	}
-
-private:
-	virtual void operator()(fz::event_base const& ev) override;
+public:
+	thread_invoker(event_loop& loop);
+	
+	virtual ~thread_invoker();
+	virtual void operator()(event_base const& ev) override;
 };
+
+/// \private
+template<typename... Args>
+std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<void(Args...)> && f)
+{
+	return [handler = thread_invoker(loop), f](Args&&... args) {
+		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
+			std::apply(f, args);
+		};
+		handler.send_event(invoker_event)(cb);
+	};
+}
+
+/**
+ * \brief Wraps the passed function, so that it is always invoked in the context of the loop.
+ *
+ * Returns a std::function with the same arguments than the passed function.
+ * The returned function can be called in any thread and as result the passed function is called
+ * asynchronously with the same arguments in the loop's thread.
+ */
+template<typename F>
+auto make_invoker(event_loop& loop, F && f)
+{
+	return do_make_invoker(loop, std::function(std::forward<F>(f)));
+}
+template<typename F>
+auto make_invoker(event_handler& h, F && f)
+{
+	return do_make_invoker(h.event_loop_, std::function(std::forward<F>(f)));
+}
+
 }
 
 #endif
