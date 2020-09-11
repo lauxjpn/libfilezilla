@@ -29,7 +29,7 @@ std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<voi
 		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
 			std::apply(f, args);
 		};
-		handler.send_event(invoker_event)(cb);
+		handler.send_event<invoker_event>(cb);
 	};
 }
 
