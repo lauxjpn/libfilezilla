@@ -33,6 +33,12 @@ std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<voi
 	};
 }
 
+// libc++ as shipped with Xcode does not have deduction guides for lambda -> std::function
+// Help it along a bit.
+/// \private
+template<typename Ret, typename F, typename ... Args>
+constexpr std::function<Ret(Args...)> get_func_type(Ret(F::*)(Args...) const);
+
 /**
  * \brief Wraps the passed function, so that it is always invoked in the context of the loop.
  *
@@ -43,12 +49,12 @@ std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<voi
 template<typename F>
 auto make_invoker(event_loop& loop, F && f)
 {
-	return do_make_invoker(loop, std::function(std::forward<F>(f)));
+	return do_make_invoker(loop, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
 }
 template<typename F>
 auto make_invoker(event_handler& h, F && f)
 {
-	return do_make_invoker(h.event_loop_, std::function(std::forward<F>(f)));
+	return do_make_invoker(h.event_loop_, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
 }
 
 }

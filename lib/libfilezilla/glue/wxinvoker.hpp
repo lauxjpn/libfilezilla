@@ -23,7 +23,7 @@ std::function<void(Args...)> do_make_invoker(wxEvtHandler& handler, std::functio
 template<typename F>
 auto make_invoker(wxEvtHandler& handler, F && f)
 {
-	return do_make_invoker(handler, std::function(std::forward<F>(f)));
+	return do_make_invoker(handler, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
 }
 
 }
