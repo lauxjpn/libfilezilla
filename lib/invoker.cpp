@@ -1,5 +1,7 @@
 #include "libfilezilla/invoker.hpp"
 
+#include <optional>
+
 namespace fz {
 thread_invoker::thread_invoker(event_loop& loop)
 	: event_handler(loop)
