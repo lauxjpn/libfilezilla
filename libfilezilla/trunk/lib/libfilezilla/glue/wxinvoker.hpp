@@ -11,7 +11,7 @@ namespace fz {
 template<typename... Args>
 std::function<void(Args...)> do_make_invoker(wxEvtHandler& handler, std::function<void(Args...)> && f)
 {
-	return [&handler, cf = f](Args&&... args) {
+	return [&handler, cf = f](Args&&... args) mutable {
 		auto cb = [cf, targs = std::make_tuple(std::forward<Args>(args)...)] {
 			std::apply(cf, targs);
 		};
@@ -24,6 +24,14 @@ template<typename F>
 auto make_invoker(wxEvtHandler& handler, F && f)
 {
 	return do_make_invoker(handler, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
+}
+
+
+inline invoker_factory get_invoker_factory(wxEvtHandler& handler)
+{
+	return [&handler](std::function<void()> const& cb) mutable {
+		handler.CallAfter(cb);
+	};
 }
 
 }

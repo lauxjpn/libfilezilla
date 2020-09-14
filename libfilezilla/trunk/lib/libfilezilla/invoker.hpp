@@ -25,7 +25,7 @@ public:
 template<typename... Args>
 std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<void(Args...)> && f)
 {
-	return [handler = thread_invoker(loop), f](Args&&... args) {
+	return [handler = thread_invoker(loop), f](Args&&... args) mutable {
 		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
 			std::apply(f, args);
 		};
@@ -55,6 +55,35 @@ template<typename F>
 auto make_invoker(event_handler& h, F && f)
 {
 	return do_make_invoker(h.event_loop_, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
+}
+
+
+typedef std::function<void(std::function<void()>)> invoker_factory;
+
+/**
+ * \brief Creates an invoker factory.
+ * 
+ * It is slower than building an ivoker directly. Only use this
+ * if the abstraction is needed.
+ */
+invoker_factory FZ_PUBLIC_SYMBOL get_invoker_factory(event_loop& loop);
+
+/// \private
+template<typename... Args>
+std::function<void(Args...)> do_make_invoker(invoker_factory const& inv, std::function<void(Args...)> && f)
+{
+	return [inv, f](Args&&... args) mutable {
+		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
+			std::apply(f, args);
+		};
+		inv(cb);
+	};
+}
+
+template<typename F>
+auto make_invoker(invoker_factory const& inv, F && f)
+{
+	return do_make_invoker(inv, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
 }
 
 }
