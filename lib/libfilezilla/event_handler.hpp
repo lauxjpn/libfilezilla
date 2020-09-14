@@ -59,7 +59,7 @@ public:
 	explicit event_handler(event_loop& loop);
 	virtual ~event_handler();
 
-	event_handler(event_handler const&) = delete;
+	event_handler(event_handler const& h);
 	event_handler& operator=(event_handler const&) = delete;
 
 	/** \brief Deactivates handler, removes all pending events and stops all timers for this handler.

@@ -20,4 +20,14 @@ void thread_invoker::operator()(fz::event_base const& ev)
 		}
 	}
 }
+
+invoker_factory get_invoker_factory(event_loop& loop)
+{
+	return [handler = std::optional<thread_invoker>(), &loop](std::function<void()> const& cb) mutable {
+		if (!handler) {
+			handler.emplace(loop);
+		}
+		handler->send_event<invoker_event>(cb);
+	};
+}
 }

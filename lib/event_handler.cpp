@@ -9,6 +9,11 @@ event_handler::event_handler(event_loop& loop)
 {
 }
 
+event_handler::event_handler(event_handler const& h)
+	: event_loop_(h.event_loop_)
+{
+}
+
 event_handler::~event_handler()
 {
 	assert(removing_); // To avoid races, the base class must have removed us already
