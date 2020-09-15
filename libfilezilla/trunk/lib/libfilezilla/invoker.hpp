@@ -16,8 +16,8 @@ class FZ_PUBLIC_SYMBOL thread_invoker final : public event_handler
 {
 public:
 	thread_invoker(event_loop& loop);
-	
 	virtual ~thread_invoker();
+
 	virtual void operator()(event_base const& ev) override;
 };
 
@@ -29,7 +29,7 @@ std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<voi
 		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
 			std::apply(f, args);
 		};
-		handler.send_event<invoker_event>(cb);
+		handler.send_event<invoker_event>(std::move(cb));
 	};
 }
 
@@ -62,7 +62,7 @@ typedef std::function<void(std::function<void()>)> invoker_factory;
 
 /**
  * \brief Creates an invoker factory.
- * 
+ *
  * It is slower than building an ivoker directly. Only use this
  * if the abstraction is needed.
  */
