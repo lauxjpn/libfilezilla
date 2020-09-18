@@ -1729,8 +1729,8 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 
 #if !defined(SO_NOSIGPIPE) && !defined(FZ_WINDOWS)
 	// Some systems have neither. Need to block signal
-	sigaction old_action;
-	sigaction action = {};
+	struct sigaction old_action;
+	struct sigaction action = {};
 	action.sa_handler = SIG_IGN;
 	int signal_set = sigaction(SIGPIPE, &action, &old_action);
 #endif
