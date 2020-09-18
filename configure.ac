@@ -117,6 +117,11 @@ else
   CHECK_ICONV([libdeps="$libdeps -liconv"])
 fi
 
+if test "$windows" = "0" && test "$mac" = "0"; then
+  CHECK_TCP_INFO
+fi
+
+
 AC_SUBST([libdeps])
 
 
