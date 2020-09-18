@@ -133,7 +133,7 @@ namespace {
 #ifndef FZ_WINDOWS
 local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char const* path, DIR* dir, bool follow), char const* path, DIR* dir, bool &is_link, int64_t* size, datetime* modification_time, int *mode, bool follow_links)
 {
-	struct stat buf;
+	struct stat buf{};
 	static_assert(sizeof(buf.st_size) >= 8, "The st_size member of struct stat must be 8 bytes or larger.");
 
 	int result = do_stat(buf, path, dir, false);
