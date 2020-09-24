@@ -23,10 +23,10 @@ namespace fz {
 template<typename Char>
 int hex_char_to_int(Char c)
 {
-	if (c >= 'a' && c <= 'z') {
+	if (c >= 'a' && c <= 'f') {
 		return c - 'a' + 10;
 	}
-	if (c >= 'A' && c <= 'Z') {
+	if (c >= 'A' && c <= 'F') {
 		return c - 'A' + 10;
 	}
 	else if (c >= '0' && c <= '9') {
