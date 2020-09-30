@@ -11,7 +11,7 @@ namespace fz {
 
 /** \brief Given a shortened IPv6 address, returns the full, unshortened address
  *
- * If passed address is encloded in square brackes, they are stripped.
+ * If passed address is encloded in square brackets, they are stripped.
  *
  * Returns an empty string if the passed string isn't a valid IPv6 address.
  */

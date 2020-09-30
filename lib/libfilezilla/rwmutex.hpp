@@ -90,7 +90,7 @@ private:
 
 /** \brief A simple scoped read lock.
  *
- * The lock is aquired on construction and, if still locked, released on destruction.
+ * The lock is acquired on construction and, if still locked, released on destruction.
  * You can manually unlock and re-lock if needed.
  *
  * There can be multiple readers.
@@ -182,7 +182,7 @@ private:
 
 /** \brief A simple scoped read lock.
  *
- * The lock is aquired on construction and, if still locked, released on destruction.
+ * The lock is acquired on construction and, if still locked, released on destruction.
  * You can manually unlock and re-lock if needed.
  */
 class FZ_PUBLIC_SYMBOL scoped_write_lock final
@@ -234,7 +234,7 @@ public:
 
 	/** \brief Obtains the mutex.
 	 *
-	 * Locking an alwritey locked scoped_write_lock results in undefined behavior.
+	 * Locking an already locked scoped_write_lock results in undefined behavior.
 	 */
 	void lock()
 	{

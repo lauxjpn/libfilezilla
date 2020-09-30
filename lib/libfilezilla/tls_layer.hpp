@@ -61,13 +61,13 @@ public:
 	 *
 	 * If the handshake is started, wait for a connection event for the result.
 	 *
-	 * If no verification handler is passed, verification is done soley using the system
+	 * If no verification handler is passed, verification is done solely using the system
 	 * trust store.
 	 *
 	 * If a verification handler is passed, it will receive a
 	 * \ref certificate_verification_event event upon which the handshake is paused until
 	 * \ref set_verification_result gets called including a \ref tls_session_info structure.
-	 * The handler is called even for certifates not trusted by the system trust store, allowing
+	 * The handler is called even for certificates not trusted by the system trust store, allowing
 	 * the following impairments: Unknown issuer, wrong hostname and certificates used outside their validity time.
 	 */
 	bool client_handshake(event_handler *const verification_handler, std::vector<uint8_t> const& session_to_resume = std::vector<uint8_t>(), native_string const& session_hostname = native_string());

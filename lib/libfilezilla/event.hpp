@@ -52,7 +52,7 @@ size_t FZ_PUBLIC_SYMBOL get_unique_type_id(std::type_info const& id);
 /**
 \brief This is the recommended event class.
 
-Instanciate the template with a unique type to identify the type of the event and a number of types for the values.
+Instantiate the template with a unique type to identify the type of the event and a number of types for the values.
 
 Keep the values simple, in particular avoid mutexes in your values.
 
@@ -90,7 +90,7 @@ public:
 		return type();
 	}
 
-	/** \brief The event value, gets built from the arguments passed in the constructur.
+	/** \brief The event value, gets built from the arguments passed in the constructor.
 	 *
 	 * You don't need to access this member directly if you use the \ref dispatch mechanism.
 	 */

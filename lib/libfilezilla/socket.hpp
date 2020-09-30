@@ -273,7 +273,7 @@ public:
 	/**
 	 * \brief Starts listening
 	 *
-	 * If no port is given, let the operating system devcide on a port. Can use local_port to query it afterwards.
+	 * If no port is given, let the operating system decide on a port. Can use local_port to query it afterwards.
 	 *
 	 * The address type, if not fz::address_type::unknown, must may the type of the address passed to bind()
 	 */
@@ -333,7 +333,7 @@ enum class socket_state
 /**
  * \brief Interface for sockets
  *
- * Can be used for layers, see fz::socket for the expexted semantics.
+ * Can be used for layers, see fz::socket for the expected semantics.
  */
 class FZ_PUBLIC_SYMBOL socket_interface : public socket_event_source
 {
@@ -359,7 +359,7 @@ public:
 	 * Only disallows further sends, does not affect reading from the
 	 * socket.
 	 *
-	 * Returns 0 on success, an erorr code otherwise.
+	 * Returns 0 on success, an error code otherwise.
 	 * If it returns EGAIN, shutdown is not yet complete. Call shutdown
 	 * again after the next write event.
 	 */
@@ -551,16 +551,16 @@ public:
 	virtual void set_event_handler(event_handler* handler) override;
 
 	/**
-	 * Can be overriden to return something different, e.g. a proxy layer
+	 * Can be overridden to return something different, e.g. a proxy layer
 	 * would return the hostname of the peer connected to through the proxy,
-	 * whereas the next layer would return the address of the proxy istself.
+	 * whereas the next layer would return the address of the proxy itself.
 	 */
 	virtual native_string peer_host() const override { return next_layer_.peer_host(); }
 
 	/**
-	 * Can be overriden to return something different, e.g. a proxy layer
+	 * Can be overridden to return something different, e.g. a proxy layer
 	 * would return the post of the peer connected to through the proxy,
-	 * whereas the next layer would return the port of the proxy istself.
+	 * whereas the next layer would return the port of the proxy itself.
 	 */
 	virtual int peer_port(int& error) const override { return next_layer_.peer_port(error); }
 
@@ -575,7 +575,7 @@ public:
 	 *
 	 * \return 0 on success
 	 * \return EAGAIN if the shutdown cannot be completed, wait for a read event and try again.
-	 * \return otherwise an error has occured.
+	 * \return otherwise an error has occurred.
 	 *
 	 * On an ordinary socket, this is a no-op. Some layers however may return an EOF before the
 	 * next lower layer has reached its own EOF, such as the EOF of the secure channel from

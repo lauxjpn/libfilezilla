@@ -362,7 +362,7 @@ OutString do_sprintf(InString const& fmt, Args&&... args)
 	size_t arg_n{};
 	while ((pos = fmt.find('%', start)) != InString::npos) {
 
-		// Copy segment preceeding the %
+		// Copy segment preceding the %
 		ret += fmt.substr(start, pos - start);
 
 		field f = detail::get_field(fmt, pos, arg_n, ret);

@@ -151,9 +151,9 @@ std::string FZ_PUBLIC_SYMBOL base32_decode_s(std::string_view const& in, base32_
 std::string FZ_PUBLIC_SYMBOL base32_decode_s(std::wstring_view const& in, base32_type type = base32_type::standard);
 
 /**
- * \brief Percent-enodes string.
+ * \brief Percent-encodes string.
  *
- * The characters A-Z, a-z, 0-9, hyphen, underscore, period, tilde are not percent-encoded, optionally slashes arne't encoded either.
+ * The characters A-Z, a-z, 0-9, hyphen, underscore, period, tilde are not percent-encoded, optionally slashes aren't encoded either.
  * Every other character is encoded.
  *
  * \param keep_slashes If set, slashes are not encoded.
@@ -162,7 +162,7 @@ std::string FZ_PUBLIC_SYMBOL percent_encode(std::string_view const& s, bool keep
 std::string FZ_PUBLIC_SYMBOL percent_encode(std::wstring_view const& s, bool keep_slashes = false);
 
 /**
- * \brief Percent-encodes wide-character. Non-ASCII characters are converted to UTF-8 befor they are encoded.
+ * \brief Percent-encodes wide-character. Non-ASCII characters are converted to UTF-8 before they are encoded.
  *
  * \sa \ref fz::percent_encode
  */
