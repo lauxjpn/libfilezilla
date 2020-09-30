@@ -51,7 +51,7 @@ public:
 	bool empty() const;
 	explicit operator bool() const { return !empty(); }
 
-	/// Often refered to as the protocol prefix, e.g. ftp://
+	/// Often referred to as the protocol prefix, e.g. ftp://
 	std::string scheme_;
 
 	/// Optional user part of the authority

@@ -19,8 +19,8 @@ namespace fz {
  * \brief Lean replacement for std::(recursive_)mutex
  *
  * Unfortunately we can't use std::mutex and std::condition_variable as MinGW doesn't implement
- * C++11 threading yet. Even in those variants that at least mutexes and condition variables, they doen't
- * make use of Vista+'s CONDITION_VARIABLE, so it's too slow for our needs.
+ * C++11 threading yet. Even in those variants that at least have mutexes and condition variables,
+ * they don't make use of Vista+'s CONDITION_VARIABLE, so it's too slow for our needs.
  *
  * \note Once all platforms have C++11 threading implemented _in the fastest way possible_, this class will be removed.
  */
@@ -55,7 +55,7 @@ private:
 
 /** \brief A simple scoped lock.
  *
- * The lock is aquired on construction and, if still locked, released on destruction.
+ * The lock is acquired on construction and, if still locked, released on destruction.
  * You can manually unlock and re-lock if needed.
  *
  * \note While this can be used with recursive mutexes, scoped_lock does not implement reference

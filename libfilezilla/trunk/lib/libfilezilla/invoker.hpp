@@ -63,7 +63,7 @@ typedef std::function<void(std::function<void()>)> invoker_factory;
 /**
  * \brief Creates an invoker factory.
  *
- * It is slower than building an ivoker directly. Only use this
+ * It is slower than building an invoker directly. Only use this
  * if the abstraction is needed.
  */
 invoker_factory FZ_PUBLIC_SYMBOL get_invoker_factory(event_loop& loop);

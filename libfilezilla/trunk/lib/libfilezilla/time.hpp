@@ -32,7 +32,7 @@ equivalent to a timestamp received via the protocol.
 
 The internal representation of \c datetime is in milliseconds since 1970-01-01 00:00:00.000 UTC and can handle a
 range of several million years. While datetime supports negative times (i.e. earlier than 1970-01-01 00:00:00.000 UTC),
-the underlying plaform may not support it.
+the underlying platform may not support it.
 
 \remark Some *nix systems base their time on TAI instead of UTC, though we pretend there
 is no difference, as the latter is the default on every modern distribution.
@@ -131,7 +131,7 @@ public:
 
 	/** \name Adding/subtracting duration intervals
 	 *
-	 * Adding or subracting a \ref duration interval is accuracy-aware, e.g. adding a single second to a datetime with
+	 * Adding or subtracting a \ref duration interval is accuracy-aware, e.g. adding a single second to a datetime with
 	 * minute-accuracy does not change the timestamp.
 	 */
 	datetime& operator+=(duration const& op);

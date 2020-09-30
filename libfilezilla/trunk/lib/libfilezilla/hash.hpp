@@ -42,7 +42,7 @@ public:
 		update(&in, 1);
 	}
 
-	/// Returns the raw digest and reinitalizes the accumulator
+	/// Returns the raw digest and reinitializes the accumulator
 	std::vector<uint8_t> digest();
 
 	operator std::vector<uint8_t>() {

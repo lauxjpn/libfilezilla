@@ -4,7 +4,7 @@
 /** \file
  * \brief Classes for rate-limiting
  *
- * Rate-limiting is done using token buckets with hierachical limits.
+ * Rate-limiting is done using token buckets with hierarchical limits.
  * Rate is distributed fairly between buckets, with any overflow
  * distributed between buckets still having capacity.
  */
@@ -155,7 +155,7 @@ protected:
 	virtual rate::type distribute_overflow(direction::type const /*d*/, rate::type /*tokens*/) { return 0; }
 
 	/**
-	 * \brief Recursively unlocks the mutexes of self and all childen.
+	 * \brief Recursively unlocks the mutexes of self and all children.
 	 */
 	virtual void unlock_tree() { mtx_.unlock(); }
 

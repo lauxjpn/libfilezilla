@@ -35,7 +35,7 @@ public:
 	bool remove(std::list<native_string> dirsToVisit);
 
 protected:
-	/// \brief Can be overriden to ask the user for a confirmation.
+	/// \brief Can be overridden to ask the user for a confirmation.
 	///
 	/// On Windows this isn't called, there SHFileOperation itself can ask for confirmation.
 	/// See \ref adjust_shfileop
@@ -44,7 +44,7 @@ protected:
 #ifdef FZ_WINDOWS
 	/// \brief Windows only: Allows customization of the SHFILEOPSTRUCT passed to SHFileOperation.
 	///
-	/// The default implementation allows undo and supresses any GUI output.
+	/// The default implementation allows undo and suppresses any GUI output.
 	virtual void adjust_shfileop(SHFILEOPSTRUCT & op);
 #endif
 };
