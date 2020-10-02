@@ -30,6 +30,7 @@ buffer::buffer(buffer && buf) noexcept
 	pos_ = buf.pos_;
 	buf.pos_ = nullptr;
 	size_ = buf.size_;
+	buf.size_ = 0;
 	capacity_ = buf.capacity_;
 	buf.capacity_ = 0;
 }
@@ -83,6 +84,7 @@ buffer& buffer::operator=(buffer && buf) noexcept
 		pos_ = buf.pos_;
 		buf.pos_ = nullptr;
 		size_ = buf.size_;
+		buf.size_ = 0;
 		capacity_ = buf.capacity_;
 		buf.capacity_ = 0;
 	}
@@ -157,7 +159,7 @@ void buffer::append(std::string_view const& str)
 
 void buffer::reserve(size_t capacity)
 {
-	if (capacity_ > capacity) {
+	if (capacity_ >= capacity) {
 		return;
 	}
 
