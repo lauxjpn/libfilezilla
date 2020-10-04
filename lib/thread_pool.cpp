@@ -62,10 +62,11 @@ public:
 	mutex & m_;
 	condition thread_cond_;
 
-	bool task_waiting_{};
 	condition task_cond_;
 
 	thread_pool& pool_;
+
+	bool task_waiting_{};
 private:
 	bool quit_{};
 };

@@ -126,17 +126,18 @@ public:
 	static native_string get_link_target(native_string const& path);
 
 private:
-	// State for directory enumeration
-	bool dirs_only_{};
 
 #ifdef FZ_WINDOWS
 	WIN32_FIND_DATA m_find_data{};
 	HANDLE m_hFind{INVALID_HANDLE_VALUE};
-	bool has_next_{};
 	native_string m_find_path;
+	bool has_next_{};
 #else
 	DIR* dir_{};
 #endif
+
+	// State for directory enumeration
+	bool dirs_only_{};
 };
 
 /**

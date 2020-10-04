@@ -114,17 +114,16 @@ private:
 
 	tls_layer& tls_layer_;
 
-	socket_state state_{};
-
 	logger_interface & logger_;
-
-	bool initialized_{};
 
 	gnutls_session_t session_{};
 
 	std::vector<uint8_t> ticket_key_;
 
 	gnutls_certificate_credentials_t cert_credentials_{};
+
+	socket_state state_{};
+
 	bool handshake_successful_{};
 	bool sent_closure_alert_{};
 
@@ -142,9 +141,6 @@ private:
 
 	std::vector<uint8_t> required_certificate_;
 
-	bool socket_eof_{};
-	int socket_error_{}; // Set in the push and pull functions if reading/writing fails fatally
-
 	friend class tls_layer;
 	friend class tls_layerCallbacks;
 
@@ -153,6 +149,11 @@ private:
 	tls_system_trust_store* system_trust_store_{};
 
 	event_handler * verification_handler_{};
+
+	int socket_error_{}; // Set in the push and pull functions if reading/writing fails fatally
+	bool socket_eof_{};
+
+	bool initialized_{};
 };
 }
 

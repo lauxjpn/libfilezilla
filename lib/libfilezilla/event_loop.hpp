@@ -111,8 +111,6 @@ private:
 	mutex sync_;
 	condition cond_;
 
-	bool quit_{};
-
 	event_handler * active_handler_{};
 
 	monotonic_clock deadline_;
@@ -123,6 +121,8 @@ private:
 
 	std::unique_ptr<thread> thread_;
 	std::unique_ptr<async_task> task_;
+
+	bool quit_{};
 };
 
 }

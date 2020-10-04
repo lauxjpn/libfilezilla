@@ -71,12 +71,11 @@ private:
 
 	void process(rate_limiter* limiter, bool locked);
 
+	std::atomic<int> activity_{2};
 	mutex mtx_{false};
 	std::vector<rate_limiter*> limiters_;
 
 	std::atomic<timer_id> timer_{};
-
-	std::atomic<int> activity_{2};
 
 	std::atomic<rate::type> burst_tolerance_{1};
 };
