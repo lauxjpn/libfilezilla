@@ -199,17 +199,17 @@ protected:
 	thread_pool & thread_pool_;
 	event_handler* evt_handler_;
 
-	socket_t fd_{-1};
-
 	socket_thread* socket_thread_{};
+
+	socket_event_source * const ev_source_{};
+
+	socket_t fd_{-1};
 
 	unsigned int port_{};
 
 	int family_;
 
 	int buffer_sizes_[2];
-
-	socket_event_source * const ev_source_{};
 };
 
 class socket;
@@ -303,7 +303,7 @@ private:
 
 
 /// State transitions are monotonically increasing
-enum class socket_state
+enum class socket_state : unsigned char
 {
 	/// How the socket is initially
 	none,
@@ -517,10 +517,10 @@ private:
 	friend class listen_socket;
 	native_string host_;
 
-	socket_state state_{};
+	duration keepalive_interval_;
 
 	int flags_{};
-	duration keepalive_interval_;
+	socket_state state_{};
 };
 
 /**

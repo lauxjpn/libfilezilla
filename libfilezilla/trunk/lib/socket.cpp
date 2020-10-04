@@ -1136,6 +1136,11 @@ protected:
 	std::string port_;
 	std::string bind_;
 
+	mutex mutex_;
+	condition condition_;
+
+	async_task thread_;
+
 #ifdef FZ_WINDOWS
 	// We wait on this using WSAWaitForMultipleEvents
 	WSAEVENT sync_event_{WSA_INVALID_EVENT};
@@ -1146,11 +1151,6 @@ protected:
 	int pipe_[2]{-1, -1};
 #endif
 
-	mutex mutex_;
-	condition condition_;
-
-	bool quit_{};
-
 	// The socket events we are waiting for
 	int waiting_{};
 
@@ -1158,10 +1158,10 @@ protected:
 	int triggered_{};
 	int triggered_errors_[WAIT_EVENTCOUNT];
 
+	bool quit_{};
+
 	// Thread waits for instructions
 	bool threadwait_{};
-
-	async_task thread_;
 };
 
 socket_base::socket_base(thread_pool& pool, event_handler* evt_handler, socket_event_source* ev_source)
