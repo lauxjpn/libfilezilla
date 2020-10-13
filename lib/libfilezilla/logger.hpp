@@ -2,7 +2,7 @@
 #define LIBFILEZILLA_LOGGER_HEADER
 
 /** \file
- * Interface for logging
+ * \brief Interface for logging
  */
 
 #include "format.hpp"
