@@ -1,6 +1,10 @@
 #ifndef LIBFILEZILLA_INVOKER_HEADER
 #define LIBFILEZILLA_INVOKER_HEADER
 
+/** \file
+ * \brief Declares fz::make_invoker and assorted machinery
+ */
+
 #include "event_handler.hpp"
 
 namespace fz {
@@ -42,8 +46,8 @@ constexpr std::function<Ret(Args...)> get_func_type(Ret(F::*)(Args...) const);
 /**
  * \brief Wraps the passed function, so that it is always invoked in the context of the loop.
  *
- * Returns a std::function with the same arguments than the passed function.
- * The returned function can be called in any thread and as result the passed function is called
+ * Returns a std::function with the same arguments as the passed function.
+ * The returned function can be called in any thread, as result the passed function is called
  * asynchronously with the same arguments in the loop's thread.
  */
 template<typename F>
@@ -80,6 +84,13 @@ std::function<void(Args...)> do_make_invoker(invoker_factory const& inv, std::fu
 	};
 }
 
+/**
+ * \brief Creates an invoker using the given factory
+ *
+ * Allows creating invokers independent of fz::event_loop,
+ * useful when interfacing with third-party event loops
+ * such as GUI frameworks, see also \ref glue/wxinvoker.hpp
+ */
 template<typename F>
 auto make_invoker(invoker_factory const& inv, F && f)
 {

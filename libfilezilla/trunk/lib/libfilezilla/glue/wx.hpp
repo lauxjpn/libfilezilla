@@ -1,6 +1,10 @@
 #ifndef LIBFILEZILLA_GLUE_WX_HEADER
 #define LIBFILEZILLA_GLUE_WX_HEADER
 
+/** \file
+ * \brief Glue to handle support wxString for some functions
+ */
+
 #include <wx/string.h>
 
 #include "../format.hpp"
