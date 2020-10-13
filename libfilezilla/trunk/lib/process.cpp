@@ -324,8 +324,7 @@ public:
 
 void make_arg(native_string const& arg, std::vector<std::unique_ptr<native_string::value_type[]>> & argList)
 {
-	std::unique_ptr<char[]> ret;
-	ret.reset(new char[arg.size() + 1]);
+	auto ret = std::make_unique<char[]>(arg.size() + 1);
 	memcpy(ret.get(), arg.c_str(), arg.size() + 1);
 	argList.push_back(std::move(ret));
 }
@@ -338,7 +337,7 @@ void get_argv(native_string const& cmd, std::vector<native_string>::const_iterat
 		make_arg(*it, argList);
 	}
 
-	argV.reset(new char *[argList.size() + 1]);
+	argV = std::make_unique<char*[]>(argList.size() + 1);
 	char ** v = argV.get();
 	for (auto const& a : argList) {
 		*(v++) = a.get();

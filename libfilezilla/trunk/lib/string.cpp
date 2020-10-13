@@ -8,6 +8,7 @@
 #include <iconv.h>
 #include <strings.h>
 
+#include <memory>
 #include <type_traits>
 #endif
 
@@ -306,18 +307,16 @@ std::wstring to_wstring_from_utf8(char const* s, size_t len)
 		if (holder && iconv(holder.cd, nullptr, nullptr, nullptr, nullptr) != static_cast<size_t>(-1)) {
 			auto in_p = const_cast<iconv_second_arg_type>(s);
 			size_t out_len = len * sizeof(wchar_t) * 2;
-			char* out_buf = new char[out_len];
-			char* out_p = out_buf;
+			auto out_buf = std::make_unique<char[]>(out_len);
+			char* out_p = out_buf.get();
 
 			size_t r = iconv(holder.cd, &in_p, &len, &out_p, &out_len);
 
 			if (r != static_cast<size_t>(-1)) {
-				ret.assign(reinterpret_cast<wchar_t*>(out_buf), reinterpret_cast<wchar_t*>(out_p));
+				ret.assign(reinterpret_cast<wchar_t*>(out_buf.get()), reinterpret_cast<wchar_t*>(out_p));
 			}
 
 			// Our buffer should big enough as well, so we can ignore errors such as E2BIG.
-
-			delete [] out_buf;
 		}
 #endif
 	}
@@ -411,18 +410,16 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in)
 			size_t in_len = in.size() * sizeof(wchar_t);
 
 			size_t out_len = in.size() * 4;
-			char* out_buf = new char[out_len];
-			char* out_p = out_buf;
+			auto out_buf = std::make_unique<char[]>(out_len);
+			char* out_p = out_buf.get();
 
 			size_t r = iconv(holder.cd, &in_p, &in_len, &out_p, &out_len);
 
 			if (r != static_cast<size_t>(-1)) {
-				ret.assign(out_buf, out_p);
+				ret.assign(out_buf.get(), out_p);
 			}
 
 			// Our buffer should big enough as well, so we can ignore errors such as E2BIG.
-
-			delete[] out_buf;
 		}
 #endif
 	}
