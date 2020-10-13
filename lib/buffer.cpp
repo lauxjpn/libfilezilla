@@ -43,6 +43,9 @@ unsigned char* buffer::get(size_t write_size)
 			pos_ = data_;
 		}
 		else {
+			if (std::numeric_limits<size_t>::max() - capacity_ < write_size) {
+				std::abort();
+			}
 			size_t const cap = std::max({ size_t(1024), capacity_ * 2, capacity_ + write_size });
 			unsigned char* d = new unsigned char[cap];
 			if (size_) {
@@ -134,6 +137,9 @@ void buffer::append(unsigned char const* data, size_t len)
 			pos_ = data_;
 		}
 		else {
+			if (std::numeric_limits<size_t>::max() - capacity_ < len) {
+				std::abort();
+			}
 			size_t const cap = std::max({ size_t(1024), capacity_ * 2, capacity_ + len });
 			unsigned char* d = new unsigned char[cap];
 			if (size_) {
