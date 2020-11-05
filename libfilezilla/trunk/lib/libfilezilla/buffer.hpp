@@ -88,6 +88,7 @@ public:
 		return size_ != 0;
 	}
 
+	size_t capacity() const { return capacity_; }
 	void reserve(size_t capacity);
 
 	void resize(size_t size);
