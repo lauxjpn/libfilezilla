@@ -9,6 +9,10 @@
 
 #include <vector>
 
+#ifdef FZ_WINDOWS
+#include "private/windows.hpp"
+#endif
+
 namespace fz {
 
 /** \brief The process class manages an asynchronous process with redirected IO.
@@ -72,6 +76,13 @@ public:
 	inline bool write(std::string_view const& s) {
 		return write(s.data(), static_cast<unsigned int>(s.size()));
 	}
+
+#if FZ_WINDOWS
+	/** \brief
+	 * Returns the HANDLE of the process.
+	 */
+	HANDLE handle() const;
+#endif
 
 private:
 	class impl;
