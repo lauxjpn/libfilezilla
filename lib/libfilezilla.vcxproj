@@ -201,9 +201,11 @@
     <ClCompile Include="event_loop.cpp" />
     <ClCompile Include="file.cpp" />
     <ClCompile Include="hash.cpp" />
+    <ClCompile Include="invoker.cpp" />
     <ClCompile Include="iputils.cpp" />
     <ClCompile Include="local_filesys.cpp" />
     <ClCompile Include="mutex.cpp" />
+    <ClCompile Include="nonowning_buffer.cpp" />
     <ClCompile Include="process.cpp" />
     <ClCompile Include="rate_limited_layer.cpp" />
     <ClCompile Include="rate_limiter.cpp" />
@@ -235,11 +237,13 @@
     <ClInclude Include="libfilezilla\file.hpp" />
     <ClInclude Include="libfilezilla\format.hpp" />
     <ClInclude Include="libfilezilla\hash.hpp" />
+    <ClInclude Include="libfilezilla\invoker.hpp" />
     <ClInclude Include="libfilezilla\iputils.hpp" />
     <ClInclude Include="libfilezilla\libfilezilla.hpp" />
     <ClInclude Include="libfilezilla\local_filesys.hpp" />
     <ClInclude Include="libfilezilla\logger.hpp" />
     <ClInclude Include="libfilezilla\mutex.hpp" />
+    <ClInclude Include="libfilezilla\nonowning_buffer.hpp" />
     <ClInclude Include="libfilezilla\optional.hpp" />
     <ClInclude Include="libfilezilla\private\defs.hpp" />
     <ClInclude Include="libfilezilla\private\visibility.hpp" />
@@ -248,6 +252,7 @@
     <ClInclude Include="libfilezilla\rate_limited_layer.hpp" />
     <ClInclude Include="libfilezilla\rate_limiter.hpp" />
     <ClInclude Include="libfilezilla\recursive_remove.hpp" />
+    <ClInclude Include="libfilezilla\rwmutex.hpp" />
     <ClInclude Include="libfilezilla\shared.hpp" />
     <ClInclude Include="libfilezilla\signature.hpp" />
     <ClInclude Include="libfilezilla\socket.hpp" />

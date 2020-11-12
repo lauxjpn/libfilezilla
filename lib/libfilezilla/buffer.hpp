@@ -43,9 +43,9 @@ public:
 	/** \brief Returns a writable buffer guaranteed to be large enough for write_size bytes, call add when done.
 	 *
 	 * The returned pointer is pointing just after the data already stored in the buffer.
-
+	 *
 	 * Calling this function does not does not affect size().
-
+	 *
 	 * \sa append
 	 *
 	 * \par Example:
@@ -65,7 +65,7 @@ public:
 
 	/** \brief Removes consumed bytes from the beginning of the buffer.
 	 *
-	 * Undefined if consumed > size
+	 * Undefined if consumed > size()
 	 */
 	void consume(size_t consumed);
 

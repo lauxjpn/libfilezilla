@@ -13,6 +13,7 @@ libfilezilla_la_SOURCES = \
 	iputils.cpp \
 	local_filesys.cpp \
 	mutex.cpp \
+	nonowning_buffer.cpp \
 	process.cpp \
 	rate_limiter.cpp \
 	rate_limited_layer.cpp \
@@ -50,6 +51,7 @@ nobase_include_HEADERS = \
 	libfilezilla/local_filesys.hpp \
 	libfilezilla/logger.hpp \
 	libfilezilla/mutex.hpp \
+	libfilezilla/nonowning_buffer.hpp \
 	libfilezilla/optional.hpp \
 	libfilezilla/process.hpp \
 	libfilezilla/rate_limiter.hpp \
