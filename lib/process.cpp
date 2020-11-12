@@ -237,6 +237,8 @@ public:
 		return true;
 	}
 
+	HANDLE handle() const { return process_; }
+
 private:
 	HANDLE process_{INVALID_HANDLE_VALUE};
 
@@ -516,6 +518,13 @@ bool process::write(char const* buffer, unsigned int len)
 {
 	return impl_ ? impl_->write(buffer, len) : false;
 }
+
+#if FZ_WINDOWS
+HANDLE process::handle() const
+{
+	return impl_ ? impl_->handle() : INVALID_HANDLE_VALUE;
+}
+#endif
 
 #if FZ_MAC
 namespace {
