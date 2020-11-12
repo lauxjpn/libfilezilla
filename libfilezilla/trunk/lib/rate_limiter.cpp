@@ -495,6 +495,12 @@ bucket::~bucket()
 	remove_bucket();
 }
 
+void bucket::remove_bucket()
+{
+	bucket_base::remove_bucket();
+	data_[0] = data_[1] = data_t{};
+}
+
 rate::type bucket::add_tokens(direction::type const d, rate::type tokens, rate::type limit)
 {
 	auto & data = data_[d];

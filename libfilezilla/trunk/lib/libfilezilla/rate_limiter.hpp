@@ -91,7 +91,7 @@ public:
 	 *
 	 * /// \warning You _MUST_ call this function in the destructor of the most derived class
 	 */
-	void remove_bucket();
+	virtual void remove_bucket();
 
 protected:
 	friend class rate_limiter;
@@ -252,6 +252,8 @@ class FZ_PUBLIC_SYMBOL bucket : public bucket_base
 {
 public:
 	virtual ~bucket();
+
+	virtual void remove_bucket() override;
 
 	/**
 	 * \brief Returns available octets
