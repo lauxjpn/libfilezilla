@@ -368,7 +368,7 @@ public:
 			err_.create();
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, std::vector<int> const& extra_fds = std::vector<int>())
 	{
 		if (pid_ != -1) {
 			return false;
@@ -394,12 +394,24 @@ public:
 			reset_fd(out_.read_);
 			reset_fd(err_.read_);
 
-			// Redirect to pipe
+			// Redirect to pipe. The redirected descriptors don't have
+			// FD_CLOEXEC set.
 			if (dup2(in_.read_, STDIN_FILENO) == -1 ||
 				dup2(out_.write_, STDOUT_FILENO) == -1 ||
 				dup2(err_.write_, STDERR_FILENO) == -1)
 			{
 				_exit(-1);
+			}
+
+			// Clear FD_CLOEXEC on extra descriptors
+			for (int fd : extra_fds) {
+				int flags = fcntl(fd, F_GETFD);
+				if (flags == -1) {
+					_exit(1);
+				}
+				if (fcntl(fd, F_SETFD, flags & ~FD_CLOEXEC) != 0) {
+					_exit(1);
+				}
 			}
 
 			// Execute process
@@ -492,6 +504,13 @@ bool process::spawn(native_string const& cmd, std::vector<native_string> const& 
 {
 	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend()) : false;
 }
+
+#ifndef FZ_WINDOWS
+bool process::spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds)
+{
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), extra_fds) : false;
+}
+#endif
 
 bool process::spawn(std::vector<native_string> const& command_with_args)
 {
