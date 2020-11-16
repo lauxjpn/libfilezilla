@@ -33,6 +33,9 @@ public:
 		/// Requested dir does not exist or is not a dir
 		nodir,
 
+		/// Out of disk space
+		nospace,
+
 		/// Some other error
 		other
 	};
