@@ -163,6 +163,11 @@ void buffer::append(std::string_view const& str)
 	append(reinterpret_cast<unsigned char const*>(str.data()), str.size());
 }
 
+void buffer::append(std::vector<uint8_t> const& data)
+{
+	append(reinterpret_cast<unsigned char const*>(data.data()), data.size());
+}
+
 void buffer::reserve(size_t capacity)
 {
 	if (capacity_ >= capacity) {
