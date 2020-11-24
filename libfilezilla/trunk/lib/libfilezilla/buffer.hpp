@@ -3,6 +3,8 @@
 
 #include "libfilezilla.hpp"
 
+#include <vector>
+
 /** \file
 * \brief Declares fz::buffer
 */
@@ -82,6 +84,7 @@ public:
 	 */
 	void append(unsigned char const* data, size_t len);
 	void append(std::string_view const& str);
+	void append(std::vector<uint8_t> const& data);
 
 	bool empty() const { return size_ == 0; }
 	explicit operator bool() const {
