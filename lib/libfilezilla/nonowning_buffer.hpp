@@ -10,13 +10,13 @@
 namespace fz {
 
 /**
- * \brief Similar to fz::buffer, but does not own memory. 
+ * \brief Similar to fz::buffer, but does not own memory.
  *
  * Needs to be created with a fixed range of memory owned elsewhere. This
  * memory range needs to remain valid for the lifetime of nonowning_buffer.
  * While nonowning_buffer can change in size, it cannot grow past the size
  * of the passed memory.
- * 
+ *
  * Note that copying nonowning_buffer is shallow.
  */
 class FZ_PUBLIC_SYMBOL nonowning_buffer final
@@ -33,7 +33,7 @@ public:
 	// Copy is shallow!
 	nonowning_buffer(nonowning_buffer const&) = default;
 	nonowning_buffer& operator=(nonowning_buffer const&) = default;
-	
+
 	nonowning_buffer(nonowning_buffer &&) = default;
 	nonowning_buffer& operator=(nonowning_buffer &&) = default;
 
@@ -41,12 +41,12 @@ public:
 
 	size_t capacity() const { return capacity_; }
 	size_t size() const { return size_; }
-	bool empty() const { return size_ == 0; };
+	bool empty() const { return size_ == 0; }
 	explicit operator bool() const { return !empty(); }
 
 	/**
 	 * \brief Resizes the buffer.
-	 * 
+	 *
 	 * If growing, memory isn't cleared.
 	 * Aborts if size exceeds capacity.
 	 */
@@ -62,18 +62,18 @@ public:
 	/** \brief Returns a writable buffer guaranteed to be large enough for write_size bytes, call add when done.
 	 *
 	 * The returned pointer is pointing just after the data already stored in the buffer.
-     *
+	 *
 	 * Calling this function does not does not affect size().
 	 *
 	 * Aborts if requested size is larger than capacity.
-	 */	
+	 */
 	uint8_t* get(size_t bytes);
 
 	/**
 	 * \brief Grows size by passed amount.
-	 * 
+	 *
 	 * Aborts if new size is larger than capacity.
-	 */	
+	 */
 	void add(size_t bytes);
 
 	/** \brief Removes consumed bytes from the beginning of the buffer.
