@@ -283,9 +283,9 @@ public:
 }
 #endif
 
-std::wstring to_wstring_from_utf8(std::string const& in)
+std::wstring to_wstring_from_utf8(std::string_view const& in)
 {
-	return to_wstring_from_utf8(in.c_str(), in.size());
+	return to_wstring_from_utf8(in.data(), in.size());
 }
 
 std::wstring to_wstring_from_utf8(char const* s, size_t len)
