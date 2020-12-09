@@ -1,3 +1,4 @@
+#include "libfilezilla/buffer.hpp"
 #include "libfilezilla/string.hpp"
 
 #ifdef FZ_WINDOWS
@@ -286,6 +287,11 @@ public:
 std::wstring to_wstring_from_utf8(std::string_view const& in)
 {
 	return to_wstring_from_utf8(in.data(), in.size());
+}
+
+std::wstring to_wstring_from_utf8(fz::buffer const& in)
+{
+	return to_wstring_from_utf8(reinterpret_cast<char const*>(in.get()), in.size());
 }
 
 std::wstring to_wstring_from_utf8(char const* s, size_t len)

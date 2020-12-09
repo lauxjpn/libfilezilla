@@ -183,6 +183,9 @@ inline typename std::enable_if<std::is_arithmetic<std::decay_t<Arg>>::value, std
 std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(std::string_view const& in);
 std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(char const* s, size_t len);
 
+class buffer;
+std::wstring FZ_PUBLIC_SYMBOL to_wstring_from_utf8(fz::buffer const& in);
+
 /** \brief Converts from std::wstring into std::string in system encoding
  *
  * \return the converted string on success. On failure an empty string is returned.
