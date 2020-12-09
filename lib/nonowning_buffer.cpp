@@ -7,7 +7,6 @@ namespace fz {
 void nonowning_buffer::resize(size_t size)
 {
 	if (!size) {
-		size_ = 0;
 		start_ = 0;
 	}
 	else if (size > capacity_) {
@@ -19,7 +18,7 @@ void nonowning_buffer::resize(size_t size)
 		start_ = 0;
 	}
 	size_ = size;
-}	
+}
 
 uint8_t* nonowning_buffer::get(size_t bytes)
 {
@@ -32,7 +31,7 @@ uint8_t* nonowning_buffer::get(size_t bytes)
 	}
 	return buffer_ + start_ + size_;
 }
-	
+
 void nonowning_buffer::add(size_t bytes)
 {
 	if (capacity_ - start_ - size_ < bytes) {
