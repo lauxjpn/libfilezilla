@@ -85,6 +85,7 @@ public:
 	void append(unsigned char const* data, size_t len);
 	void append(std::string_view const& str);
 	void append(std::vector<uint8_t> const& data);
+	void append(unsigned char v);
 
 	bool empty() const { return size_ == 0; }
 	explicit operator bool() const {
