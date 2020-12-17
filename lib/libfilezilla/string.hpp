@@ -286,12 +286,16 @@ template<> inline wchar_t const* choose_string(char const*, wchar_t const* w) { 
 #endif
 
  /// Returns \c in with all occurrences of \c find in the input string replaced with \c replacement
-std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, std::string const& find, std::string const& replacement);
-std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, std::wstring const& find, std::wstring const& replacement);
+std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, std::string_view const& find, std::string_view const& replacement);
+std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, std::wstring_view const& find, std::wstring_view const& replacement);
+std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, char find, char replacement);
+std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, wchar_t find, wchar_t replacement);
 
 /// Modifies \c in, replacing all occurrences of \c find with \c replacement
-bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string const& find, std::string const& replacement);
-bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string_view const& find, std::string_view const& replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, std::wstring_view const& find, std::wstring_view const& replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, char find, char replacement);
+bool FZ_PUBLIC_SYMBOL replace_substrings(std::wstring& in, wchar_t find, wchar_t replacement);
 
 /**
  * \brief Tokenizes string.

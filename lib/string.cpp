@@ -434,8 +434,8 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in)
 }
 
 namespace {
-template<typename String>
-inline bool do_replace_substrings(String& in, String const& find, String const& replacement)
+template<typename String, typename View>
+inline bool do_replace_substrings(String& in, View const& find, View const& replacement)
 {
 	bool ret = false;
 	size_t pos = in.find(find);
@@ -448,29 +448,55 @@ inline bool do_replace_substrings(String& in, String const& find, String const& 
 }
 }
 
-std::string replaced_substrings(std::string const& in, std::string const& find, std::string const& replacement)
+std::string replaced_substrings(std::string const& in, std::string_view const& find, std::string_view const& replacement)
 {
 	std::string ret = in;
 	do_replace_substrings(ret, find, replacement);
 	return ret;
 }
 
-std::wstring replaced_substrings(std::wstring const& in, std::wstring const& find, std::wstring const& replacement)
+std::wstring replaced_substrings(std::wstring const& in, std::wstring_view const& find, std::wstring_view const& replacement)
 {
 	std::wstring ret = in;
 	do_replace_substrings(ret, find, replacement);
 	return ret;
 }
 
-bool replace_substrings(std::string& in, std::string const& find, std::string const& replacement)
+std::string replace_substrings(std::string const& in, char find, char replacement)
+{
+	std::string ret = in;
+	do_replace_substrings(ret, std::string_view(&find, 1), std::string_view(&replacement, 1));
+	return ret;
+}
+
+std::wstring replace_substrings(std::wstring const& in, wchar_t find, wchar_t replacement)
+{
+	std::wstring ret = in;
+	do_replace_substrings(ret, std::wstring_view(&find, 1), std::wstring_view(&replacement, 1));
+	return ret;
+}
+
+
+bool replace_substrings(std::string& in, std::string_view const& find, std::string_view const& replacement)
 {
 	return do_replace_substrings(in, find, replacement);
 }
 
-bool replace_substrings(std::wstring& in, std::wstring const& find, std::wstring const& replacement)
+bool replace_substrings(std::wstring& in, std::wstring_view const& find, std::wstring_view const& replacement)
 {
 	return do_replace_substrings(in, find, replacement);
 }
+
+bool replace_substrings(std::string& in, char find, char replacement)
+{
+	return do_replace_substrings(in, std::string_view(&find, 1), std::string_view(&replacement, 1));
+}
+
+bool replace_substrings(std::wstring& in, wchar_t find, wchar_t replacement)
+{
+	return do_replace_substrings(in, std::wstring_view(&find, 1), std::wstring_view(&replacement, 1));
+}
+
 
 namespace {
 template<typename Ret, typename String>
