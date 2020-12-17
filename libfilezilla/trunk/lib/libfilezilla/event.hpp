@@ -46,7 +46,9 @@ public:
 	virtual size_t derived_type() const = 0;
 };
 
-///\private
+/**
+ * Maps a type info to a unique identifier even across DLL boundaries
+ */
 size_t FZ_PUBLIC_SYMBOL get_unique_type_id(std::type_info const& id);
 
 /**
