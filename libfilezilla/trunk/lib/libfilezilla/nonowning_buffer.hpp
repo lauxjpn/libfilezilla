@@ -30,6 +30,16 @@ public:
 	{
 	}
 
+	explicit nonowning_buffer(uint8_t *buffer, size_t capacity, size_t size)
+		: buffer_(buffer)
+		, capacity_(capacity)
+		, size_(size)
+	{
+		if (size > capacity) {
+			abort();
+		}
+	}
+
 	// Copy is shallow!
 	nonowning_buffer(nonowning_buffer const&) = default;
 	nonowning_buffer& operator=(nonowning_buffer const&) = default;
@@ -83,6 +93,9 @@ public:
 	void consume(size_t bytes);
 
 	void reset();
+
+	void append(uint8_t* data, size_t len);
+	void append(uint8_t c) { append(&c, 1); }
 
 private:
 	uint8_t* buffer_{};
