@@ -11,7 +11,6 @@
 #include <nettle/curve25519.h>
 #include <nettle/gcm.h>
 #include <nettle/memops.h>
-#include <nettle/pbkdf2.h>
 #include <nettle/sha2.h>
 #include <nettle/version.h>
 
@@ -91,9 +90,7 @@ private_key private_key::from_password(std::vector<uint8_t> const& password, std
 
 	if (!password.empty() && salt.size() == salt_size && iterations >= min_iterations) {
 
-		std::vector<uint8_t> key;
-		key.resize(key_size);
-		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), iterations, salt_size, salt.data(), 32, key.data());
+		std::vector<uint8_t> key = pbkdf2_hmac_sha256(password, salt, 32, iterations);
 		key[0] &= 248;
 		key[31] &= 127;
 		key[31] |= 64;
@@ -350,10 +347,7 @@ symmetric_key symmetric_key::from_password(std::vector<uint8_t> const& password,
 	symmetric_key ret;
 
 	if (!password.empty() && salt.size() == salt_size && iterations >= min_iterations) {
-
-		std::vector<uint8_t> key;
-		key.resize(key_size);
-		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), iterations, salt_size, salt.data(), 32, key.data());
+		std::vector<uint8_t> key = pbkdf2_hmac_sha256(password, salt, 32, iterations);
 		ret.key_ = std::move(key);
 		ret.salt_ = salt;
 	}
