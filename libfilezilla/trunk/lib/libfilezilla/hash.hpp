@@ -77,6 +77,7 @@ std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& ke
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& key, std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string_view const& key, std::vector<uint8_t> const& data);
 
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL pbkdf2_hmac_sha256(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, size_t length, unsigned int iterations);
 }
 
 #endif

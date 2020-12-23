@@ -2,9 +2,16 @@
 
 #include "libfilezilla/hash.hpp"
 
-#include <nettle/md5.h>
-#include <nettle/sha2.h>
 #include <nettle/hmac.h>
+#include <nettle/md5.h>
+#include <nettle/pbkdf2.h>
+
+// Undo Nettle's horrible namespace mangling fuckery
+#ifdef pbkdf2_hmac_sha256
+#undef pbkdf2_hmac_sha256
+#endif
+
+#include <nettle/sha2.h>
 
 namespace fz {
 
@@ -315,4 +322,15 @@ std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::vector<uint8_
 	return hmac_sha256_impl(key, data);
 }
 
+std::vector<uint8_t> pbkdf2_hmac_sha256(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, size_t length, unsigned int iterations)
+{
+	std::vector<uint8_t> ret;
+
+	if (!password.empty() && !salt.empty()) {
+		ret.resize(length);
+		nettle_pbkdf2_hmac_sha256(password.size(), password.data(), iterations, salt.size(), salt.data(), length, ret.data());
+	}
+
+	return ret;
+}
 }
