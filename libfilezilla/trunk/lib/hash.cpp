@@ -322,7 +322,7 @@ std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::vector<uint8_
 	return hmac_sha256_impl(key, data);
 }
 
-std::vector<uint8_t> pbkdf2_hmac_sha256(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, size_t length, unsigned int iterations)
+std::vector<uint8_t> pbkdf2_hmac_sha256(std::basic_string_view<uint8_t> const& password, std::basic_string_view<uint8_t> const& salt, size_t length, unsigned int iterations)
 {
 	std::vector<uint8_t> ret;
 

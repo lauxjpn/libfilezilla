@@ -77,7 +77,17 @@ std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& ke
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::vector<uint8_t> const& key, std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string_view const& key, std::vector<uint8_t> const& data);
 
-std::vector<uint8_t> FZ_PUBLIC_SYMBOL pbkdf2_hmac_sha256(std::vector<uint8_t> const& password, std::vector<uint8_t> const& salt, size_t length, unsigned int iterations);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL pbkdf2_hmac_sha256(std::basic_string_view<uint8_t> const& password, std::basic_string_view<uint8_t> const& salt, size_t length, unsigned int iterations);
+
+template <typename PasswordContainer, typename SaltContainer,
+          std::enable_if_t<sizeof(typename PasswordContainer::value_type) == sizeof(uint8_t) &&
+                           sizeof(typename SaltContainer::value_type) == sizeof(uint8_t)>* = nullptr>
+std::vector<uint8_t> pbkdf2_hmac_sha256(PasswordContainer const& password, SaltContainer const& salt, size_t length, unsigned int iterations)
+{
+	return pbkdf2_hmac_sha256(std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(password.data()), password.size()),
+	                          std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(salt.data()), salt.size()),
+	                          length, iterations);
+}
 }
 
 #endif
