@@ -94,7 +94,7 @@ public:
 
 	void reset();
 
-	void append(uint8_t* data, size_t len);
+	void append(uint8_t const* data, size_t len);
 	void append(uint8_t c) { append(&c, 1); }
 
 private:

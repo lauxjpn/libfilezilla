@@ -62,7 +62,7 @@ void nonowning_buffer::reset()
 	start_ = 0;
 }
 
-void nonowning_buffer::append(uint8_t* data, size_t len)
+void nonowning_buffer::append(uint8_t const* data, size_t len)
 {
 	if (data && len) {
 		memcpy(get(len), data, len);
