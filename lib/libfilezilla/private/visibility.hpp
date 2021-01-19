@@ -12,7 +12,7 @@
   #if FZ_USING_DLL
     #define FZ_PUBLIC_SYMBOL FZ_IMPORT_SHARED
   #else
-    #define FZ_PUBLIC_SYMBOL FZ_EXPORT_STATIC
+    #define FZ_PUBLIC_SYMBOL FZ_IMPORT_STATIC
   #endif
 #endif
 
