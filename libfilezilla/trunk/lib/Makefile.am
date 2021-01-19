@@ -71,6 +71,7 @@ nobase_include_HEADERS = \
 	libfilezilla/translate.hpp \
 	libfilezilla/uri.hpp \
 	libfilezilla/util.hpp \
+	libfilezilla/visibility_helper.hpp \
 	libfilezilla/private/defs.hpp \
 	libfilezilla/private/visibility.hpp \
 	libfilezilla/private/windows.hpp \
