@@ -448,30 +448,30 @@ inline bool do_replace_substrings(String& in, View const& find, View const& repl
 }
 }
 
-std::string replaced_substrings(std::string const& in, std::string_view const& find, std::string_view const& replacement)
+std::string replaced_substrings(std::string_view const& in, std::string_view const& find, std::string_view const& replacement)
 {
-	std::string ret = in;
+	std::string ret(in.data(), in.size());
 	do_replace_substrings(ret, find, replacement);
 	return ret;
 }
 
-std::wstring replaced_substrings(std::wstring const& in, std::wstring_view const& find, std::wstring_view const& replacement)
+std::wstring replaced_substrings(std::wstring_view const& in, std::wstring_view const& find, std::wstring_view const& replacement)
 {
-	std::wstring ret = in;
+	std::wstring ret(in.data(), in.size());
 	do_replace_substrings(ret, find, replacement);
 	return ret;
 }
 
-std::string replace_substrings(std::string const& in, char find, char replacement)
+std::string replaced_substrings(std::string_view const& in, char find, char replacement)
 {
-	std::string ret = in;
+	std::string ret(in.data(), in.size());
 	do_replace_substrings(ret, std::string_view(&find, 1), std::string_view(&replacement, 1));
 	return ret;
 }
 
-std::wstring replace_substrings(std::wstring const& in, wchar_t find, wchar_t replacement)
+std::wstring replaced_substrings(std::wstring_view const& in, wchar_t find, wchar_t replacement)
 {
-	std::wstring ret = in;
+	std::wstring ret(in.data(), in.size());
 	do_replace_substrings(ret, std::wstring_view(&find, 1), std::wstring_view(&replacement, 1));
 	return ret;
 }
@@ -544,6 +544,36 @@ std::vector<std::string_view> strtok_view(std::string_view const& tokens, std::s
 std::vector<std::wstring_view> strtok_view(std::wstring_view const& tokens, std::wstring_view const& delims, bool const ignore_empty)
 {
 	return strtok_impl<std::wstring_view>(tokens, delims, ignore_empty);
+}
+
+std::string normalize_hyphens(std::string_view const& in)
+{
+	std::string ret(in.data(), in.size());
+
+	fz::replace_substrings(ret, u8"\u2010", "-"); // Hyphen
+	fz::replace_substrings(ret, u8"\u2011", "-"); // Non-Breaking-Hyphen
+	fz::replace_substrings(ret, u8"\u2012", "-"); // Figure Dash
+	fz::replace_substrings(ret, u8"\u2013", "-"); // En Dash
+	fz::replace_substrings(ret, u8"\u2014", "-"); // Em Dash
+	fz::replace_substrings(ret, u8"\u2015", "-"); // Horizontal Bar
+	fz::replace_substrings(ret, u8"\u2212", "-"); // Minus Sign
+
+	return ret;
+}
+
+std::wstring normalize_hyphens(std::wstring_view const& in)
+{
+	std::wstring ret(in.data(), in.size());
+
+	fz::replace_substrings(ret, L"\u2010", L"-"); // Hyphen
+	fz::replace_substrings(ret, L"\u2011", L"-"); // Non-Breaking-Hyphen
+	fz::replace_substrings(ret, L"\u2012", L"-"); // Figure Dash
+	fz::replace_substrings(ret, L"\u2013", L"-"); // En Dash
+	fz::replace_substrings(ret, L"\u2014", L"-"); // Em Dash
+	fz::replace_substrings(ret, L"\u2015", L"-"); // Horizontal Bar
+	fz::replace_substrings(ret, L"\u2212", L"-"); // Minus Sign
+
+	return ret;
 }
 
 }
