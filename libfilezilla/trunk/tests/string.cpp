@@ -18,6 +18,7 @@ class string_test final : public CppUnit::TestFixture
 	CPPUNIT_TEST(test_trim);
 	CPPUNIT_TEST(test_strtok);
 	CPPUNIT_TEST(test_startsendswith);
+	CPPUNIT_TEST(test_normalize_hyphens);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -32,6 +33,7 @@ public:
 	void test_trim();
 	void test_strtok();
 	void test_startsendswith();
+	void test_normalize_hyphens();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(string_test);
@@ -217,4 +219,10 @@ void string_test::test_startsendswith()
 	CPPUNIT_ASSERT_EQUAL(true, fz::ends_with<true>(std::string("hello"), std::string("ello")));
 	CPPUNIT_ASSERT_EQUAL(false, fz::ends_with<true>(std::string("ello"), std::string("HELLO")));
 	CPPUNIT_ASSERT_EQUAL(true, fz::ends_with<true>(std::string("hello"), std::string("ELLO")));
+}
+
+void string_test::test_normalize_hyphens()
+{
+	CPPUNIT_ASSERT_EQUAL(std::string("--------"), fz::normalize_hyphens(fz::percent_decode_s("-" "%e2%80%90" "%e2%80%91" "%e2%80%92" "%e2%80%93" "%e2%80%94" "%e2%80%95" "%e2%88%92")));
+	ASSERT_EQUAL(std::wstring(L"--------"), fz::normalize_hyphens(fz::to_wstring_from_utf8(fz::percent_decode_s("-" "%e2%80%90" "%e2%80%91" "%e2%80%92" "%e2%80%93" "%e2%80%94" "%e2%80%95" "%e2%88%92"))));
 }

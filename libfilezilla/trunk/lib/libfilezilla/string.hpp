@@ -286,10 +286,10 @@ template<> inline wchar_t const* choose_string(char const*, wchar_t const* w) { 
 #endif
 
  /// Returns \c in with all occurrences of \c find in the input string replaced with \c replacement
-std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, std::string_view const& find, std::string_view const& replacement);
-std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, std::wstring_view const& find, std::wstring_view const& replacement);
-std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string const& in, char find, char replacement);
-std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring const& in, wchar_t find, wchar_t replacement);
+std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string_view const& in, std::string_view const& find, std::string_view const& replacement);
+std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring_view const& in, std::wstring_view const& find, std::wstring_view const& replacement);
+std::string FZ_PUBLIC_SYMBOL replaced_substrings(std::string_view const& in, char find, char replacement);
+std::wstring FZ_PUBLIC_SYMBOL replaced_substrings(std::wstring_view const& in, wchar_t find, wchar_t replacement);
 
 /// Modifies \c in, replacing all occurrences of \c find with \c replacement
 bool FZ_PUBLIC_SYMBOL replace_substrings(std::string& in, std::string_view const& find, std::string_view const& replacement);
@@ -526,6 +526,14 @@ bool ends_with(String const& s, String const& ending)
 		return std::equal(ending.rbegin(), ending.rend(), s.rbegin());
 	}
 }
+
+/**
+ * Normalizes various hyphens, dashes and minuses to just hyphen-minus.
+ *
+ * The narrow version assumes UTF-8 as encoding.
+ */
+std::string FZ_PUBLIC_SYMBOL normalize_hyphens(std::string_view const& in);
+std::wstring FZ_PUBLIC_SYMBOL normalize_hyphens(std::wstring_view const& in);
 
 }
 
