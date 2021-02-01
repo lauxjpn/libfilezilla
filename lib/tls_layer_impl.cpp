@@ -738,6 +738,9 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 	if (!session_hostname.empty()) {
 		set_hostname(session_hostname);
 	}
+	else if (!hostname_.empty()) {
+		set_hostname(hostname_);
+	}
 
 	if (tls_layer_.next_layer_.get_state() == socket_state::none || tls_layer_.next_layer_.get_state() == socket_state::connecting) {
 		// Wait until the socket gets connected
@@ -1798,7 +1801,7 @@ std::string tls_layer_impl::get_gnutls_version()
 void tls_layer_impl::set_hostname(native_string const& host)
 {
 	hostname_ = host;
-	if (!hostname_.empty() && get_address_type(hostname_) == address_type::unknown) {
+	if (session_ && !hostname_.empty() && get_address_type(hostname_) == address_type::unknown) {
 		auto const utf8 = to_utf8(hostname_);
 		if (!utf8.empty()) {
 			int res = gnutls_server_name_set(session_, GNUTLS_NAME_DNS, utf8.c_str(), utf8.size());
