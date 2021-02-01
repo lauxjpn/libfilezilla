@@ -42,9 +42,9 @@ public:
 	 * \note May return \c true even if the process cannot be started. In that case, trying to read from the process
 	 * will fail with an error or EOF.
 	 */
-	bool spawn(native_string const& cmd, std::vector<native_string> const& args = std::vector<native_string>());
+	bool spawn(native_string const& cmd, std::vector<native_string> const& args = std::vector<native_string>(), bool redirect_io = true);
 
-	bool spawn(std::vector<native_string> const& command_with_args);
+	bool spawn(std::vector<native_string> const& command_with_args, bool redirect_io = true);
 
 #ifndef FZ_WINDOWS
 	/**
@@ -53,7 +53,7 @@ public:
 	 * This function only exists on *nix, it is not needed on Windows where
 	 * DuplicateHandle() can be used instead with the target process as argument.
 	 */
-	bool spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds);
+	bool spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io = true);
 #endif
 
 	/** \brief Stops the spawned process
