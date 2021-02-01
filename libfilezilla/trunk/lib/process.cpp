@@ -154,22 +154,25 @@ public:
 			err_.create(true);
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end)
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io)
 	{
 		if (process_ != INVALID_HANDLE_VALUE) {
 			return false;
 		}
 
-		if (!create_pipes()) {
-			return false;
-		}
-
 		STARTUPINFO si{};
 		si.cb = sizeof(si);
-		si.dwFlags = STARTF_USESTDHANDLES;
-		si.hStdInput = in_.read_;
-		si.hStdOutput = out_.write_;
-		si.hStdError = err_.write_;
+
+		if (redirect_io) {
+			if (!create_pipes()) {
+				return false;
+			}
+
+			si.dwFlags = STARTF_USESTDHANDLES;
+			si.hStdInput = in_.read_;
+			si.hStdOutput = out_.write_;
+			si.hStdError = err_.write_;
+		}
 
 		auto cmdline = get_cmd_line(cmd, begin, end);
 
@@ -186,10 +189,12 @@ public:
 		process_ = pi.hProcess;
 
 		// We don't need to use these
-		reset_handle(pi.hThread);
-		reset_handle(in_.read_);
-		reset_handle(out_.write_);
-		reset_handle(err_.write_);
+		if (redirect_io) {
+			reset_handle(pi.hThread);
+			reset_handle(in_.read_);
+			reset_handle(out_.write_);
+			reset_handle(err_.write_);
+		}
 
 		return true;
 	}
@@ -368,13 +373,13 @@ public:
 			err_.create();
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, std::vector<int> const& extra_fds = std::vector<int>())
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io, std::vector<int> const& extra_fds = std::vector<int>())
 	{
 		if (pid_ != -1) {
 			return false;
 		}
 
-		if (!create_pipes()) {
+		if (redirect_io && !create_pipes()) {
 			return false;
 		}
 
@@ -389,18 +394,20 @@ public:
 		else if (!pid) {
 			// We're the child.
 
-			// Close uneeded descriptors
-			reset_fd(in_.write_);
-			reset_fd(out_.read_);
-			reset_fd(err_.read_);
+			if (redirect_io) {
+				// Close uneeded descriptors
+				reset_fd(in_.write_);
+				reset_fd(out_.read_);
+				reset_fd(err_.read_);
 
-			// Redirect to pipe. The redirected descriptors don't have
-			// FD_CLOEXEC set.
-			if (dup2(in_.read_, STDIN_FILENO) == -1 ||
-				dup2(out_.write_, STDOUT_FILENO) == -1 ||
-				dup2(err_.write_, STDERR_FILENO) == -1)
-			{
-				_exit(-1);
+				// Redirect to pipe. The redirected descriptors don't have
+				// FD_CLOEXEC set.
+				if (dup2(in_.read_, STDIN_FILENO) == -1 ||
+					dup2(out_.write_, STDOUT_FILENO) == -1 ||
+					dup2(err_.write_, STDERR_FILENO) == -1)
+				{
+					_exit(-1);
+				}
 			}
 
 			// Clear FD_CLOEXEC on extra descriptors
@@ -424,9 +431,11 @@ public:
 			pid_ = pid;
 
 			// Close unneeded descriptors
-			reset_fd(in_.read_);
-			reset_fd(out_.write_);
-			reset_fd(err_.write_);
+			if (redirect_io) {
+				reset_fd(in_.read_);
+				reset_fd(out_.write_);
+				reset_fd(err_.write_);
+			}
 		}
 
 		return true;
@@ -500,25 +509,25 @@ process::~process()
 	delete impl_;
 }
 
-bool process::spawn(native_string const& cmd, std::vector<native_string> const& args)
+bool process::spawn(native_string const& cmd, std::vector<native_string> const& args, bool redirect_io)
 {
-	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend()) : false;
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io) : false;
 }
 
 #ifndef FZ_WINDOWS
-bool process::spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds)
+bool process::spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io)
 {
-	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), extra_fds) : false;
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io, extra_fds) : false;
 }
 #endif
 
-bool process::spawn(std::vector<native_string> const& command_with_args)
+bool process::spawn(std::vector<native_string> const& command_with_args, bool redirect_io)
 {
 	if (command_with_args.empty()) {
 		return false;
 	}
 	auto begin = command_with_args.begin() + 1;
-	return impl_ ? impl_->spawn(command_with_args.front(), begin, command_with_args.end()) : false;
+	return impl_ ? impl_->spawn(command_with_args.front(), begin, command_with_args.end(), redirect_io) : false;
 }
 
 void process::kill()
