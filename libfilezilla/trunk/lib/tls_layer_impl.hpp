@@ -154,6 +154,11 @@ private:
 	bool socket_eof_{};
 
 	bool initialized_{};
+
+#if DEBUG_SOCKETEVENTS
+	bool debug_can_read_{};
+	bool debug_can_write_{};
+#endif
 };
 }
 
