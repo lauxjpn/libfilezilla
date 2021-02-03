@@ -1206,21 +1206,23 @@ void socket_base::detach_thread(scoped_lock & l)
 	}
 }
 
-void socket_base::do_set_event_handler(event_handler* pEvtHandler)
+bool socket_base::do_set_event_handler(event_handler* pEvtHandler)
 {
 	if (!socket_thread_) {
-		return;
+		return false;
 	}
 
 	scoped_lock l(socket_thread_->mutex_);
 
 	if (evt_handler_ == pEvtHandler) {
-		return;
+		return false;
 	}
 
 	change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_);
 
 	evt_handler_ = pEvtHandler;
+
+	return true;
 }
 
 int socket_base::close()
@@ -1701,6 +1703,13 @@ int socket::read(void* buffer, unsigned int size, int& error)
 		return -1;
 	}
 
+#if DEBUG_SOCKETEVENTS
+	{
+		scoped_lock l(socket_thread_->mutex_);
+		assert(!(socket_thread_->waiting_ & WAIT_READ));
+	}
+#endif
+
 	int res = recv(fd_, (char*)buffer, size, 0);
 
 	if (res == -1) {
@@ -1735,6 +1744,13 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 	int signal_set = sigaction(SIGPIPE, &action, &old_action);
 #endif
 
+#endif
+
+#if DEBUG_SOCKETEVENTS
+	if (socket_thread_) {
+		scoped_lock l(socket_thread_->mutex_);
+		assert(!(socket_thread_->waiting_ & WAIT_WRITE));
+	}
 #endif
 
 	int res = send(fd_, (const char*)buffer, size, flags);
@@ -1889,9 +1905,9 @@ int socket::shutdown()
 
 void socket::set_event_handler(event_handler* pEvtHandler)
 {
-	do_set_event_handler(pEvtHandler);
+	bool changed = do_set_event_handler(pEvtHandler);
 
-	if (pEvtHandler) {
+	if (changed && pEvtHandler) {
 		scoped_lock l(socket_thread_->mutex_);
 		if (state_ == socket_state::connected && !(socket_thread_->waiting_ & WAIT_WRITE) && !has_pending_event(evt_handler_, ev_source_, socket_event_flag::write)) {
 			pEvtHandler->send_event<socket_event>(ev_source_, socket_event_flag::write, 0);

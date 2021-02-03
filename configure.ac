@@ -37,7 +37,6 @@ if test "$locales" != "yes" -a "$localesonly" = "yes"; then
   AC_MSG_ERROR([invalid flags: --disable-locales cannot be used together with --enable-localesonly])
 fi
 
-
 if ! test "$localesonly" = "yes"; then
 
 if test "X$GCC" = Xyes; then
@@ -139,6 +138,15 @@ AC_DEFINE_UNQUOTED(USED_CXXFLAGS, ["$CXXFLAGS"], [Define to the used CXXFLAGS to
 AH_TEMPLATE(USED_COMPILER, [Define to name and version of used compiler])
 if COMPILER=`$CC --version | head -n 1`; then
   AC_DEFINE_UNQUOTED(USED_COMPILER, ["$COMPILER"])
+fi
+
+
+# Require pkg-config
+# ------------------
+PKG_PROG_PKG_CONFIG
+
+if test -z "$PKG_CONFIG"; then
+  AC_MSG_ERROR([pkg-config not found. pkg-config is required to check for some dependencies.])
 fi
 
 
@@ -252,20 +260,20 @@ if test "$windows" = 1 > /dev/null 2>&1; then
   fi
 fi
 
-# Require pkg-config
-# ------------------
-PKG_PROG_PKG_CONFIG
-
-# Do not abort while not having runtime dependency
-#if test -z "$PKG_CONFIG"; then
-#  AC_MSG_ERROR([pkg-config not found. pkg-config is required to check for some dependencies.])
-#fi
-
-
 # CppUnit tests
 # -------------
 
 PKG_CHECK_MODULES(CPPUNIT, [cppunit >= 1.13.0], [have_cppunit=yes],[:])
+
+# Debugging flags
+# ---------------
+
+AC_ARG_ENABLE(socketdebug, AS_HELP_STRING([--enable-socketdebug],[Enables debug code to check socket(_layer) invariantes for read/write calls and event sequencing.]), \
+        [socketdebug="$enableval"], [dsocketdebug="no"])
+if test "$socketdebug" = "yes"; then
+  AC_DEFINE(DEBUG_SOCKETEVENTS, 1, [Set to 1 to ensure socket invariants.])
+fi
+
 
 fi
 

@@ -15,6 +15,10 @@
 
 #include <string.h>
 
+#if DEBUG_SOCKETEVENTS
+#include <assert.h>
+#endif
+
 static_assert(GNUTLS_VERSION_NUMBER != 0x030604, "Using TLS 1.3 with this version of GnuTLS does not work, update your version of GnuTLS");
 
 namespace fz {
@@ -598,6 +602,10 @@ void tls_layer_impl::on_read()
 	}
 	else if (state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) {
 		if (tls_layer_.event_handler_) {
+#if DEBUG_SOCKETEVENTS
+			assert(!debug_can_read_);
+			debug_can_read_ = true;
+#endif
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 		}
 	}
@@ -667,6 +675,10 @@ int tls_layer_impl::continue_write()
 
 	if (state_ == socket_state::connected) {
 		if (tls_layer_.event_handler_) {
+#if DEBUG_SOCKETEVENTS
+			assert(!debug_can_write_);
+			debug_can_write_ = true;
+#endif
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 		}
 	}
@@ -828,9 +840,17 @@ int tls_layer_impl::continue_handshake()
 			if (tls_layer_.event_handler_) {
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::connection, 0);
 				if (can_read_from_socket_) {
+#if DEBUG_SOCKETEVENTS
+					assert(!debug_can_read_);
+					debug_can_read_ = true;
+#endif
 					tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 				}
 				if (can_write_to_socket_) {
+#if DEBUG_SOCKETEVENTS
+					assert(!debug_can_write_);
+					debug_can_write_ = true;
+#endif
 					tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 				}
 			}
@@ -864,12 +884,19 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 		return -1;
 	}
 
+#if DEBUG_SOCKETEVENTS
+	assert(debug_can_read_);
+#endif
+
 	int res = do_call_gnutls_record_recv(buffer, len);
 	if (res >= 0) {
 		error = 0;
 		return res;
 	}
 	else if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
+#if DEBUG_SOCKETEVENTS
+		debug_can_read_ = false;
+#endif
 		error = EAGAIN;
 	}
 	else {
@@ -895,7 +922,14 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 		return -1;
 	}
 
+#if DEBUG_SOCKETEVENTS
+	assert(debug_can_write_);
+#endif
+
 	if (!send_buffer_.empty()) {
+#if DEBUG_SOCKETEVENTS
+		debug_can_write_ = false;
+#endif
 		error = EAGAIN;
 		return -1;
 	}
@@ -1051,9 +1085,17 @@ void tls_layer_impl::set_verification_result(bool trusted)
 		if (tls_layer_.event_handler_) {
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::connection, 0);
 			if (can_read_from_socket_) {
+#if DEBUG_SOCKETEVENTS
+				assert(!debug_can_read_);
+				debug_can_read_ = true;
+#endif
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 			}
 			if (can_write_to_socket_) {
+#if DEBUG_SOCKETEVENTS
+				assert(!debug_can_write_);
+				debug_can_write_ = true;
+#endif
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 			}
 		}
