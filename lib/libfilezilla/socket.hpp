@@ -191,7 +191,7 @@ protected:
 
 	int close();
 
-	void do_set_event_handler(event_handler* pEvtHandler);
+	bool do_set_event_handler(event_handler* pEvtHandler);
 
 	// Note: Unlocks the lock.
 	void detach_thread(scoped_lock & l);
