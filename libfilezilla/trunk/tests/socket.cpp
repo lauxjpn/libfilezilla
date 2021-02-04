@@ -228,7 +228,7 @@ struct server final : public base
 			}
 			else {
 				int error;
-				s_ = l_.accept(error);
+				s_ = l_.accept(error, use_tls_ ? nullptr : this);
 				if (!s_) {
 					fail(__LINE__, error);
 				}
@@ -243,7 +243,6 @@ struct server final : public base
 				else {
 					si_ = s_.get();
 				}
-				si_->set_event_handler(this);
 			}
 		}
 		else {

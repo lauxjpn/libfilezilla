@@ -17,6 +17,10 @@
 
 #if DEBUG_SOCKETEVENTS
 #include <assert.h>
+
+namespace fz {
+bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_source const* const source, socket_event_flag event);
+}
 #endif
 
 static_assert(GNUTLS_VERSION_NUMBER != 0x030604, "Using TLS 1.3 with this version of GnuTLS does not work, update your version of GnuTLS");
@@ -886,6 +890,7 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 
 #if DEBUG_SOCKETEVENTS
 	assert(debug_can_read_);
+	assert(!has_pending_event(tls_layer_.event_handler_, &tls_layer_, socket_event_flag::read));
 #endif
 
 	int res = do_call_gnutls_record_recv(buffer, len);
@@ -924,6 +929,7 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 
 #if DEBUG_SOCKETEVENTS
 	assert(debug_can_write_);
+	assert(!has_pending_event(tls_layer_.event_handler_, &tls_layer_, socket_event_flag::write));
 #endif
 
 	if (!send_buffer_.empty()) {
@@ -2048,6 +2054,31 @@ int tls_layer_impl::shutdown_read()
 	}
 
 	return error;
+}
+
+void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block)
+{
+	fz::socket_event_flag const pending = change_socket_event_handler(tls_layer_.event_handler_, pEvtHandler, &tls_layer_, retrigger_block);
+	tls_layer_.event_handler_ = pEvtHandler;
+
+	if (pEvtHandler) {
+		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down) && !(pending & socket_event_flag::write) && !(retrigger_block & socket_event_flag::write)) {
+			pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
+		}
+		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) && !(pending & socket_event_flag::read) && !(retrigger_block & socket_event_flag::read)) {
+			pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
+		}
+
+#if DEBUG_SOCKETEVENTS
+		if (state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) {
+			debug_can_read_ = true;
+		}
+		if (state_ == socket_state::connected || state_ == socket_state::shutting_down) {
+			debug_can_write_ = true;
+		}
+#endif
+	}
+
 }
 
 }

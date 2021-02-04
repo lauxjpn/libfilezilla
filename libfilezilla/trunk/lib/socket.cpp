@@ -112,24 +112,40 @@ void remove_socket_events(event_handler * handler, socket_event_source const* co
 	handler->event_loop_.filter_events(socket_event_filter);
 }
 
-void change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source)
+socket_event_flag change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source, socket_event_flag remove)
 {
 	if (!old_handler) {
-		return;
+		return socket_event_flag::none;
 	}
 
 	if (old_handler == new_handler) {
-		return;
+		return socket_event_flag::none;
 	}
 
 	if (!new_handler) {
 		remove_socket_events(old_handler, source);
+		return socket_event_flag::none;
 	}
 	else {
+#if DEBUG_SOCKETEVENTS
+		socket_event_flag seen = socket_event_flag::none;
+#endif
+
+		socket_event_flag ret = socket_event_flag::none;
 		auto socket_event_filter = [&](event_loop::Events::value_type & ev) -> bool {
 			if (ev.first == old_handler) {
 				if (ev.second->derived_type() == socket_event::type()) {
-					if (std::get<0>(static_cast<socket_event const&>(*ev.second).v_) == source) {
+					auto & sev = static_cast<socket_event const&>(*ev.second);
+					if (std::get<0>(sev.v_) == source) {
+						auto const flag = std::get<1>(sev.v_);
+#if DEBUG_SOCKETEVENTS
+						assert(!(flag & seen));
+						seen |= flag;
+#endif
+						if (flag & remove) {
+							return true;
+						}
+						ret |= flag;
 						ev.first = new_handler;
 					}
 				}
@@ -143,12 +159,17 @@ void change_socket_event_handler(event_handler * old_handler, event_handler * ne
 		};
 
 		old_handler->event_loop_.filter_events(socket_event_filter);
+		return ret;
 	}
 }
 
-namespace {
-bool has_pending_event(event_handler * handler, socket_event_source const* const source, socket_event_flag event)
+#if DEBUG_SOCKETEVENTS
+bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_source const* const source, socket_event_flag event)
 {
+	if (!handler) {
+		return false;
+	}
+
 	bool ret = false;
 
 	auto socket_event_filter = [&](event_loop::Events::value_type const& ev) -> bool {
@@ -165,7 +186,9 @@ bool has_pending_event(event_handler * handler, socket_event_source const* const
 
 	return ret;
 }
+#endif
 
+namespace {
 #ifdef FZ_WINDOWS
 static int convert_msw_error_code(int error)
 {
@@ -1045,6 +1068,7 @@ protected:
 		if (!socket_ || !socket_->evt_handler_) {
 			return;
 		}
+
 		if (triggered_ & WAIT_READ) {
 			socket_->evt_handler_->send_event<socket_event>(socket_->ev_source_, socket_event_flag::read, triggered_errors_[1]);
 			triggered_ &= ~WAIT_READ;
@@ -1204,25 +1228,6 @@ void socket_base::detach_thread(scoped_lock & l)
 			l.unlock();
 		}
 	}
-}
-
-bool socket_base::do_set_event_handler(event_handler* pEvtHandler)
-{
-	if (!socket_thread_) {
-		return false;
-	}
-
-	scoped_lock l(socket_thread_->mutex_);
-
-	if (evt_handler_ == pEvtHandler) {
-		return false;
-	}
-
-	change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_);
-
-	evt_handler_ = pEvtHandler;
-
-	return true;
 }
 
 int socket_base::close()
@@ -1437,6 +1442,23 @@ listen_socket::~listen_socket()
 	detach_thread(l);
 }
 
+void listen_socket::set_event_handler(event_handler* pEvtHandler)
+{
+	if (!socket_thread_) {
+		return;
+	}
+
+	scoped_lock l(socket_thread_->mutex_);
+
+	if (evt_handler_ == pEvtHandler) {
+		return;
+	}
+
+	change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_, fz::socket_event_flag::none);
+
+	evt_handler_ = pEvtHandler;
+}
+
 int listen_socket::listen(address_type family, int port)
 {
 	if (state_ != listen_socket_state::none) {
@@ -1524,14 +1546,14 @@ int listen_socket::listen(address_type family, int port)
 	return 0;
 }
 
-std::unique_ptr<socket> listen_socket::accept(int &error)
+std::unique_ptr<socket> listen_socket::accept(int &error, fz::event_handler * handler)
 {
 	socket_descriptor desc = fast_accept(error);
 	if (!desc) {
 		return std::unique_ptr<socket>();
 	}
 
-	auto ret = socket::from_descriptor(std::move(desc), thread_pool_, error);
+	auto ret = socket::from_descriptor(std::move(desc), thread_pool_, error, handler);
 	if (!ret) {
 		error = ENOMEM;
 	}
@@ -1605,7 +1627,7 @@ socket::~socket()
 	detach_thread(l);
 }
 
-std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error)
+std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error, fz::event_handler * handler)
 {
 	if (!desc) {
 		error = ENOTSOCK;
@@ -1631,6 +1653,7 @@ std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, threa
 		pSocket->state_ = socket_state::connected;
 		pSocket->fd_ = fd;
 		pSocket->host_ = to_native(pSocket->peer_ip());
+		pSocket->evt_handler_ = handler;
 		pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
 		if (pSocket->socket_thread_->start()) {
 			error = ENOMEM;
@@ -1707,6 +1730,7 @@ int socket::read(void* buffer, unsigned int size, int& error)
 	{
 		scoped_lock l(socket_thread_->mutex_);
 		assert(!(socket_thread_->waiting_ & WAIT_READ));
+		assert(!has_pending_event(evt_handler_, this, socket_event_flag::read));
 	}
 #endif
 
@@ -1750,6 +1774,7 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 	if (socket_thread_) {
 		scoped_lock l(socket_thread_->mutex_);
 		assert(!(socket_thread_->waiting_ & WAIT_WRITE));
+		assert(!has_pending_event(evt_handler_, this, socket_event_flag::write));
 	}
 #endif
 
@@ -1766,6 +1791,11 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 		error = last_socket_error();
 		if (error == EAGAIN) {
 			scoped_lock l (socket_thread_->mutex_);
+
+#if DEBUG_SOCKETEVENTS
+			assert(!(socket_thread_->waiting_ & WAIT_WRITE));
+			assert(!has_pending_event(evt_handler_, this, socket_event_flag::write));
+#endif
 			if (!(socket_thread_->waiting_ & WAIT_WRITE)) {
 				socket_thread_->waiting_ |= WAIT_WRITE;
 				socket_thread_->wakeup_thread(l);
@@ -1855,33 +1885,6 @@ native_string socket::peer_host() const
 	return host_;
 }
 
-void socket::retrigger(socket_event_flag event)
-{
-	if (!socket_thread_) {
-		return;
-	}
-
-	if (event != socket_event_flag::read && event != socket_event_flag::write) {
-		return;
-	}
-
-	scoped_lock l(socket_thread_->mutex_);
-
-	auto s = state_;
-	if (s != socket_state::connected && (s != socket_state::shut_down || event == socket_event_flag::write)) {
-		return;
-	}
-
-	if (!evt_handler_ || has_pending_event(evt_handler_, this, event)) {
-		return;
-	}
-
-	int const wait_flag = (event == socket_event_flag::read) ? WAIT_READ : WAIT_WRITE;
-	if (!(socket_thread_->waiting_ & wait_flag)) {
-		evt_handler_->send_event<socket_event>(this, event, 0);
-	}
-}
-
 int socket::shutdown()
 {
 #ifdef FZ_WINDOWS
@@ -1903,16 +1906,28 @@ int socket::shutdown()
 	return 0;
 }
 
-void socket::set_event_handler(event_handler* pEvtHandler)
+void socket::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block)
 {
-	bool changed = do_set_event_handler(pEvtHandler);
+	if (!socket_thread_) {
+		return;
+	}
 
-	if (changed && pEvtHandler) {
-		scoped_lock l(socket_thread_->mutex_);
-		if (state_ == socket_state::connected && !(socket_thread_->waiting_ & WAIT_WRITE) && !has_pending_event(evt_handler_, ev_source_, socket_event_flag::write)) {
+	scoped_lock l(socket_thread_->mutex_);
+
+	if (evt_handler_ == pEvtHandler) {
+		return;
+	}
+
+	fz::socket_event_flag const pending = change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_, retrigger_block);
+	evt_handler_ = pEvtHandler;
+
+	if (pEvtHandler) {
+		if (state_ == socket_state::connected && !(socket_thread_->waiting_ & WAIT_WRITE) && !(pending & socket_event_flag::write) && !(retrigger_block & socket_event_flag::write)) {
+			socket_thread_->triggered_ &= ~WAIT_WRITE;
 			pEvtHandler->send_event<socket_event>(ev_source_, socket_event_flag::write, 0);
 		}
-		if ((state_ == socket_state::connected || state_ == socket_state::shut_down) && !(socket_thread_->waiting_ & WAIT_READ) && !has_pending_event(evt_handler_, ev_source_, socket_event_flag::read)) {
+		if ((state_ == socket_state::connected || state_ == socket_state::shut_down) && !(socket_thread_->waiting_ & WAIT_READ) && !(pending & socket_event_flag::read) && !(retrigger_block & socket_event_flag::read)) {
+			socket_thread_->triggered_ &= ~WAIT_READ;
 			pEvtHandler->send_event<socket_event>(ev_source_, socket_event_flag::read, 0);
 		}
 	}
@@ -1986,11 +2001,11 @@ socket_layer::~socket_layer()
 	remove_socket_events(event_handler_, this);
 }
 
-void socket_layer::set_event_handler(event_handler* handler)
+void socket_layer::set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block)
 {
 	auto old = event_handler_;
 	event_handler_ = handler;
-	change_socket_event_handler(old, handler, this);
+	change_socket_event_handler(old, handler, this, retrigger_block);
 
 	if (event_passthrough_) {
 		next_layer_.set_event_handler(handler);

@@ -69,6 +69,8 @@ public:
 
 	int shutdown_read();
 
+	void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block);
+
 private:
 	bool init();
 	void deinit();
