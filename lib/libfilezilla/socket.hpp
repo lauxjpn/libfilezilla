@@ -23,7 +23,13 @@ struct sockaddr;
 namespace fz {
 class thread_pool;
 
-/// The type of a socket event
+/** \brief The type of a socket event
+ *
+ * In received events, exactly a single bit is always set.
+ *
+ * Flag combinations are used when changing event handlers,
+ * \sa f::socket::set_event_handler
+ */
 enum class socket_event_flag
 {
 	/**
@@ -31,26 +37,43 @@ enum class socket_event_flag
 	 * additional addresses to try.
 	 * Errors can be ignored for this type.
 	 */
-	connection_next,
+	connection_next = 0x1,
 
 	/**
 	 * If no error is set, the connection has been established.
 	 * If an error is set, the connection could not be established.
 	 */
-	connection,
+	connection = 0x2,
 
 	/**
 	 * If no error is set, data has become available.
 	 * If an error is set, the connection has failed.
 	 */
-	read,
+	read = 0x4,
 
 	/**
 	 * If no error is set, data can be written.
 	 * If an error is set, the connection has failed.
 	 */
-	write
+	write = 0x8,
+
+	none = 0x0,
+	all = 0xf
 };
+
+inline bool operator&(socket_event_flag lhs, socket_event_flag rhs) {
+	return (static_cast<std::underlying_type_t<socket_event_flag>>(lhs) & static_cast<std::underlying_type_t<socket_event_flag>>(rhs)) != 0;
+}
+inline socket_event_flag operator|(socket_event_flag lhs, socket_event_flag rhs)
+{
+	return static_cast<socket_event_flag>(static_cast<std::underlying_type_t<socket_event_flag>>(lhs) | static_cast<std::underlying_type_t<socket_event_flag>>(rhs));
+}
+inline socket_event_flag& operator|=(socket_event_flag& lhs, socket_event_flag rhs)
+{
+	lhs = lhs | rhs;
+	return lhs;
+}
+
 
 /**
  * \brief All classes sending socket events should derive from this.
@@ -131,8 +154,10 @@ void FZ_PUBLIC_SYMBOL remove_socket_events(event_handler * handler, socket_event
  * This function is called by socket::set_event_handler().
  *
  * Example use-cases: Handoff after proxy handshakes, or handoff to TLS classes in case of STARTTLS mechanism
+ *
+ * Returns which events are still pending.
  */
-void FZ_PUBLIC_SYMBOL change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source);
+fz::socket_event_flag FZ_PUBLIC_SYMBOL change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source, fz::socket_event_flag remove);
 
 /// \private
 class socket_thread;
@@ -190,8 +215,6 @@ protected:
 	virtual ~socket_base() = default;
 
 	int close();
-
-	bool do_set_event_handler(event_handler* pEvtHandler);
 
 	// Note: Unlocks the lock.
 	void detach_thread(scoped_lock & l);
@@ -281,7 +304,7 @@ public:
 	int listen(address_type family, int port = 0);
 
 	/// Accepts incoming connection. If no socket is returned, error contains the reason
-	std::unique_ptr<socket> accept(int& error);
+	std::unique_ptr<socket> accept(int& error, fz::event_handler * handler = nullptr);
 
 	/**
 	 * \brief  Like accept, but only returns a socket descriptor.
@@ -293,9 +316,7 @@ public:
 
 	listen_socket_state get_state() const;
 
-	void set_event_handler(event_handler* pEvtHandler) {
-		do_set_event_handler(pEvtHandler);
-	}
+	void set_event_handler(event_handler* pEvtHandler);
 
 private:
 	listen_socket_state state_{};
@@ -344,7 +365,7 @@ public:
 	virtual int read(void* buffer, unsigned int size, int& error) = 0;
 	virtual int write(void const* buffer, unsigned int size, int& error) = 0;
 
-	virtual void set_event_handler(event_handler* pEvtHandler) = 0;
+	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) = 0;
 
 	virtual native_string peer_host() const = 0;
 	virtual int peer_port(int& error) const = 0;
@@ -394,7 +415,7 @@ public:
 	socket(socket const&) = delete;
 	socket& operator=(socket const&) = delete;
 
-	static std::unique_ptr<socket> from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error);
+	static std::unique_ptr<socket> from_descriptor(socket_descriptor && desc, thread_pool & pool, int & error, fz::event_handler * handler = nullptr);
 
 	socket_state get_state() const override;
 	bool is_connected() const {
@@ -476,15 +497,21 @@ public:
 	 */
 	int ideal_send_buffer_size();
 
-	/**
-	 * Allows re-triggering the read and write events.
-	 * Slow and cumbersome, use sparingly.
-	 */
-	void retrigger(socket_event_flag event);
-
 	virtual int shutdown() override;
 
-	virtual void set_event_handler(event_handler* pEvtHandler) override;
+	/**
+	 * \brief Changes the associated event handler.
+	 *
+	 * Pending events are rewritten to the new handler, or deleted if there is no new handler.
+	 *
+	 * Initially, the new handler is assumed to be waiting on read and write events and if th
+	 * socket is in a readable/writable state, the corresponding events are sent if not already
+	 * pending.
+	 *
+	 * As exception, events passed in retrigger_block are always removed and not resent if the socket
+	 * is in the readable/writable state.
+	 */
+	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override;
 
 	enum
 	{
@@ -548,7 +575,7 @@ public:
 	socket_layer& operator=(socket_layer const&) = delete;
 
 	/// The handler for any events generated (or forwarded) by this layer.
-	virtual void set_event_handler(event_handler* handler) override;
+	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override;
 
 	/**
 	 * Can be overridden to return something different, e.g. a proxy layer

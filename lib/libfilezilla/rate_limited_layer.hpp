@@ -36,9 +36,10 @@ public:
 		return next_layer_.shutdown();
 	}
 
-	virtual void set_event_handler(event_handler* handler) override {
+	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override {
 		scoped_lock l(mtx_);
-		socket_layer::set_event_handler(handler);
+		// FIXME
+		socket_layer::set_event_handler(handler, retrigger_block);
 	}
 
 protected:
@@ -74,7 +75,8 @@ public:
 		return next_layer_.shutdown();
 	}
 
-	virtual void set_event_handler(event_handler* handler) override {
+	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override {
+		//FIXME
 		scoped_lock l(mtx_);
 		socket_layer::set_event_handler(handler);
 	}

@@ -140,4 +140,10 @@ int tls_layer::shutdown_read()
 {
 	return impl_->shutdown_read();
 }
+
+void tls_layer::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block)
+{
+	return impl_->set_event_handler(pEvtHandler, retrigger_block);
+}
+
 }
