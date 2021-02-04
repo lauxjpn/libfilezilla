@@ -586,6 +586,8 @@ void tls_layer_impl::on_socket_event(socket_event_source* s, socket_event_flag t
 		if (hostname_.empty()) {
 			set_hostname(tls_layer_.next_layer_.peer_host());
 		}
+		on_send();
+		break;
 	default:
 		break;
 	}
@@ -850,13 +852,10 @@ int tls_layer_impl::continue_handshake()
 #endif
 					tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 				}
-				if (can_write_to_socket_) {
 #if DEBUG_SOCKETEVENTS
-					assert(!debug_can_write_);
-					debug_can_write_ = true;
+				assert(!debug_can_write_);
+				debug_can_write_ = true;
 #endif
-					tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
-				}
 			}
 		}
 
@@ -1097,13 +1096,10 @@ void tls_layer_impl::set_verification_result(bool trusted)
 #endif
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 			}
-			if (can_write_to_socket_) {
 #if DEBUG_SOCKETEVENTS
-				assert(!debug_can_write_);
-				debug_can_write_ = true;
+			assert(!debug_can_write_);
+			debug_can_write_ = true;
 #endif
-				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
-			}
 		}
 
 		return;
@@ -2062,7 +2058,7 @@ void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_ev
 	tls_layer_.event_handler_ = pEvtHandler;
 
 	if (pEvtHandler) {
-		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down) && !(pending & socket_event_flag::write) && !(retrigger_block & socket_event_flag::write)) {
+		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down) && !(pending & (socket_event_flag::write | socket_event_flag::connection)) && !(retrigger_block & socket_event_flag::write)) {
 			pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 		}
 		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) && !(pending & socket_event_flag::read) && !(retrigger_block & socket_event_flag::read)) {
