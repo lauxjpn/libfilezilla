@@ -109,7 +109,7 @@ struct base : public fz::event_handler
 
 			send_event(new fz::socket_event(si_, fz::socket_event_flag::read, 0));
 		}
-		else if (type == fz::socket_event_flag::write) {
+		else if (type == fz::socket_event_flag::write || type == fz::socket_event_flag::connection) {
 			if (sent_ > 1024 * 1024 * 10 && (fz::monotonic_clock::now() - start_) > fz::duration::from_seconds(5)) {
 				int res = si_->shutdown();
 				if (res && res != EAGAIN) {
@@ -242,6 +242,7 @@ struct server final : public base
 				}
 				else {
 					si_ = s_.get();
+					on_socket_event_base(si_, fz::socket_event_flag::write, 0);
 				}
 			}
 		}

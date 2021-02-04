@@ -175,7 +175,7 @@ bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_s
 	auto socket_event_filter = [&](event_loop::Events::value_type const& ev) -> bool {
 		if (ev.first == handler && ev.second->derived_type() == socket_event::type()) {
 			auto const& socket_ev = static_cast<socket_event const&>(*ev.second).v_;
-			if (std::get<0>(socket_ev) == source && std::get<1>(socket_ev) == event) {
+			if (std::get<0>(socket_ev) == source && std::get<1>(socket_ev) & event) {
 				ret = true;
 			}
 		}
@@ -689,7 +689,7 @@ protected:
 			}
 
 			// We're now interested in all the other nice events
-			waiting_ |= WAIT_READ | WAIT_WRITE;
+			waiting_ |= WAIT_READ;
 
 			return 1;
 		}
@@ -1654,7 +1654,7 @@ std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, threa
 		pSocket->fd_ = fd;
 		pSocket->host_ = to_native(pSocket->peer_ip());
 		pSocket->evt_handler_ = handler;
-		pSocket->socket_thread_->waiting_ = WAIT_READ | WAIT_WRITE;
+		pSocket->socket_thread_->waiting_ = WAIT_READ;
 		if (pSocket->socket_thread_->start()) {
 			error = ENOMEM;
 			pSocket.reset();
@@ -1774,7 +1774,7 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 	if (socket_thread_) {
 		scoped_lock l(socket_thread_->mutex_);
 		assert(!(socket_thread_->waiting_ & WAIT_WRITE));
-		assert(!has_pending_event(evt_handler_, this, socket_event_flag::write));
+		assert(!has_pending_event(evt_handler_, this, socket_event_flag::write | socket_event_flag::connection));
 	}
 #endif
 
@@ -1794,7 +1794,7 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 
 #if DEBUG_SOCKETEVENTS
 			assert(!(socket_thread_->waiting_ & WAIT_WRITE));
-			assert(!has_pending_event(evt_handler_, this, socket_event_flag::write));
+			assert(!has_pending_event(evt_handler_, this, socket_event_flag::write | socket_event_flag::connection));
 #endif
 			if (!(socket_thread_->waiting_ & WAIT_WRITE)) {
 				socket_thread_->waiting_ |= WAIT_WRITE;
@@ -1922,7 +1922,7 @@ void socket::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag
 	evt_handler_ = pEvtHandler;
 
 	if (pEvtHandler) {
-		if (state_ == socket_state::connected && !(socket_thread_->waiting_ & WAIT_WRITE) && !(pending & socket_event_flag::write) && !(retrigger_block & socket_event_flag::write)) {
+		if (state_ == socket_state::connected && !(socket_thread_->waiting_ & WAIT_WRITE) && !(pending & (socket_event_flag::connection | socket_event_flag::write)) && !(retrigger_block & socket_event_flag::write)) {
 			socket_thread_->triggered_ &= ~WAIT_WRITE;
 			pEvtHandler->send_event<socket_event>(ev_source_, socket_event_flag::write, 0);
 		}
