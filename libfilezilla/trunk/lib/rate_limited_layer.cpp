@@ -19,6 +19,8 @@ rate_limited_layer::~rate_limited_layer()
 
 void rate_limited_layer::wakeup(direction::type d)
 {
+	//  mtx_ is held by the caller, no need to lock in this function.
+
 	if (!event_handler_) {
 		return;
 	}
