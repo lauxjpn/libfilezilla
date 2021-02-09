@@ -56,9 +56,6 @@ enum class socket_event_flag
 	 * If an error is set, the connection has failed.
 	 */
 	write = 0x8,
-
-	none = 0x0,
-	all = 0xf
 };
 
 inline bool operator&(socket_event_flag lhs, socket_event_flag rhs) {
@@ -365,7 +362,7 @@ public:
 	virtual int read(void* buffer, unsigned int size, int& error) = 0;
 	virtual int write(void const* buffer, unsigned int size, int& error) = 0;
 
-	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) = 0;
+	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag{}) = 0;
 
 	virtual native_string peer_host() const = 0;
 	virtual int peer_port(int& error) const = 0;
@@ -511,7 +508,7 @@ public:
 	 * As exception, events passed in retrigger_block are always removed and not resent if the socket
 	 * is in the readable/writable state.
 	 */
-	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override;
+	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag{}) override;
 
 	enum
 	{
@@ -575,7 +572,7 @@ public:
 	socket_layer& operator=(socket_layer const&) = delete;
 
 	/// The handler for any events generated (or forwarded) by this layer.
-	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override;
+	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag{}) override;
 
 	/**
 	 * Can be overridden to return something different, e.g. a proxy layer
@@ -636,7 +633,7 @@ protected:
 	 * A pass-through layer does not handle events itself. Instead any events sent by the next layer get
 	 * sent to the event handler passed to the layer.
 	 */
-	void set_event_passthrough();
+	void set_event_passthrough(socket_event_flag retrigger_block = socket_event_flag{});
 
 	event_handler* event_handler_{};
 	socket_interface& next_layer_;

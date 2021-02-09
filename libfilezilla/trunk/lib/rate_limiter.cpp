@@ -648,4 +648,13 @@ std::array<rate::type, 2> bucket::gather_unspent_for_removal()
 	return ret;
 }
 
+bool bucket::waiting(scoped_lock & l, direction::type d)
+{
+	if (d != direction::inbound && d != direction::outbound) {
+		return false;
+	}
+
+	return data_[d].waiting_;
+}
+
 }

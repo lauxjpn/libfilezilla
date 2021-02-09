@@ -167,7 +167,7 @@ public:
 
 	virtual int shutdown_read() override;
 
-	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override;
+	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = socket_event_flag{}) override;
 
 private:
 	virtual void FZ_PRIVATE_SYMBOL operator()(event_base const& ev) override;

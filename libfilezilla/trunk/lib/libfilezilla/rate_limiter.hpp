@@ -278,6 +278,9 @@ protected:
 	 */
 	virtual void wakeup(direction::type /*d*/) {}
 
+	/// Call with the bucket_base mutex lock.
+	bool waiting(scoped_lock & l, direction::type d);
+
 private:
 	virtual void update_stats(bool & active) override;
 	virtual size_t unsaturated(direction::type const d) const override { return data_[d].unsaturated_ ? 1 : 0; }

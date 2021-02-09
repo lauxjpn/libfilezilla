@@ -115,23 +115,23 @@ void remove_socket_events(event_handler * handler, socket_event_source const* co
 socket_event_flag change_socket_event_handler(event_handler * old_handler, event_handler * new_handler, socket_event_source const* const source, socket_event_flag remove)
 {
 	if (!old_handler) {
-		return socket_event_flag::none;
+		return socket_event_flag{};
 	}
 
 	if (old_handler == new_handler) {
-		return socket_event_flag::none;
+		return socket_event_flag{};
 	}
 
 	if (!new_handler) {
 		remove_socket_events(old_handler, source);
-		return socket_event_flag::none;
+		return socket_event_flag{};
 	}
 	else {
 #if DEBUG_SOCKETEVENTS
-		socket_event_flag seen = socket_event_flag::none;
+		socket_event_flag seen = socket_event_flag{};
 #endif
 
-		socket_event_flag ret = socket_event_flag::none;
+		socket_event_flag ret = socket_event_flag{};
 		auto socket_event_filter = [&](event_loop::Events::value_type & ev) -> bool {
 			if (ev.first == old_handler) {
 				if (ev.second->derived_type() == socket_event::type()) {
@@ -1251,7 +1251,7 @@ int socket_base::close()
 		static_cast<socket*>(this)->state_ = socket_state::closed;
 	}
 	else {
-		static_cast<listen_socket*>(this)->state_ = listen_socket_state::none;
+		static_cast<listen_socket*>(this)->state_ = listen_socket_state{};
 	}
 
 	socket_thread_->triggered_ = 0;
@@ -1434,7 +1434,7 @@ listen_socket::listen_socket(thread_pool & pool, event_handler* evt_handler)
 
 listen_socket::~listen_socket()
 {
-	if (state_ != listen_socket_state::none) {
+	if (state_ != listen_socket_state{}) {
 		close();
 	}
 
@@ -1454,14 +1454,14 @@ void listen_socket::set_event_handler(event_handler* pEvtHandler)
 		return;
 	}
 
-	change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_, fz::socket_event_flag::none);
+	change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_, fz::socket_event_flag{});
 
 	evt_handler_ = pEvtHandler;
 }
 
 int listen_socket::listen(address_type family, int port)
 {
-	if (state_ != listen_socket_state::none) {
+	if (state_ != listen_socket_state{}) {
 		return EALREADY;
 	}
 
@@ -1538,7 +1538,7 @@ int listen_socket::listen(address_type family, int port)
 	socket_thread_->waiting_ = WAIT_ACCEPT;
 
 	if (socket_thread_->start()) {
-		state_ = listen_socket_state::none;
+		state_ = listen_socket_state{};
 		close_socket_fd(fd_);
 		return EMFILE;
 	}
@@ -1603,7 +1603,7 @@ socket_descriptor listen_socket::fast_accept(int &error)
 listen_socket_state listen_socket::get_state() const
 {
 	if (!socket_thread_) {
-		return listen_socket_state::none;
+		return listen_socket_state{};
 	}
 
 	scoped_lock l(socket_thread_->mutex_);
@@ -1666,7 +1666,7 @@ std::unique_ptr<socket> socket::from_descriptor(socket_descriptor && desc, threa
 
 int socket::connect(native_string const& host, unsigned int port, address_type family)
 {
-	if (state_ != socket_state::none) {
+	if (state_ != socket_state{}) {
 		return EISCONN;
 	}
 
@@ -1712,7 +1712,7 @@ int socket::connect(native_string const& host, unsigned int port, address_type f
 socket_state socket::get_state() const
 {
 	if (!socket_thread_) {
-		return socket_state::none;
+		return socket_state{};
 	}
 
 	scoped_lock l(socket_thread_->mutex_);
@@ -2005,10 +2005,11 @@ void socket_layer::set_event_handler(event_handler* handler, fz::socket_event_fl
 {
 	auto old = event_handler_;
 	event_handler_ = handler;
-	change_socket_event_handler(old, handler, this, retrigger_block);
+	socket_event_flag const pending = change_socket_event_handler(old, handler, this, retrigger_block);
 
 	if (event_passthrough_) {
-		next_layer_.set_event_handler(handler);
+		retrigger_block |= pending;
+		next_layer_.set_event_handler(handler, retrigger_block);
 	}
 }
 
@@ -2026,10 +2027,10 @@ void socket_layer::forward_hostaddress_event(socket_event_source* source, std::s
 	}
 }
 
-void socket_layer::set_event_passthrough()
+void socket_layer::set_event_passthrough(socket_event_flag retrigger_block)
 {
 	event_passthrough_ = true;
-	next_layer_.set_event_handler(event_handler_);
+	next_layer_.set_event_handler(event_handler_, retrigger_block);
 }
 
 int socket_layer::shutdown_read()
