@@ -76,9 +76,26 @@ int rate_limited_layer::write(void const* buffer, unsigned int size, int& error)
 }
 
 
+void rate_limited_layer::set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block)
+{
+	scoped_lock l(mtx_);
+
+	if (waiting(l, direction::inbound)) {
+		retrigger_block |= socket_event_flag::read;
+	}
+	if (waiting(l, direction::outbound)) {
+		retrigger_block |= socket_event_flag::write;
+	}
+
+	socket_layer::set_event_handler(handler, retrigger_block);
+}
+
+
 class compound_rate_limited_layer::crll_bucket : public bucket
 {
 public:
+	friend class compound_rate_limited_layer;
+
 	crll_bucket(compound_rate_limited_layer & parent, rate_limiter& limiter)
 		: parent_(parent)
 		, limiter_(limiter)
@@ -222,6 +239,22 @@ int compound_rate_limited_layer::write(void const* buffer, unsigned int size, in
 	}
 
 	return written;
+}
+
+void compound_rate_limited_layer::set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block)
+{
+	for (auto & b : buckets_) {
+		fz::scoped_lock l(b->mtx_);
+		if (b->waiting_[direction::inbound]) {
+			retrigger_block |= socket_event_flag::read;
+		}
+		if (b->waiting_[direction::outbound]) {
+			retrigger_block |= socket_event_flag::write;
+		}
+	}
+
+	scoped_lock l(mtx_);
+	socket_layer::set_event_handler(handler, retrigger_block);
 }
 
 }

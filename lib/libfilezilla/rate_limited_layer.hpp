@@ -36,11 +36,7 @@ public:
 		return next_layer_.shutdown();
 	}
 
-	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override {
-		scoped_lock l(mtx_);
-		// FIXME
-		socket_layer::set_event_handler(handler, retrigger_block);
-	}
+	virtual void set_event_handler(event_handler* handler, socket_event_flag retrigger_block = socket_event_flag{}) override;
 
 protected:
 	virtual void wakeup(direction::type d) override;
@@ -75,11 +71,7 @@ public:
 		return next_layer_.shutdown();
 	}
 
-	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = fz::socket_event_flag::none) override {
-		//FIXME
-		scoped_lock l(mtx_);
-		socket_layer::set_event_handler(handler);
-	}
+	virtual void set_event_handler(event_handler* handler, fz::socket_event_flag retrigger_block = socket_event_flag{}) override;
 
 protected:
 	class crll_bucket;
