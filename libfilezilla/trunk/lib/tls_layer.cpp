@@ -28,12 +28,12 @@ bool tls_layer::client_handshake(event_handler* const verification_handler, std:
 
 bool tls_layer::server_handshake()
 {
-	return impl_->server_handshake(std::vector<uint8_t>());
+	return impl_->server_handshake(std::vector<uint8_t>(), std::string_view());
 }
 
-bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume)
+bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble)
 {
-	return impl_->server_handshake(session_to_resume);
+	return impl_->server_handshake(session_to_resume, preamble);
 }
 
 int tls_layer::read(void *buffer, unsigned int size, int& error)

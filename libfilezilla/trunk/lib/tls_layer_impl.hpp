@@ -28,7 +28,7 @@ public:
 
 	bool client_handshake(std::vector<uint8_t> const& session_to_resume, native_string const& session_hostname, std::vector<uint8_t> const& required_certificate, event_handler * verification_handler);
 
-	bool server_handshake(std::vector<uint8_t> const& session_to_resume);
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble);
 
 	int connect(native_string const& host, unsigned int port, address_type family);
 
@@ -140,6 +140,9 @@ private:
 	// been queued and thus need to make a copy of the input up to
 	// gnutls_record_get_max_size()
 	buffer send_buffer_;
+
+	// Sent out just before the handshake itself
+	buffer preamble_;
 
 	std::vector<uint8_t> required_certificate_;
 
