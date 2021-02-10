@@ -817,7 +817,11 @@ int tls_layer_impl::continue_handshake()
 		return ENOTCONN;
 	}
 
-	while (can_write_to_socket_ && !preamble_.empty()) {
+	while (!preamble_.empty()) {
+		if (!can_write_to_socket_) {
+			return EAGAIN;
+		}
+
 		int error{};
 		int written = tls_layer_.next_layer_.write(preamble_.get(), static_cast<int>(preamble_.size()), error);
 		if (written < 0) {
