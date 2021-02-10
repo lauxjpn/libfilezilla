@@ -93,8 +93,9 @@ public:
 	 *
 	 * Before calling server_handshake, a valid certificate and key must be passed
 	 * in through \ref set_certificate.
+	 * The preamble is sent out after setting up all the parameters, but before the first handshake message
 	 */
-	bool server_handshake(std::vector<uint8_t> const& session_to_resume);
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble = {});
 
 	/// Gets session parameters for resumption
 	std::vector<uint8_t> get_session_parameters() const;
