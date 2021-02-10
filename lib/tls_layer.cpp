@@ -26,11 +26,6 @@ bool tls_layer::client_handshake(event_handler* const verification_handler, std:
 	return impl_->client_handshake(session_to_resume, session_hostname, std::vector<uint8_t>(), verification_handler);
 }
 
-bool tls_layer::server_handshake()
-{
-	return impl_->server_handshake(std::vector<uint8_t>(), std::string_view());
-}
-
 bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble)
 {
 	return impl_->server_handshake(session_to_resume, preamble);
