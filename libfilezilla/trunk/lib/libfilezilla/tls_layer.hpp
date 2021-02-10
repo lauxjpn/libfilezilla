@@ -81,21 +81,13 @@ public:
 	 *
 	 * Before calling server_handshake, a valid certificate and key must be passed
 	 * in through \ref set_certificate.
-	 */
-	bool server_handshake();
-
-	/**
-	 * \brief Starts shaking hand for a new TLS session as server.
 	 *
-	 * Returns true if the handshake has started, false on error.
+	 * Session parameters of an existing session can be passed to allow session resumption. Check after handshake completion
+	 * with resumed_session()
 	 *
-	 * If the handshake is started, wait for a connection event for the result.
-	 *
-	 * Before calling server_handshake, a valid certificate and key must be passed
-	 * in through \ref set_certificate.
 	 * The preamble is sent out after setting up all the parameters, but before the first handshake message
 	 */
-	bool server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble = {});
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume = {}, std::string_view const& preamble = {});
 
 	/// Gets session parameters for resumption
 	std::vector<uint8_t> get_session_parameters() const;
