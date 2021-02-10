@@ -1,5 +1,13 @@
 #include "libfilezilla/rate_limited_layer.hpp"
 
+#if DEBUG_SOCKETEVENTS
+#include <assert.h>
+
+namespace fz {
+bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_source const* const source, socket_event_flag event);
+}
+#endif
+
 namespace fz {
 
 rate_limited_layer::rate_limited_layer(event_handler* handler, socket_interface& next_layer, rate_limiter * limiter)
@@ -35,6 +43,11 @@ void rate_limited_layer::wakeup(direction::type d)
 
 int rate_limited_layer::read(void* buffer, unsigned int size, int& error)
 {
+#if DEBUG_SOCKETEVENTS
+	assert(!has_pending_event(event_handler_, this, socket_event_flag::read));
+	assert(!has_pending_event(event_handler_, &next_layer_, socket_event_flag::read));
+#endif
+
 	auto const max = available(direction::inbound);
 	if (!max) {
 		error = EAGAIN;
@@ -56,6 +69,11 @@ int rate_limited_layer::read(void* buffer, unsigned int size, int& error)
 
 int rate_limited_layer::write(void const* buffer, unsigned int size, int& error)
 {
+#if DEBUG_SOCKETEVENTS
+	assert(!has_pending_event(event_handler_, this, socket_event_flag::write));
+	assert(!has_pending_event(event_handler_, &next_layer_, socket_event_flag::write));
+#endif
+
 	auto const max = available(direction::outbound);
 	if (!max) {
 		error = EAGAIN;
