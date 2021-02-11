@@ -118,49 +118,46 @@ socket_event_flag change_socket_event_handler(event_handler * old_handler, event
 		return socket_event_flag{};
 	}
 
-	if (old_handler == new_handler) {
-		return socket_event_flag{};
-	}
-
 	if (!new_handler) {
 		remove_socket_events(old_handler, source);
 		return socket_event_flag{};
 	}
-	else {
+
+	// Don't check for old == new as we need to remove the events in remove and report the pending ones.
+
 #if DEBUG_SOCKETEVENTS
-		socket_event_flag seen = socket_event_flag{};
+	socket_event_flag seen = socket_event_flag{};
 #endif
 
-		socket_event_flag ret = socket_event_flag{};
-		auto socket_event_filter = [&](event_loop::Events::value_type & ev) -> bool {
-			if (ev.first == old_handler) {
-				if (ev.second->derived_type() == socket_event::type()) {
-					auto & sev = static_cast<socket_event const&>(*ev.second);
-					if (std::get<0>(sev.v_) == source) {
-						auto const flag = std::get<1>(sev.v_);
+	socket_event_flag ret = socket_event_flag{};
+	auto socket_event_filter = [&](event_loop::Events::value_type & ev) -> bool {
+		if (ev.first == old_handler) {
+			if (ev.second->derived_type() == socket_event::type()) {
+				auto & sev = static_cast<socket_event const&>(*ev.second);
+				if (std::get<0>(sev.v_) == source) {
+					auto const flag = std::get<1>(sev.v_);
 #if DEBUG_SOCKETEVENTS
-						assert(!(flag & seen));
-						seen |= flag;
+					assert(!(flag & seen));
+					seen |= flag;
 #endif
-						if (flag & remove) {
-							return true;
-						}
-						ret |= flag;
-						ev.first = new_handler;
+					if (flag & remove) {
+						return true;
 					}
-				}
-				else if (ev.second->derived_type() == hostaddress_event::type()) {
-					if (std::get<0>(static_cast<hostaddress_event const&>(*ev.second).v_) == source) {
-						ev.first = new_handler;
-					}
+					ret |= flag;
+					ev.first = new_handler;
 				}
 			}
-			return false;
-		};
+			else if (ev.second->derived_type() == hostaddress_event::type()) {
+				if (std::get<0>(static_cast<hostaddress_event const&>(*ev.second).v_) == source) {
+					ev.first = new_handler;
+				}
+			}
+		}
+		return false;
+	};
 
-		old_handler->event_loop_.filter_events(socket_event_filter);
-		return ret;
-	}
+	old_handler->event_loop_.filter_events(socket_event_filter);
+	return ret;
 }
 
 #if DEBUG_SOCKETEVENTS
@@ -1913,10 +1910,6 @@ void socket::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag
 	}
 
 	scoped_lock l(socket_thread_->mutex_);
-
-	if (evt_handler_ == pEvtHandler) {
-		return;
-	}
 
 	fz::socket_event_flag const pending = change_socket_event_handler(evt_handler_, pEvtHandler, ev_source_, retrigger_block);
 	evt_handler_ = pEvtHandler;
