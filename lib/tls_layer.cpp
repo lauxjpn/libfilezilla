@@ -141,4 +141,48 @@ void tls_layer::set_event_handler(event_handler* pEvtHandler, fz::socket_event_f
 	return impl_->set_event_handler(pEvtHandler, retrigger_block);
 }
 
+bool tls_layer::set_alpn(std::string_view const& alpn)
+{
+	if (!impl_) {
+		return false;
+	}
+
+	impl_->alpn_.clear();
+	impl_->alpn_.emplace_back(alpn);
+	return true;
+}
+
+bool tls_layer::set_alpn(std::vector<std::string> const& alpn)
+{
+	if (!impl_) {
+		return false;
+	}
+
+	impl_->alpn_ = alpn;
+	return true;
+}
+
+std::string tls_layer::get_alpn() const
+{
+	if (!impl_) {
+		return {};
+	}
+
+	return impl_->get_alpn();
+}
+
+native_string tls_layer::get_hostname() const
+{
+	if (!impl_) {
+		return {};
+	}
+
+	return impl_->get_hostname();
+}
+
+bool tls_layer::is_server() const
+{
+	return impl_ ? impl_->server_ : false;
+}
+
 }

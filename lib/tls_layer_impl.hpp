@@ -71,6 +71,9 @@ public:
 
 	void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block);
 
+	std::string get_alpn() const;
+	native_string get_hostname() const;
+
 private:
 	bool init();
 	void deinit();
@@ -114,6 +117,8 @@ private:
 		return ticket_key_.empty();
 	}
 
+	bool do_set_alpn();
+
 	tls_layer& tls_layer_;
 
 	logger_interface & logger_;
@@ -123,6 +128,8 @@ private:
 	std::vector<uint8_t> ticket_key_;
 
 	gnutls_certificate_credentials_t cert_credentials_{};
+
+	std::vector<std::string> alpn_;
 
 	socket_state state_{};
 
@@ -159,6 +166,7 @@ private:
 	bool socket_eof_{};
 
 	bool initialized_{};
+	bool server_{};
 
 #if DEBUG_SOCKETEVENTS
 	bool debug_can_read_{};
