@@ -121,6 +121,8 @@ struct socket_event_type;
  *   socket_interface::shutdown_read has returned EAGAIN.
  * - The same holds for the write event and socket_interface::write and
  *   socket_interface::shutdown
+ * - A successful connection events doubles as write event, it does not
+ *   act as read event
  *
  * It is a grave violation to call the read/write/shutdown functions
  * again after they returned EAGAIN without first waiting for the event.
@@ -501,7 +503,7 @@ public:
 	 *
 	 * Pending events are rewritten to the new handler, or deleted if there is no new handler.
 	 *
-	 * Initially, the new handler is assumed to be waiting on read and write events and if th
+	 * Initially, the new handler is assumed to be waiting on read and write events and if the
 	 * socket is in a readable/writable state, the corresponding events are sent if not already
 	 * pending.
 	 *
