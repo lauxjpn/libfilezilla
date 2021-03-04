@@ -148,6 +148,21 @@ public:
 	 */
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
 
+	/** \brief Negotiate application protocol
+	 *
+	 * If the peer makes use of ALPN, the handshake fails if no matching protocol is found.
+	 * If the peer does not use/support ALPN, the handshake continues and no protocol is negotiated.
+	 */
+	bool set_alpn(std::string_view const& alpn);
+	bool set_alpn(std::vector<std::string> const& alpns);
+
+	/// After a successful handshake, returns which protocol, if any, has been negotiated
+	std::string get_alpn() const;
+
+	/// If running as server, get the SNI sent by the client
+	native_string get_hostname() const;
+
+	bool is_server() const;
 
 	virtual socket_state get_state() const override;
 

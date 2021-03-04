@@ -146,6 +146,14 @@ struct cert_list_holder final
 	unsigned int certs_size{};
 };
 
+std::string to_string(gnutls_datum_t const& d)
+{
+	if (d.data && d.size) {
+		return std::string(d.data, d.data + d.size);
+	}
+	return {};
+}
+
 struct datum_holder final : gnutls_datum_t
 {
 	datum_holder() {
@@ -375,6 +383,11 @@ bool tls_layer_impl::init_session(bool client)
 	gnutls_transport_set_pull_function(session_, c_pull_function);
 	gnutls_transport_set_ptr(session_, (gnutls_transport_ptr_t)this);
 
+	if (!do_set_alpn()) {
+		deinit();
+		return false;
+	}
+
 	return true;
 }
 
@@ -467,10 +480,14 @@ void tls_layer_impl::log_alert(logmsg::type logLevel)
 	gnutls_alert_description_t last_alert = gnutls_alert_get(session_);
 	char const* alert = gnutls_alert_get_name(last_alert);
 	if (alert) {
-		logger_.log(logLevel, fztranslate("Received TLS alert from the server: %s (%d)"), alert, last_alert);
+		logger_.log(logLevel,
+					server_ ? fztranslate("Received TLS alert from the client: %s (%d)") : fztranslate("Received TLS alert from the server: %s (%d)"),
+					alert, last_alert);
 	}
 	else {
-		logger_.log(logLevel, fztranslate("Received unknown TLS alert %d from the server"), last_alert);
+		logger_.log(logLevel,
+					server_ ? fztranslate("Received unknown TLS alert %d from the client") : fztranslate("Received unknown TLS alert %d from the server"),
+					last_alert);
 	}
 }
 
@@ -784,6 +801,8 @@ bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_res
 		return false;
 	}
 
+	server_ = true;
+
 	ticket_key_ = session_to_resume;
 
 	if (!init() || !init_session(false)) {
@@ -1006,7 +1025,7 @@ void tls_layer_impl::failure(int code, bool send_close, std::wstring const& func
 				)
 			{
 				if (state_ != socket_state::shut_down || !shutdown_silence_read_errors_) {
-					logger_.log(logmsg::status, fztranslate("Server did not properly shut down TLS connection"));
+					logger_.log(logmsg::status, server_ ? fztranslate("Client did not properly shut down TLS connection") : fztranslate("Server did not properly shut down TLS connection"));
 				}
 			}
 		}
@@ -1876,6 +1895,33 @@ void tls_layer_impl::set_hostname(native_string const& host)
 	}
 }
 
+native_string tls_layer_impl::get_hostname() const
+{
+	if (!session_) {
+		return {};
+	}
+
+	size_t len{};
+	unsigned int type{};
+	unsigned int i{};
+	int ret;
+	do {
+		ret = gnutls_server_name_get(session_, nullptr, &len, &type, i++);
+	}
+	while (ret == GNUTLS_E_SHORT_MEMORY_BUFFER && type != GNUTLS_NAME_DNS);
+
+	if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+		std::string name;
+		name.resize(len - 1);
+		ret = gnutls_server_name_get(session_, name.data(), &len, &type, --i);
+		if (!ret) {
+			return fz::to_native(name);
+		}
+	}
+
+	return {};
+}
+
 int tls_layer_impl::connect(native_string const& host, unsigned int port, address_type family)
 {
 	if (hostname_.empty()) {
@@ -2091,10 +2137,40 @@ void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_ev
 		}
 		if (state_ == socket_state::connected || state_ == socket_state::shutting_down) {
 			debug_can_write_ = true;
-		}
+
 #endif
 	}
 
+}
+
+bool tls_layer_impl::do_set_alpn()
+{
+	if (alpn_.empty()) {
+		return true;
+	}
+
+	gnutls_datum_t * data = new gnutls_datum_t[alpn_.size()];
+	for (size_t i = 0; i < alpn_.size(); ++i) {
+		data[i].data = reinterpret_cast<unsigned char *>(const_cast<char*>(alpn_[i].c_str()));
+		data[i].size = alpn_[i].size();
+	}
+	int res = gnutls_alpn_set_protocols(session_, data, alpn_.size(), GNUTLS_ALPN_MANDATORY);
+
+	if (res) {
+		log_error(res, L"gnutls_alpn_set_protocols");
+	}
+	return res == 0;
+}
+
+std::string tls_layer_impl::get_alpn() const
+{
+	if (session_) {
+		gnutls_datum_t protocol;
+		if (!gnutls_alpn_get_selected_protocol(session_, &protocol)) {
+			return to_string(protocol);
+		}
+	}
+	return {};
 }
 
 }
