@@ -25,24 +25,6 @@ public:
 	virtual void operator()(event_base const& ev) override;
 };
 
-/// \private
-template<typename... Args>
-std::function<void(Args...)> do_make_invoker(event_loop& loop, std::function<void(Args...)> && f)
-{
-	return [handler = thread_invoker(loop), f](Args&&... args) mutable {
-		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
-			std::apply(f, args);
-		};
-		handler.send_event<invoker_event>(std::move(cb));
-	};
-}
-
-// libc++ as shipped with Xcode does not have deduction guides for lambda -> std::function
-// Help it along a bit.
-/// \private
-template<typename Ret, typename F, typename ... Args>
-constexpr std::function<Ret(Args...)> get_func_type(Ret(F::*)(Args...) const);
-
 /**
  * \brief Wraps the passed function, so that it is always invoked in the context of the loop.
  *
@@ -53,12 +35,19 @@ constexpr std::function<Ret(Args...)> get_func_type(Ret(F::*)(Args...) const);
 template<typename F>
 auto make_invoker(event_loop& loop, F && f)
 {
-	return do_make_invoker(loop, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
+	return [handler = thread_invoker(loop), cf = std::forward<F>(f)](auto &&... args) mutable -> decltype(f(std::forward<decltype(args)>(args)...), void())
+	{
+		auto cb = [cf = std::move(cf), targs = std::make_tuple(std::forward<decltype(args)>(args)...)] {
+			std::apply(cf, targs);
+		};
+		handler.send_event<invoker_event>(std::move(cb));
+	};
 }
+
 template<typename F>
 auto make_invoker(event_handler& h, F && f)
 {
-	return do_make_invoker(h.event_loop_, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
+	return make_invoker(h.event_loop_, std::forward<F>(f));
 }
 
 
@@ -72,18 +61,6 @@ typedef std::function<void(std::function<void()>)> invoker_factory;
  */
 invoker_factory FZ_PUBLIC_SYMBOL get_invoker_factory(event_loop& loop);
 
-/// \private
-template<typename... Args>
-std::function<void(Args...)> do_make_invoker(invoker_factory const& inv, std::function<void(Args...)> && f)
-{
-	return [inv, f](Args&&... args) mutable {
-		auto cb = [f, args = std::make_tuple(std::forward<Args>(args)...)] {
-			std::apply(f, args);
-		};
-		inv(cb);
-	};
-}
-
 /**
  * \brief Creates an invoker using the given factory
  *
@@ -94,7 +71,13 @@ std::function<void(Args...)> do_make_invoker(invoker_factory const& inv, std::fu
 template<typename F>
 auto make_invoker(invoker_factory const& inv, F && f)
 {
-	return do_make_invoker(inv, decltype(get_func_type(&F::operator()))(std::forward<F>(f)));
+	return [inv, cf = std::forward<F>(f)](auto &&... args) mutable -> decltype(f(std::forward<decltype(args)>(args)...), void())
+	{
+		auto cb = [cf = std::move(cf), targs = std::make_tuple(std::forward<decltype(args)>(args)...)] {
+			std::apply(cf, targs);
+		};
+		inv(cb);
+	};
 }
 
 }
