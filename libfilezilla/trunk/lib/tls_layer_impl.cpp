@@ -2137,7 +2137,7 @@ void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_ev
 		}
 		if (state_ == socket_state::connected || state_ == socket_state::shutting_down) {
 			debug_can_write_ = true;
-
+		}
 #endif
 	}
 
