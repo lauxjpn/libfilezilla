@@ -5,6 +5,12 @@
  * \brief Glue to handle support wxString for some functions
  */
 
+
+#include "../private/defs.hpp"
+#if FZ_WINDOWS
+#include "../private/windows.hpp"
+#endif
+
 #include <wx/string.h>
 
 #include "../format.hpp"
