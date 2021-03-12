@@ -696,13 +696,17 @@ int tls_layer_impl::continue_write()
 	}
 	while (!send_buffer_.empty());
 
-	if (state_ == socket_state::connected) {
-		if (tls_layer_.event_handler_) {
+	if (write_blocked_by_send_buffer_) {
+		write_blocked_by_send_buffer_ = false;
+
+		if (state_ == socket_state::connected) {
+			if (tls_layer_.event_handler_) {
 #if DEBUG_SOCKETEVENTS
-			assert(!debug_can_write_);
-			debug_can_write_ = true;
+				assert(!debug_can_write_);
+				debug_can_write_ = true;
 #endif
-			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
+				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
+			}
 		}
 	}
 
@@ -971,6 +975,7 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 #endif
 
 	if (!send_buffer_.empty()) {
+		write_blocked_by_send_buffer_ = true;
 #if DEBUG_SOCKETEVENTS
 		debug_can_write_ = false;
 #endif
@@ -2120,6 +2125,8 @@ int tls_layer_impl::shutdown_read()
 
 void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block)
 {
+	write_blocked_by_send_buffer_ = false;
+
 	fz::socket_event_flag const pending = change_socket_event_handler(tls_layer_.event_handler_, pEvtHandler, &tls_layer_, retrigger_block);
 	tls_layer_.event_handler_ = pEvtHandler;
 
