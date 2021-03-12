@@ -168,6 +168,8 @@ private:
 	bool initialized_{};
 	bool server_{};
 
+	bool write_blocked_by_send_buffer_{};
+
 #if DEBUG_SOCKETEVENTS
 	bool debug_can_read_{};
 	bool debug_can_write_{};
