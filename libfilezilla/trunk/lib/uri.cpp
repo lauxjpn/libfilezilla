@@ -254,17 +254,20 @@ bool query_string::set(std::string_view const& raw)
 	for (auto const& token : tokens) {
 		size_t pos = token.find('=');
 		if (!pos) {
+			segments_.clear();
 			return false;
 		}
 
 		std::string key = percent_decode_s(token.substr(0, pos));
 		if (key.empty()) {
+			segments_.clear();
 			return false;
 		}
 		std::string value;
 		if (pos != std::string::npos) {
 			value = percent_decode_s(token.substr(pos + 1));
 			if (value.empty() && pos + 1 != token.size()) {
+				segments_.clear();
 				return false;
 			}
 		}
