@@ -64,8 +64,8 @@ template <typename First, typename Second,
                           sizeof(typename Second::value_type) == sizeof(uint8_t)>* = nullptr>
 inline bool equal_consttime(First const& lhs, Second const& rhs)
 {
-	return equal_consttime(std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(lhs.data()), rhs.size()),
-	                       std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(lhs.data()), rhs.size()));
+	return equal_consttime(std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(lhs.data()), lhs.size()),
+	                       std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(rhs.data()), rhs.size()));
 }
 
 }
