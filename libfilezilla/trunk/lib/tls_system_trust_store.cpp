@@ -25,7 +25,9 @@ tls_system_trust_store_impl::~tls_system_trust_store_impl()
 {
 	task_.join();
 
-	gnutls_certificate_free_credentials(credentials_);
+	if (credentials_) {
+		gnutls_certificate_free_credentials(credentials_);
+	}
 }
 
 std::tuple<gnutls_certificate_credentials_t, scoped_lock> tls_system_trust_store_impl::lease()
