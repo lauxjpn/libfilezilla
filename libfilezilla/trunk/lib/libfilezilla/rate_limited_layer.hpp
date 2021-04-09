@@ -24,18 +24,6 @@ public:
 	virtual int read(void* buffer, unsigned int size, int& error) override;
 	virtual int write(void const* buffer, unsigned int size, int& error) override;
 
-	virtual socket_state get_state() const override {
-		return next_layer_.get_state();
-	}
-
-	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override {
-		return next_layer_.connect(host, port, family);
-	}
-
-	virtual int shutdown() override {
-		return next_layer_.shutdown();
-	}
-
 	virtual void set_event_handler(event_handler* handler, socket_event_flag retrigger_block = socket_event_flag{}) override;
 
 protected:

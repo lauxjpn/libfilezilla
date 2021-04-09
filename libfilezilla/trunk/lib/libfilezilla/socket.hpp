@@ -94,7 +94,7 @@ public:
 	}
 
 protected:
-	socket_event_source() = default;
+	socket_event_source() = delete;
 	explicit socket_event_source(socket_event_source* root)
 		: root_(root)
 	{}
@@ -615,6 +615,18 @@ public:
 	 * data in the send buffer (assuming there are no network errors).
 	 */
 	virtual int shutdown_read() override;
+
+	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override {
+		return next_layer_.connect(host, port, family);
+	}
+
+	virtual int shutdown() override {
+		return next_layer_.shutdown();
+	}
+
+	virtual socket_state get_state() const override {
+		return next_layer_.get_state();
+	}
 
 protected:
 	/**
