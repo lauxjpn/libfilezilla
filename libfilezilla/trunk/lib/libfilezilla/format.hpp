@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <type_traits>
 
-#ifdef FORMAT_DEBUG
+#ifdef LFZ_FORMAT_DEBUG
 #include <assert.h>
 #define format_assert(pred) assert((pred))
 #else
