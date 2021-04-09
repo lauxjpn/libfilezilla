@@ -76,6 +76,9 @@
   <PropertyGroup>
     <IntDir>$(OutDir)</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='static_debug|x64'">
+    <LibraryPath>$(gnutls_lib);$(nettle_lib);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
