@@ -4,7 +4,7 @@ namespace fz {
 
 namespace {
 template<typename DataContainer>
-std::string base64_encode_impl(DataContainer const& in, base64_type type, bool pad)
+void base64_encode_impl(std::string & out, DataContainer const& in, base64_type type, bool pad)
 {
 	static_assert(sizeof(typename DataContainer::value_type) == 1, "Bad container type");
 
@@ -13,12 +13,13 @@ std::string base64_encode_impl(DataContainer const& in, base64_type type, bool p
 			? "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 			: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-	std::string ret;
-
 	size_t len = in.size();
 	size_t pos{};
 
-	ret.reserve(((len + 2) / 3) * 4);
+	size_t const newcap = out.size() + ((len + 2) / 3) * 4;
+	if (out.capacity() < newcap) {
+		out.reserve(newcap);
+	}
 
 	while (len >= 3) {
 		len -= 3;
@@ -26,42 +27,49 @@ std::string base64_encode_impl(DataContainer const& in, base64_type type, bool p
 		auto const c2 = static_cast<unsigned char>(in[pos++]);
 		auto const c3 = static_cast<unsigned char>(in[pos++]);
 
-		ret += base64_chars[(c1 >> 2) & 0x3fu];
-		ret += base64_chars[((c1 & 0x3u) << 4) | ((c2 >> 4) & 0xfu)];
-		ret += base64_chars[((c2 & 0xfu) << 2) | ((c3 >> 6) & 0x3u)];
-		ret += base64_chars[(c3 & 0x3fu)];
+		out += base64_chars[(c1 >> 2) & 0x3fu];
+		out += base64_chars[((c1 & 0x3u) << 4) | ((c2 >> 4) & 0xfu)];
+		out += base64_chars[((c2 & 0xfu) << 2) | ((c3 >> 6) & 0x3u)];
+		out += base64_chars[(c3 & 0x3fu)];
 	}
 	if (len) {
 		auto const c1 = static_cast<unsigned char>(in[pos++]);
-		ret += base64_chars[(c1 >> 2) & 0x3fu];
+		out += base64_chars[(c1 >> 2) & 0x3fu];
 		if (len == 2) {
 			auto const c2 = static_cast<unsigned char>(in[pos++]);
-			ret += base64_chars[((c1 & 0x3u) << 4) | ((c2 >> 4) & 0xfu)];
-			ret += base64_chars[(c2 & 0xfu) << 2];
+			out += base64_chars[((c1 & 0x3u) << 4) | ((c2 >> 4) & 0xfu)];
+			out += base64_chars[(c2 & 0xfu) << 2];
 		}
 		else {
-			ret += base64_chars[(c1 & 0x3u) << 4];
+			out += base64_chars[(c1 & 0x3u) << 4];
 			if (pad) {
-				ret += '=';
+				out += '=';
 			}
 		}
 		if (pad) {
-			ret += '=';
+			out += '=';
 		}
 	}
-
-	return ret;
 }
 }
 
 std::string base64_encode(std::string_view const& in, base64_type type, bool pad)
 {
-	return base64_encode_impl(in, type, pad);
+	std::string ret;
+	base64_encode_impl(ret, in, type, pad);
+	return ret;
 }
 
 std::string base64_encode(std::vector<uint8_t> const& in, base64_type type, bool pad)
 {
-	return base64_encode_impl(in, type, pad);
+	std::string ret;
+	base64_encode_impl(ret, in, type, pad);
+	return ret;
+}
+
+void base64_encode_append(std::string& result, std::string_view const& in, base64_type type, bool pad)
+{
+	base64_encode_impl(result, in, type, pad);
 }
 
 namespace {
