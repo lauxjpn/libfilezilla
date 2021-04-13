@@ -114,6 +114,14 @@ std::string FZ_PUBLIC_SYMBOL base64_encode(std::string_view const& in, base64_ty
 std::string FZ_PUBLIC_SYMBOL base64_encode(std::vector<uint8_t> const& in, base64_type type = base64_type::standard, bool pad = true);
 
 /**
+ * \brief base64-encodes input and appends it to result.
+ *
+ * Multiple inputs concatenated this way cannot be passed to a single base64_decode. The parts need to be
+ * individually decoded.
+ */
+void FZ_PUBLIC_SYMBOL base64_encode_append(std::string& result, std::string_view const& in, base64_type type = base64_type::standard, bool pad = true);
+
+/**
  * \brief Decodes base64, ignores whitespace. Returns empty string on invalid input.
  *
  * Padding is optional, alphabet is auto-detected.
