@@ -364,6 +364,44 @@ public:
 	virtual int read(void* buffer, unsigned int size, int& error) = 0;
 	virtual int write(void const* buffer, unsigned int size, int& error) = 0;
 
+	template<typename T, std::enable_if_t<std::is_signed_v<T>, int> = 0>
+	int read(void* buffer, T size, int& error)
+	{
+		if (size < 0) {
+			error = EINVAL;
+			return -1;
+		}
+
+		return read(buffer, static_cast<unsigned int>(size), error);
+	}
+	template<typename T, std::enable_if_t<std::is_unsigned_v<T> && (sizeof(T) > sizeof(unsigned int)), int> = 0>
+	int read(void* buffer, T size, int& error)
+	{
+		if (size > std::numeric_limits<unsigned int>::max()) {
+			size = std::numeric_limits<unsigned int>::max();
+		}
+		return read(buffer, static_cast<unsigned int>(size), error);
+	}
+
+	template<typename T, std::enable_if_t<std::is_signed_v<T>, int> = 0>
+	int write(void const* buffer, T size, int& error)
+	{
+		if (size < 0) {
+			error = EINVAL;
+			return -1;
+		}
+
+		return write(buffer, static_cast<std::make_unsigned_t<T>>(size), error);
+	}
+	template<typename T, std::enable_if_t<std::is_unsigned_v<T> && (sizeof(T) > sizeof(unsigned int)), int> = 0>
+	int write(void const* buffer, T size, int& error)
+	{
+		if (size > std::numeric_limits<unsigned int>::max()) {
+			size = std::numeric_limits<unsigned int>::max();
+		}
+		return write(buffer, static_cast<unsigned int>(size), error);
+	}
+	
 	virtual void set_event_handler(event_handler* pEvtHandler, fz::socket_event_flag retrigger_block = fz::socket_event_flag{}) = 0;
 
 	virtual native_string peer_host() const = 0;
