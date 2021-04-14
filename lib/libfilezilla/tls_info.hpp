@@ -8,6 +8,8 @@
 #include "time.hpp"
 
 namespace fz {
+class logger_interface;
+
 /**
  * \brief Represents all relevant information of a X.509 certificate as used by TLS.
  */
@@ -118,6 +120,16 @@ private:
 
 	bool self_signed_{};
 };
+
+/**
+ * \brief Gets the certificate information for the certificates in the file.
+ *
+ * If the sort flag is not set, certificates are returned in input order.
+ * If the sort flag is set, a chain is built, with certificate i signed by i+1.
+ * If building the chain fails, nothing is returned.
+ */
+std::vector<x509_certificate> FZ_PUBLIC_SYMBOL load_certificates_file(native_string const& certsfile, bool pem, bool sort, logger_interface * logger = nullptr);
+std::vector<x509_certificate> FZ_PUBLIC_SYMBOL load_certificates(std::string_view const& certdata, bool pem, bool sort, logger_interface * logger = nullptr);
 
 /**
  * \brief Information about a TLS session

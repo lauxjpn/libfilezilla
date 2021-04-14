@@ -6,6 +6,7 @@ typedef std::make_signed_t<size_t> ssize_t;
 #endif
 
 #include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
 
 #include "libfilezilla/buffer.hpp"
 #include "libfilezilla/logger.hpp"
@@ -15,9 +16,23 @@ typedef std::make_signed_t<size_t> ssize_t;
 namespace fz {
 class tls_system_trust_store;
 class logger_interface;
-namespace {
-struct cert_list_holder;
-}
+
+struct cert_list_holder final
+{
+	cert_list_holder() = default;
+	~cert_list_holder() {
+		for (unsigned int i = 0; i < certs_size; ++i) {
+			gnutls_x509_crt_deinit(certs[i]);
+		}
+		gnutls_free(certs);
+	}
+
+	cert_list_holder(cert_list_holder const&) = delete;
+	cert_list_holder& operator=(cert_list_holder const&) = delete;
+
+	gnutls_x509_crt_t * certs{};
+	unsigned int certs_size{};
+};
 
 class tls_layer;
 class tls_layer_impl final
@@ -58,7 +73,7 @@ public:
 
 	bool set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem);
 
-	bool set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem);
+	bool set_certificate(std::string_view const& key, std::string_view const& certs, native_string const& password, bool pem);
 
 	static std::string get_gnutls_version();
 
@@ -73,6 +88,9 @@ public:
 
 	std::string get_alpn() const;
 	native_string get_hostname() const;
+
+	static int load_certificates(std::string_view const& in, bool pem, gnutls_x509_crt_t *& certs, unsigned int & certs_size, bool & sort);
+	static bool extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last, logger_interface * logger);
 
 private:
 	bool init();
@@ -106,8 +124,7 @@ private:
 
 	bool get_sorted_peer_certificates(gnutls_x509_crt_t *& certs, unsigned int & certs_size);
 
-	bool extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last);
-	std::vector<x509_certificate::subject_name> get_cert_subject_alt_names(gnutls_x509_crt_t cert);
+	static std::vector<x509_certificate::subject_name> get_cert_subject_alt_names(gnutls_x509_crt_t cert);
 
 	void log_verification_error(int status);
 
@@ -175,6 +192,9 @@ private:
 	bool debug_can_write_{};
 #endif
 };
+
+std::string read_certificates_file(native_string const& certsfile, logger_interface * logger);
+
 }
 
 #endif
