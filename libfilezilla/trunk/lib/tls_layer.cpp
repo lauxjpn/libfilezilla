@@ -96,7 +96,7 @@ bool tls_layer::set_certificate_file(native_string const& keyfile, native_string
 	return impl_->set_certificate_file(keyfile, certsfile, password, pem);
 }
 
-bool tls_layer::set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem)
+bool tls_layer::set_certificate(std::string_view const& key, std::string_view const& certs, native_string const& password, bool pem)
 {
 	return impl_->set_certificate(key, certs, password, pem);
 }

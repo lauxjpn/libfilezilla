@@ -133,7 +133,7 @@ public:
 	 *
 	 * If the pem flag is set, the input is assumed to be in PEM, otherwise DER.
 	 */
-	bool set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem = true);
+	bool set_certificate(std::string_view const& key, std::string_view const& certs, native_string const& password, bool pem = true);
 
 	/// Returns the version of the loaded GnuTLS library, may be different than the version used at compile-time.
 	static std::string get_gnutls_version();

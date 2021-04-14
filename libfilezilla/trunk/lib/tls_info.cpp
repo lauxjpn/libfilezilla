@@ -1,4 +1,5 @@
 #include "libfilezilla/tls_info.hpp"
+#include "tls_layer_impl.hpp"
 
 namespace fz {
 x509_certificate::x509_certificate(
@@ -78,4 +79,38 @@ tls_session_info::tls_session_info(std::string const& host, unsigned int port,
 	, hostname_mismatch_(hostname_mismatch)
 {
 }
+
+std::vector<x509_certificate> load_certificates_file(native_string const& certsfile, bool pem, bool sort, logger_interface * logger)
+{
+	std::string certdata = read_certificates_file(certsfile, logger);
+	if (certdata.empty()) {
+		return {};
+	}
+
+	return load_certificates(certdata, pem, sort, logger);
+}
+
+std::vector<x509_certificate> load_certificates(std::string_view const& certdata, bool pem, bool sort, logger_interface * logger)
+{
+	cert_list_holder certs;
+	if (tls_layer_impl::load_certificates(certdata, pem, certs.certs, certs.certs_size, sort) != GNUTLS_E_SUCCESS) {
+		return {};
+	}
+
+	std::vector<x509_certificate> certificates;
+	certificates.reserve(certs.certs_size);
+	for (unsigned int i = 0; i < certs.certs_size; ++i) {
+		x509_certificate cert;
+		if (tls_layer_impl::extract_cert(certs.certs[i], cert, i + 1 == certs.certs_size, logger)) {
+			certificates.emplace_back(std::move(cert));
+		}
+		else {
+			certificates.clear();
+			break;
+		}
+	}
+
+	return certificates;
+}
+
 }

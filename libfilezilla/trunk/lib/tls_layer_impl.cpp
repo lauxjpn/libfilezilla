@@ -15,6 +15,8 @@
 
 #include <string.h>
 
+using namespace std::literals;
+
 #if DEBUG_SOCKETEVENTS
 #include <assert.h>
 
@@ -129,27 +131,18 @@ extern "C" int handshake_hook_func(gnutls_session_t session, unsigned int htype,
 	return tls_layerCallbacks::handshake_hook_func(session, htype, post, incoming);
 }
 
-struct cert_list_holder final
-{
-	cert_list_holder() = default;
-	~cert_list_holder() {
-		for (unsigned int i = 0; i < certs_size; ++i) {
-			gnutls_x509_crt_deinit(certs[i]);
-		}
-		gnutls_free(certs);
-	}
-
-	cert_list_holder(cert_list_holder const&) = delete;
-	cert_list_holder& operator=(cert_list_holder const&) = delete;
-
-	gnutls_x509_crt_t * certs{};
-	unsigned int certs_size{};
-};
-
 std::string to_string(gnutls_datum_t const& d)
 {
 	if (d.data && d.size) {
 		return std::string(d.data, d.data + d.size);
+	}
+	return {};
+}
+
+std::string_view to_view(gnutls_datum_t const& d)
+{
+	if (d.data && d.size) {
+		return std::string_view(reinterpret_cast<char const*>(d.data), d.size);
 	}
 	return {};
 }
@@ -247,6 +240,33 @@ bool tls_layer_impl::init()
 	return true;
 }
 
+std::string read_certificates_file(native_string const& certsfile, logger_interface * logger)
+{
+	file cf(certsfile, file::reading, file::existing);
+	if (!cf.opened()) {
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Could not open certificate file."));
+		}
+		return {};
+	}
+	int64_t const cs = cf.size();
+	if (cs < 0 || cs > 1024 * 1024) {
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Certificate file too big."));
+		}
+		return {};
+	}
+	std::string c;
+	c.resize(cs);
+	auto read = cf.read(c.data(), cs);
+	if (read != cs) {
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Could not read certificate file."));
+		}
+		return {};
+	}
+}
+
 bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem)
 {
 	// Load the files ourselves instead of calling gnutls_certificate_set_x509_key_file2
@@ -270,29 +290,15 @@ bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_s
 		return false;
 	}
 
-
-	file cf(certsfile, file::reading, file::existing);
-	if (!cf.opened()) {
-		logger_.log(logmsg::error, fztranslate("Could not open certificate file."));
-		return false;
-	}
-	int64_t const cs = cf.size();
-	if (cs < 0 || cs > 1024 * 1024) {
-		logger_.log(logmsg::error, fztranslate("Certificate file too big."));
-		return false;
-	}
-	std::string c;
-	c.resize(cs);
-	read = cf.read(c.data(), cs);
-	if (read != cs) {
-		logger_.log(logmsg::error, fztranslate("Could not read certificate file."));
+	std::string c = read_certificates_file(certsfile, &logger_);
+	if (c.empty()) {
 		return false;
 	}
 
 	return set_certificate(k, c, password, pem);
 }
 
-bool tls_layer_impl::set_certificate(std::string const& key, std::string const& certs, native_string const& password, bool pem)
+bool tls_layer_impl::set_certificate(std::string_view const& key, std::string_view const& certs, native_string const& password, bool pem)
 {
 	if (!init()) {
 		return false;
@@ -320,6 +326,7 @@ bool tls_layer_impl::set_certificate(std::string const& key, std::string const& 
 
 	return true;
 }
+// Convert them all to PEM
 
 bool tls_layer_impl::init_session(bool client)
 {
@@ -1169,13 +1176,15 @@ static std::string bin2hex(unsigned char const* in, size_t size)
 }
 
 
-bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last)
+bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last, logger_interface * logger)
 {
 	datetime expiration_time(gnutls_x509_crt_get_expiration_time(cert), datetime::seconds);
 	datetime activation_time(gnutls_x509_crt_get_activation_time(cert), datetime::seconds);
 
 	if (!activation_time || !expiration_time || expiration_time < activation_time) {
-		logger_.log(logmsg::error, fztranslate("Could not extract validity period of certificate"));
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Could not extract validity period of certificate"));
+		}
 		return false;
 	}
 
@@ -1211,28 +1220,38 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 	std::string subject, issuer;
 
 	datum_holder raw_subject;
-	if (!gnutls_x509_crt_get_dn3(cert, &raw_subject, 0)) {
+	res = gnutls_x509_crt_get_dn3(cert, &raw_subject, 0);
+	if (!res) {
 		subject = raw_subject.to_string_view();
 	}
 	else {
-		log_error(res, L"gnutls_x509_crt_get_dn3");
+		if (logger) {
+			logger->log(logmsg::debug_warning, "gnutls_x509_crt_get_dn3 failed with %d", res);
+		}
 	}
 	if (subject.empty()) {
-		logger_.log(logmsg::error, fztranslate("Could not get distinguished name of certificate subject, gnutls_x509_get_dn failed"));
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Could not get distinguished name of certificate subject, gnutls_x509_get_dn failed"));
+		}
 		return false;
 	}
 
 	std::vector<x509_certificate::subject_name> alt_subject_names = get_cert_subject_alt_names(cert);
 
 	datum_holder raw_issuer;
-	if (!gnutls_x509_crt_get_issuer_dn3(cert, &raw_issuer, 0)) {
+	res = gnutls_x509_crt_get_issuer_dn3(cert, &raw_issuer, 0);
+	if (!res) {
 		issuer = raw_issuer.to_string_view();
 	}
 	else {
-		log_error(res, L"gnutls_x509_crt_get_issuer_dn3");
+		if (logger) {
+			logger->log(logmsg::debug_warning, "gnutls_x509_crt_get_issuer_dn3 failed with %d", res);
+		}
 	}
 	if (issuer.empty() ) {
-		logger_.log(logmsg::error, fztranslate("Could not get distinguished name of certificate issuer, gnutls_x509_get_issuer_dn failed"));
+		if (logger) {
+			logger->log(logmsg::error, fztranslate("Could not get distinguished name of certificate issuer, gnutls_x509_get_issuer_dn failed"));
+		}
 		return false;
 	}
 
@@ -1253,7 +1272,9 @@ bool tls_layer_impl::extract_cert(gnutls_x509_crt_t const& cert, x509_certificat
 
 	datum_holder der;
 	if (gnutls_x509_crt_export2(cert, GNUTLS_X509_FMT_DER, &der) != GNUTLS_E_SUCCESS || !der.data || !der.size) {
-		logger_.log(logmsg::error, L"gnutls_x509_crt_get_issuer_dn");
+		if (logger) {
+			logger->log(logmsg::error, L"gnutls_x509_crt_get_issuer_dn");
+		}
 		return false;
 	}
 	std::vector<uint8_t> data(der.data, der.data + der.size);
@@ -1389,6 +1410,29 @@ int tls_layer_impl::get_algorithm_warnings() const
 	return algorithmWarnings;
 }
 
+int tls_layer_impl::load_certificates(std::string_view const& in, bool pem, gnutls_x509_crt_t *& certs, unsigned int & certs_size, bool & sort)
+{
+	gnutls_datum_t dpem;
+	dpem.data = reinterpret_cast<unsigned char*>(const_cast<char *>(in.data()));
+	dpem.size = in.size();
+	unsigned int flags{};
+	if (sort) {
+		flags |= GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED;
+	}
+
+	int res = gnutls_x509_crt_list_import2(&certs, &certs_size, &dpem, pem ? GNUTLS_X509_FMT_PEM : GNUTLS_X509_FMT_DER, flags);
+	if (res == GNUTLS_E_CERTIFICATE_LIST_UNSORTED) {
+		sort = false;
+		flags |= GNUTLS_X509_CRT_LIST_SORT;
+		res = gnutls_x509_crt_list_import2(&certs, &certs_size, &dpem, pem ? GNUTLS_X509_FMT_PEM : GNUTLS_X509_FMT_DER, flags);
+	}
+
+	if (res != GNUTLS_E_SUCCESS) {
+		certs = nullptr;
+		certs_size = 0;
+	}
+	return res;
+}
 
 bool tls_layer_impl::get_sorted_peer_certificates(gnutls_x509_crt_t *& certs, unsigned int & certs_size)
 {
@@ -1404,52 +1448,35 @@ bool tls_layer_impl::get_sorted_peer_certificates(gnutls_x509_crt_t *& certs, un
 	}
 
 	// Convert them all to PEM
-	gnutls_datum_t *pem_cert_list = new gnutls_datum_t[cert_list_size];
+	// Avoid gnutls_pem_base64_encode2, excessive allocations.
+	auto constexpr header = "-----BEGIN CERTIFICATE-----\r\n"sv;
+	auto constexpr footer = "\r\n-----END CERTIFICATE-----\r\n"sv;
+
+	size_t cap = cert_list_size * header.size() + footer.size();
 	for (unsigned i = 0; i < cert_list_size; ++i) {
-		if (gnutls_pem_base64_encode2("CERTIFICATE", cert_list + i, pem_cert_list + i) != 0) {
-			for (unsigned int j = 0; j < i; ++j) {
-				gnutls_free(pem_cert_list[j].data);
-			}
-			delete [] pem_cert_list;
-			logger_.log(logmsg::error, fztranslate("gnutls_pem_base64_encode2 failed"));
-			return false;
-		}
+		cap += ((cert_list[i].size + 2) / 3) * 4;
 	}
 
-	// Concatenate them
-	gnutls_datum_t concated_certs{};
-	for (unsigned i = 0; i < cert_list_size; ++i) {
-		concated_certs.size += pem_cert_list[i].size;
-	}
-	concated_certs.data = new unsigned char[concated_certs.size];
-	concated_certs.size = 0;
-	for (unsigned i = 0; i < cert_list_size; ++i) {
-		memcpy(concated_certs.data + concated_certs.size, pem_cert_list[i].data, pem_cert_list[i].size);
-		concated_certs.size += pem_cert_list[i].size;
-	}
+	std::string pem;
+	pem.reserve(cap);
 
 	for (unsigned i = 0; i < cert_list_size; ++i) {
-		gnutls_free(pem_cert_list[i].data);
+		pem += header;
+		base64_encode_append(pem, to_view(cert_list[i]), base64_type::standard, true);
+		pem += footer;
 	}
-	delete[] pem_cert_list;
 
 	// And now import the certificates
-	int res = gnutls_x509_crt_list_import2(&certs, &certs_size, &concated_certs, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED);
+	bool sort = true;
+	int res = load_certificates(pem, true, certs, certs_size, sort);
 	if (res == GNUTLS_E_CERTIFICATE_LIST_UNSORTED) {
-		logger_.log(logmsg::error, fztranslate("Server sent unsorted certificate chain in violation of the TLS specifications"));
-		res = gnutls_x509_crt_list_import2(&certs, &certs_size, &concated_certs, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_SORT);
-	}
-
-	delete[] concated_certs.data;
-
-	if (res != GNUTLS_E_SUCCESS) {
-		certs = nullptr;
-		certs_size = 0;
 		logger_.log(logmsg::error, fztranslate("Could not sort peer certificates"));
-		return false;
+	}
+	else if (!sort) {
+		logger_.log(logmsg::error, fztranslate("Server sent unsorted certificate chain in violation of the TLS specifications"));
 	}
 
-	return true;
+	return res == GNUTLS_E_SUCCESS;
 }
 
 void tls_layer_impl::log_verification_error(int status)
@@ -1661,8 +1688,8 @@ int tls_layer_impl::verify_certificate()
 		certificates.reserve(certs.certs_size);
 		for (unsigned int i = 0; i < certs.certs_size; ++i) {
 			x509_certificate cert;
-			if (extract_cert(certs.certs[i], cert, i + 1 == certs.certs_size)) {
-				certificates.push_back(cert);
+			if (extract_cert(certs.certs[i], cert, i + 1 == certs.certs_size, &logger_)) {
+				certificates.emplace_back(std::move(cert));
 			}
 			else {
 				failure(0, true);
@@ -1690,7 +1717,7 @@ int tls_layer_impl::verify_certificate()
 					}
 
 					x509_certificate out;
-					if (!extract_cert(issuer, out, true)) {
+					if (!extract_cert(issuer, out, true, &logger_)) {
 						failure(0, true);
 						return ECONNABORTED;
 					}
