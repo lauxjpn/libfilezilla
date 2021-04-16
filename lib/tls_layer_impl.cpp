@@ -265,6 +265,7 @@ std::string read_certificates_file(native_string const& certsfile, logger_interf
 		}
 		return {};
 	}
+	return c;
 }
 
 bool tls_layer_impl::set_certificate_file(native_string const& keyfile, native_string const& certsfile, native_string const& password, bool pem)
