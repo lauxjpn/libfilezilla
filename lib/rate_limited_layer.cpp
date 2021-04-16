@@ -142,7 +142,7 @@ public:
 
 	rate::type max_{};
 
-	std::atomic<bool> waiting_[2];
+	std::atomic<bool> waiting_[2]{};
 };
 
 compound_rate_limited_layer::compound_rate_limited_layer(event_handler* handler, socket_interface& next_layer)
