@@ -93,7 +93,7 @@ void hostname_lookup::impl::do_lookup(scoped_lock& l)
 
 	if (!thread_) {
 		if (!res) {
-			freeaddrinfo(addrssList);
+			freeaddrinfo(addressList);
 		}
 		return;
 	}
