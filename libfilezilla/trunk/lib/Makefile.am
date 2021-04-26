@@ -9,6 +9,7 @@ libfilezilla_la_SOURCES = \
 	event_loop.cpp \
 	file.cpp \
 	hash.cpp \
+	hostname_lookup.cpp \
 	invoker.cpp \
 	iputils.cpp \
 	local_filesys.cpp \
@@ -45,6 +46,7 @@ nobase_include_HEADERS = \
 	libfilezilla/file.hpp \
 	libfilezilla/format.hpp \
 	libfilezilla/hash.hpp \
+	libfilezilla/hostname_lookup.hpp \
 	libfilezilla/invoker.hpp \
 	libfilezilla/iputils.hpp \
 	libfilezilla/libfilezilla.hpp \

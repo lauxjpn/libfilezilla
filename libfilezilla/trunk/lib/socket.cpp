@@ -185,9 +185,8 @@ bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_s
 }
 #endif
 
-namespace {
 #ifdef FZ_WINDOWS
-static int convert_msw_error_code(int error)
+int convert_msw_error_code(int error)
 {
 	// Takes an MSW socket error and converts it into an equivalent POSIX error code.
 	switch (error)
@@ -236,7 +235,10 @@ static int convert_msw_error_code(int error)
 		return error;
 	}
 }
+#endif
 
+namespace {
+#ifdef FZ_WINDOWS
 int last_socket_error()
 {
 	return convert_msw_error_code(WSAGetLastError());
