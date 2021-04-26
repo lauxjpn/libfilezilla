@@ -92,6 +92,9 @@ void hostname_lookup::impl::do_lookup(scoped_lock& l)
 	l.lock();
 
 	if (!thread_) {
+		if (!res) {
+			freeaddrinfo(addrssList);
+		}
 		return;
 	}
 
@@ -109,12 +112,12 @@ void hostname_lookup::impl::do_lookup(scoped_lock& l)
 			}
 		}
 	}
-	
+
 	freeaddrinfo(addressList);
 
 	handler_->send_event<hostname_lookup_event>(parent_, res, std::move(addrs));
 	host_.clear();
-};
+}
 
 hostname_lookup::hostname_lookup(thread_pool& pool, event_handler& evt_handler)
 	: impl_(new impl(this, pool, &evt_handler))
