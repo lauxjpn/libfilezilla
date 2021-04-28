@@ -879,4 +879,98 @@ bool datetime::set_rfc822(std::wstring_view const& str)
 	return do_set_rfc822(*this, str);
 }
 
+namespace {
+template<typename String>
+bool do_set_rfc3339(fz::datetime& dt, String str)
+{
+	if (str.size() < 19) {
+		dt.clear();
+		return false;
+	}
+
+	auto separator_pos = str.find_first_of(fzS(typename String::value_type, "tT ")); // Including space, there is a lowercase 'may' in section 5.6 of the RFC
+	if (separator_pos == String::npos) {
+		dt.clear();
+		return false;
+	}
+
+	auto date_part = str.substr(0, separator_pos);
+	auto const date_tokens = fz::strtok_view(date_part, fzS(typename String::value_type, "-"));
+
+	auto offset_pos = str.find_first_of(fzS(typename String::value_type, "+-Zz"), separator_pos);
+
+	String time_part;
+	if (offset_pos == String::npos) {
+		// Allow the offset part to be missing
+		time_part = str.substr(separator_pos + 1);
+	}
+	else {
+		time_part = str.substr(separator_pos + 1, offset_pos - separator_pos - 1);
+	}
+
+	auto const time_tokens = fz::strtok_view(time_part, fzS(typename String::value_type, ":."));
+	if (date_tokens.size() == 3 && (time_tokens.size() == 3 || time_tokens.size() == 4)) {
+		int year = fz::to_integral<int>(date_tokens[0]);
+		if (year < 1000) {
+			if (year < 1000) {
+				year += 1900;
+			}
+		}
+		int month = fz::to_integral<int>(date_tokens[1]);
+		int day = fz::to_integral<int>(date_tokens[2]);
+
+		int hour = fz::to_integral<int>(time_tokens[0]);
+		int minute = fz::to_integral<int>(time_tokens[1]);
+		int second = fz::to_integral<int>(time_tokens[2]);
+
+		bool set{};
+		if (time_tokens.size() == 4) {
+			// Convert fraction, .82 is 820ms
+			int ms = fz::to_integral<int>(time_tokens[3].substr(0, 3));
+			if (time_tokens[3].size() == 1) {
+				ms *= 100;
+			}
+			else if (time_tokens[3].size() == 2) {
+				ms *= 10;
+			}
+			set = dt.set(fz::datetime::utc, year, month, day, hour, minute, second, ms);
+		}
+		else {
+			set = dt.set(fz::datetime::utc, year, month, day, hour, minute, second);
+		}
+
+		if (set && offset_pos != String::npos && str[offset_pos] != 'Z') {
+			auto const offset_tokens = fz::strtok_view(str.substr(offset_pos + 1), ':');
+			if (offset_tokens.size() != 2) {
+				dt.clear();
+				return false;
+			}
+
+			int minutes = fz::to_integral<int>(offset_tokens[0], 10009) * 60 + fz::to_integral<int>(offset_tokens[1], 10000);
+			if (minutes < 10000) {
+				if (str[offset_pos] == '+') {
+					minutes = -minutes;
+				}
+				dt += fz::duration::from_minutes(minutes);
+			}
+		}
+
+		return set;
+	}
+
+	dt.clear();
+	return false;
+}
+}
+
+bool datetime::set_rfc3339(std::string_view const& str)
+{
+	return do_set_rfc3339(*this, str);
+}
+
+bool datetime::set_rfc3339(std::wstring_view const& str)
+{
+	return do_set_rfc3339(*this, str);
+}
+
 }
