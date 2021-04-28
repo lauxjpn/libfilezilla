@@ -12,6 +12,7 @@ class TimeTest final : public CppUnit::TestFixture
 	CPPUNIT_TEST(testPreEpoch);
 	CPPUNIT_TEST(testAlternateMidnight);
 	CPPUNIT_TEST(testRFC822);
+	CPPUNIT_TEST(testRFC3339);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -24,6 +25,7 @@ public:
 	void testAlternateMidnight();
 
 	void testRFC822();
+	void testRFC3339();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(TimeTest);
@@ -123,4 +125,19 @@ void TimeTest::testRFC822()
 	CPPUNIT_ASSERT(t == t1);
 	CPPUNIT_ASSERT(t.set_rfc822(offset2));
 	CPPUNIT_ASSERT(t == t1);
+}
+
+void TimeTest::testRFC3339()
+{
+	fz::datetime const t1(fz::datetime::utc, 1985, 4, 12, 23, 20, 50, 520);
+	fz::datetime const t2(fz::datetime::utc, 1996, 12, 20, 0, 39, 57);
+
+	std::string const s1 = "1985-04-12T23:20:50.52Z";
+	std::string const s2 = "1996-12-19T16:39:57-08:00";
+
+	fz::datetime t;
+	CPPUNIT_ASSERT(t.set_rfc3339(s1));
+	CPPUNIT_ASSERT(t == t1);
+	CPPUNIT_ASSERT(t.set_rfc3339(s2));
+	CPPUNIT_ASSERT(t == t2);
 }

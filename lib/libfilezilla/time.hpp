@@ -248,6 +248,20 @@ public:
 	bool set_rfc822(std::string_view const& str);
 	bool set_rfc822(std::wstring_view const& str);
 
+	/**
+	 * Parses a date in the format specified in RFC 3339
+	 *
+	 * On errors, object gets clears
+	 *
+	 * \return whether setting the timestamp succeeded. On failure object gets cleared.
+	 *
+	 * \par Examples:
+	 * 1985-04-12T23:20:50.52Z
+	 * 1996-12-19T16:39:57-08:00
+	 */
+	bool set_rfc3339(std::string_view const& str);
+	bool set_rfc3339(std::wstring_view const& str);
+
 private:
 	int FZ_PRIVATE_SYMBOL compare_slow(datetime const& op) const;
 
