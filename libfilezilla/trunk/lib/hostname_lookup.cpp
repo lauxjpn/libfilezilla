@@ -106,7 +106,7 @@ void hostname_lookup::impl::do_lookup(scoped_lock& l)
 	}
 	else {
 		for (addrinfo* addr = addressList; addr && !res; addr = addr->ai_next) {
-			auto s = socket::address_to_string(addr->ai_addr, addr->ai_addrlen);
+			auto s = socket::address_to_string(addr->ai_addr, addr->ai_addrlen, false);
 			if (!s.empty()) {
 				addrs.emplace_back(std::move(s));
 			}
