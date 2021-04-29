@@ -27,7 +27,9 @@ public:
 	}
 
 	bool spawn() {
-		thread_ = pool_.spawn([this](){ entry(); });
+		if (!thread_) {
+			thread_ = pool_.spawn([this](){ entry(); });
+		}
 		return thread_.operator bool();
 	}
 
