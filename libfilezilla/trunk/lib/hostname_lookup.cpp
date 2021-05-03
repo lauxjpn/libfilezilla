@@ -147,6 +147,23 @@ bool hostname_lookup::lookup(native_string const& host, address_type family)
 	return true;
 }
 
+namespace {
+void filter_hostname_events(fz::hostname_lookup* lookup, fz::event_handler* handler)
+{
+	auto filter = [&](event_loop::Events::value_type const& ev) -> bool {
+		if (ev.first != handler) {
+			return false;
+		}
+		else if (ev.second->derived_type() != hostname_lookup_event::type()) {
+			return false;
+		}
+		return std::get<0>(static_cast<hostname_lookup_event const&>(*ev.second).v_) == lookup;
+	};
+
+	handler->event_loop_.filter_events(filter);
+}
+}
+
 hostname_lookup::~hostname_lookup()
 {
 	scoped_lock l(impl_->mtx_);
@@ -155,19 +172,25 @@ hostname_lookup::~hostname_lookup()
 		delete impl_;
 	}
 	else {
-		auto filter = [&](event_loop::Events::value_type const& ev) -> bool {
-			if (ev.first != impl_->handler_) {
-				return false;
-			}
-			else if (ev.second->derived_type() != hostname_lookup_event::type()) {
-				return false;
-			}
-			return std::get<0>(static_cast<hostname_lookup_event const&>(*ev.second).v_) == this;
-		};
+		filter_hostname_events(this, impl_->handler_);
 
-		impl_->handler_->event_loop_.filter_events(filter);
 		impl_->thread_.detach();
 		impl_->cond_.signal(l);
+	}
+}
+
+void hostname_lookup::reset()
+{
+	scoped_lock l(impl_->mtx_);
+	if (!impl_->thread_) {
+		return;
+	}
+
+	filter_hostname_events(this, impl_->handler_);
+	if (!impl_->host_.empty()) {
+		impl_->thread_.detach();
+		impl_->cond_.signal(l);
+		impl_ = new impl(this, impl_->pool_, impl_->handler_);
 	}
 }
 

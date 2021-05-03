@@ -16,6 +16,9 @@ public:
 	hostname_lookup(thread_pool& pool, event_handler& evt_handler);
 	~hostname_lookup();
 
+	hostname_lookup(hostname_lookup const&) = delete;
+	hostname_lookup& operator=(hostname_lookup const&) = delete;
+
 	/**
 	 * \brief Looks up the passed host
 	 *
@@ -25,6 +28,8 @@ public:
 	 * If the function returns true, wait for the \ref hostname_lookup_event before you can call it again.
 	 */
 	bool lookup(native_string const& host, address_type family = address_type::unknown);
+
+	void reset();
 
 private:
 	class impl;
