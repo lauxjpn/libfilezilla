@@ -89,7 +89,7 @@ public:
 	/**
 	 * Removes the bucket from its parent
 	 *
-	 * /// \warning You _MUST_ call this function in the destructor of the most derived class
+	 * \warning You _MUST_ call this function in the destructor of the most derived class
 	 */
 	virtual void remove_bucket();
 
