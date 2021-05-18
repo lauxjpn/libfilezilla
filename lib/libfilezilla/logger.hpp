@@ -84,12 +84,12 @@ public:
 	}
 
 	/// Sets which message types should be logged
-	void set_all(logmsg::type t) {
+	virtual void set_all(logmsg::type t) {
 		level_ = t;
 	}
 
 	/// Sets whether the given types should be logged
-	void set(logmsg::type t, bool flag) {
+	virtual void set(logmsg::type t, bool flag) {
 		if (flag) {
 			enable(t);
 		}
@@ -99,12 +99,12 @@ public:
 	}
 
 	/// Enables logging for the passed message types
-	void enable(logmsg::type t) {
+	virtual void enable(logmsg::type t) {
 		level_ |= t;
 	}
 
 	/// Disables logging for the passed message types
-	void disable(logmsg::type t) {
+	virtual void disable(logmsg::type t) {
 		level_ &= ~t;
 	}
 
