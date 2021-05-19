@@ -622,6 +622,9 @@ void tls_layer_impl::on_read()
 {
 	logger_.log(logmsg::debug_debug, L"tls_layer_impl::on_read()");
 
+#if DEBUG_SOCKETEVENTS
+	assert(!can_read_from_socket_);
+#endif
 	can_read_from_socket_ = true;
 
 	if (!session_) {
@@ -2146,6 +2149,13 @@ int tls_layer_impl::shutdown_read()
 	else if (res > 0) {
 		// Have to fail the connection as we have now discarded data.
 		return ECONNABORTED;
+	}
+
+	if (error == EAGAIN) {
+		can_read_from_socket_ = false;
+#if DEBUG_SOCKETEVENTS
+		debug_can_read_ = false;
+#endif
 	}
 
 	return error;
