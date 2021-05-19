@@ -89,7 +89,7 @@ public:
 	}
 
 	/// Sets whether the given types should be logged
-	virtual void set(logmsg::type t, bool flag) {
+	void set(logmsg::type t, bool flag) {
 		if (flag) {
 			enable(t);
 		}
