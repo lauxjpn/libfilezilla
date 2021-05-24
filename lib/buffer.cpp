@@ -153,8 +153,10 @@ void buffer::append(unsigned char const* data, size_t len)
 		}
 	}
 
-	memcpy(pos_ + size_, data, len);
-	size_ += len;
+	if (len) {
+		memcpy(pos_ + size_, data, len);
+		size_ += len;
+	}
 
 	delete [] old;
 }
