@@ -1,5 +1,5 @@
-#include "libfilezilla/encode.hpp"
-#include "libfilezilla/string.hpp"
+#include "../lib/libfilezilla/encode.hpp"
+#include "../lib/libfilezilla/string.hpp"
 
 #include "test_utils.hpp"
 /*

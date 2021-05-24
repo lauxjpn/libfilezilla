@@ -1,5 +1,5 @@
-#include "libfilezilla/time.hpp"
-#include "libfilezilla/util.hpp"
+#include "../lib/libfilezilla/time.hpp"
+#include "../lib/libfilezilla/util.hpp"
 
 #include <cppunit/extensions/HelperMacros.h>
 

@@ -1,5 +1,5 @@
-#include "libfilezilla/event_handler.hpp"
-#include "libfilezilla/event_loop.hpp"
+#include "../lib/libfilezilla/event_handler.hpp"
+#include "../lib/libfilezilla/event_loop.hpp"
 
 #include <cppunit/extensions/HelperMacros.h>
 

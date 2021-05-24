@@ -1,9 +1,9 @@
-#include "libfilezilla/hash.hpp"
-#include "libfilezilla/logger.hpp"
-#include "libfilezilla/socket.hpp"
-#include "libfilezilla/thread_pool.hpp"
-#include "libfilezilla/tls_layer.hpp"
-#include "libfilezilla/util.hpp"
+#include "../lib/libfilezilla/hash.hpp"
+#include "../lib/libfilezilla/logger.hpp"
+#include "../lib/libfilezilla/socket.hpp"
+#include "../lib/libfilezilla/thread_pool.hpp"
+#include "../lib/libfilezilla/tls_layer.hpp"
+#include "../lib/libfilezilla/util.hpp"
 
 #include "test_utils.hpp"
 

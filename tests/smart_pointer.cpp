@@ -1,5 +1,5 @@
-#include "libfilezilla/optional.hpp"
-#include "libfilezilla/shared.hpp"
+#include "../lib/libfilezilla/optional.hpp"
+#include "../lib/libfilezilla/shared.hpp"
 
 #include "test_utils.hpp"
 /*

@@ -1,6 +1,6 @@
-#include "libfilezilla/encryption.hpp"
-#include "libfilezilla/signature.hpp"
-#include "libfilezilla/util.hpp"
+#include "../lib/libfilezilla/encryption.hpp"
+#include "../lib/libfilezilla/signature.hpp"
+#include "../lib/libfilezilla/util.hpp"
 
 #include "test_utils.hpp"
 
