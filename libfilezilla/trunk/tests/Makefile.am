@@ -18,7 +18,6 @@ test_SOURCES =  test.cpp \
 		util.cpp
 
 test_CPPFLAGS = $(AM_CPPFLAGS)
-test_CPPFLAGS += -I$(top_srcdir)/lib
 test_CPPFLAGS += $(CPPUNIT_CFLAGS)
 
 test_LDFLAGS = $(AM_LDFLAGS)
@@ -36,7 +35,7 @@ noinst_HEADERS = test_utils.hpp
 ratelimit_test_SOURCES = \
 	ratelimit.cpp
 
-ratelimit_test_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/lib
+ratelimit_test_CPPFLAGS = $(AM_CPPFLAGS)
 ratelimit_test_LDFLAGS = $(AM_LDFLAGS) -no-install
 ratelimit_test_LDADD = ../lib/libfilezilla.la $(libdeps)
 ratelimit_test_DEPENDENCIES = ../lib/libfilezilla.la
