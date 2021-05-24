@@ -427,7 +427,7 @@ public:
 	virtual int shutdown_read() = 0;
 
 protected:
-	socket_interface() = default;
+	socket_interface() = delete;
 
 	explicit socket_interface(socket_event_source * root)
 		: socket_event_source(root)
