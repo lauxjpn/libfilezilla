@@ -8,6 +8,7 @@ class buffer_test final : public CppUnit::TestFixture
 {
 	CPPUNIT_TEST_SUITE(buffer_test);
 	CPPUNIT_TEST(test_simple);
+	CPPUNIT_TEST(test_append);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -15,6 +16,7 @@ public:
 	void tearDown() {}
 
 	void test_simple();
+	void test_append();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(buffer_test);
@@ -37,4 +39,26 @@ void buffer_test::test_simple()
 	buf2.add(6);
 
 	CPPUNIT_ASSERT(buf == buf2);
+}
+
+void buffer_test::test_append()
+{
+	fz::buffer buf;
+	buf.reserve(10);
+	size_t const cap = buf.capacity();
+	buf.add(cap);
+	for (size_t i = 0; i < cap; ++i) {
+		buf[i] = static_cast<unsigned char>(i);
+	}
+	buf.consume(5);
+	buf.append(buf.get(), 5);
+	CPPUNIT_ASSERT(buf.size() == buf.capacity());
+
+	for (size_t i = 0; i < cap - 5; ++i) {
+		CPPUNIT_ASSERT(buf[i] == static_cast<unsigned char>(i + 5));
+	}
+
+	for (size_t i = 0; i < 5; ++i) {
+		CPPUNIT_ASSERT(buf[cap - 5 + i] == static_cast<unsigned char>(i + 5));
+	}
 }

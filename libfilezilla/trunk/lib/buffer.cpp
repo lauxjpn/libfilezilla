@@ -133,7 +133,12 @@ void buffer::append(unsigned char const* data, size_t len)
 	// until after appending in case of append from own memory
 	unsigned char* old{};
 	if (capacity_ - (pos_ - data_) - size_ < len) {
-		if (capacity_ - size_ > len) {
+		if (capacity_ - size_ >= len) {
+			// Also offset data in case of self-assignment
+			if (data >= pos_ && data_ < (pos_ + size_)) {
+				data -= pos_ - data_;
+			}
+
 			memmove(data_, pos_, size_);
 			pos_ = data_;
 		}
