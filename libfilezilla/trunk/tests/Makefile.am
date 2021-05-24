@@ -9,6 +9,7 @@ test_SOURCES =  test.cpp \
 		dispatch.cpp \
 		eventloop.cpp \
 		format.cpp \
+		invoker.cpp \
 		iputils.cpp \
 		smart_pointer.cpp \
 		socket.cpp \
