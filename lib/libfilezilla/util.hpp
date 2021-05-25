@@ -82,7 +82,7 @@ inline bool equal_consttime(First const& lhs, Second const& rhs)
  * By first explicitly destructing the moved-to instance and then placement
  * move-constructing it from the moved-from instance, correct destruction order is guaranteed.
  */
-template<typename T>
+template<typename T, typename std::enable_if_t<std::is_final_v<T>>* = nullptr>
 T& move_assign_through_move_constructor(T* p, T&& op) noexcept
 {
 	p->~T();
