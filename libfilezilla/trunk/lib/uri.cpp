@@ -121,7 +121,7 @@ bool uri::parse_authority(std::string_view authority)
 	return true;
 }
 
-std::string uri::to_string() const
+std::string uri::to_string(bool with_query) const
 {
 	std::string ret;
 	if (!scheme_.empty()) {
@@ -133,20 +133,22 @@ std::string uri::to_string() const
 	}
 	ret += percent_encode(path_, true);
 
-	if (!query_.empty()) {
-		ret += "?" + query_;
-	}
-	if (!fragment_.empty()) {
-		ret += "#" + fragment_;
+	if (with_query) {
+		if (!query_.empty()) {
+			ret += "?" + query_;
+		}
+		if (!fragment_.empty()) {
+			ret += "#" + fragment_;
+		}
 	}
 
 	return ret;
 }
 
-std::string uri::get_request() const
+std::string uri::get_request(bool with_query) const
 {
 	std::string ret = percent_encode(path_, true);
-	if (!ret.empty() && !query_.empty()) {
+	if (!ret.empty() && !query_.empty() && with_query) {
 		ret += "?";
 		ret += query_;
 	}
