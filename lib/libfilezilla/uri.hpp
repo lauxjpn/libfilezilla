@@ -40,10 +40,10 @@ public:
 	 * Percent-encodes username, pass, host and path
 	 * Does not encode query and fragment.
 	 */
-	std::string to_string() const;
+	std::string to_string(bool with_query = true) const;
 
 	/// \brief Returns path and query, separated by question mark.
-	std::string get_request() const;
+	std::string get_request(bool with_query = true) const;
 
 	/// \brief Returns [user[:pass]@]host[:port]
 	std::string get_authority(bool with_userinfo) const;
