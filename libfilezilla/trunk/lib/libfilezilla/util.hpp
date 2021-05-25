@@ -68,6 +68,28 @@ inline bool equal_consttime(First const& lhs, Second const& rhs)
 	                       std::basic_string_view<uint8_t>(reinterpret_cast<uint8_t const*>(rhs.data()), rhs.size()));
 }
 
+/**
+ * /brief Helper to move-assign guaranteeing same member destruction order as the destructor.
+ *
+ * The implicity-defined move operator performs a member-wise move
+ * (class.copy.assign 15.8.2.12 in the C++17 standard), which can lead to members
+ * being destroyed in construction order, e.g. if moving a std::unique_ptr
+ *
+ * If the members depend on being destroyed in destruction order, by default the
+ * reverse default construction order, the implicitly-defined move operator cannot
+ * be used.
+ *
+ * By first explicitly destructing the moved-to instance and then placement
+ * move-constructing it from the moved-from instance, correct destruction order is guaranteed.
+ */
+template<typename T>
+T& move_assign_through_move_constructor(T* p, T&& op) noexcept
+{
+	p->~T();
+	new (p)T(std::move(op));
+	return *p;
+}
+
 }
 
 #endif
