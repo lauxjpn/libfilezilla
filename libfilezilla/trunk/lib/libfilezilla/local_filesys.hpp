@@ -5,7 +5,7 @@
 #include "time.hpp"
 
 #ifdef FZ_WINDOWS
-#include "private/windows.hpp"
+#include "glue/windows.hpp"
 #else
 #include <dirent.h>
 #endif

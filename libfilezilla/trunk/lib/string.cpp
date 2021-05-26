@@ -4,7 +4,7 @@
 #ifdef FZ_WINDOWS
 #include <string.h>
 
-#include "libfilezilla/private/windows.hpp"
+#include "libfilezilla/glue/windows.hpp"
 #else
 #include <iconv.h>
 #include <strings.h>

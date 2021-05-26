@@ -76,7 +76,7 @@ nobase_include_HEADERS = \
 	libfilezilla/visibility_helper.hpp \
 	libfilezilla/private/defs.hpp \
 	libfilezilla/private/visibility.hpp \
-	libfilezilla/private/windows.hpp \
+	libfilezilla/glue/windows.hpp \
 	libfilezilla/glue/wx.hpp \
 	libfilezilla/glue/wxinvoker.hpp
 

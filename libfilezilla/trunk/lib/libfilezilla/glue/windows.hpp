@@ -1,5 +1,7 @@
-#ifndef LIBFILEZILLA_PRIVATE_WINDOWS_HEADER
-#define LIBFILEZILLA_PRIVATE_WINDOWS_HEADER
+#ifndef LIBFILEZILLA_GLUE_WINDOWS_HEADER
+#define LIBFILEZILLA_GLUE_WINDOWS_HEADER
+
+#include "../private/defs.hpp"
 
 #ifndef FZ_WINDOWS
 #error "You included a file you should not include"

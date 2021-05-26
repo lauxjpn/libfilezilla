@@ -5,7 +5,7 @@
 
 #if defined(FZ_WINDOWS) && (defined(__MINGW32__) || defined(__MINGW64__))
 #define USE_CUSTOM_THREADS 1
-#include "libfilezilla/private/windows.hpp"
+#include "libfilezilla/glue/windows.hpp"
 #include <process.h>
 #endif
 

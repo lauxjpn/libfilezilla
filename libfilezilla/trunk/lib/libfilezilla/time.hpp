@@ -9,7 +9,7 @@
 #include <limits>
 
 #ifdef FZ_WINDOWS
-#include "private/windows.hpp"
+#include "glue/windows.hpp"
 #endif
 
 /** \file

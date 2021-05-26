@@ -1,6 +1,6 @@
 #include "libfilezilla/libfilezilla.hpp"
 #ifdef FZ_WINDOWS
-  #include "libfilezilla/private/windows.hpp"
+  #include "libfilezilla/glue/windows.hpp"
   #include <winsock2.h>
   #include <ws2tcpip.h>
   #include <mstcpip.h>
