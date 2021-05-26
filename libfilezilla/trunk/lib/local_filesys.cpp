@@ -989,7 +989,7 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 		flags |= MOVEFILE_COPY_ALLOWED;
 	}
 	DWORD res = MoveFileExW(source.c_str(), dest.c_str(), flags);
-	if (!res) {
+	if (res) {
 		return {result::ok};
 	}
 
