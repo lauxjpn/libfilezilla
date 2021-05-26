@@ -163,6 +163,22 @@ private:
  */
 result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, bool current_user_only = false, native_string * last_created = nullptr);
 
+/**
+ * \brief Rename/move the passed file or directory
+ *
+ * Can rename both files and directories within same filesystem. Can
+ * optionally rename files across filesystems
+ *
+ * If renaming a file, the target file is overwritten.
+ *
+ * Directories cannot be renamed/moved across differnet filesystems/mount points
+ *
+ * param allow_copy If true, files, but not directories, can be moved across
+ *                  file system boundaries. It first copies the file before
+ *                  deleting the old one.
+ */
+result FZ_PUBLIC_SYMBOL rename_file(native_string const& source, native_string const& dest, bool allow_copy = true);
+
 }
 
 #endif
