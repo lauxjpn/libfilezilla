@@ -1,4 +1,8 @@
 #include "libfilezilla/local_filesys.hpp"
+
+#include "libfilezilla/buffer.hpp"
+#include "libfilezilla/file.hpp"
+
 #ifndef FZ_WINDOWS
 #include <errno.h>
 #include <sys/fcntl.h>
@@ -385,7 +389,7 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only)
 		has_next_ = false;
 		switch (GetLastError()) {
 			case ERROR_ACCESS_DENIED:
-				return result{result::noperm };
+				return result{result::noperm};
 			default:
 				return result{result::other};
 		}
@@ -925,4 +929,140 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 
 	return result{result::ok};
 }
+
+#ifndef FZ_WINDOWS
+namespace {
+static result do_copy(native_string const& source, native_string const& dest, bool & dest_opened)
+{
+	fz::file in(source, fz::file::reading, fz::file::existing);
+
+	if (!in.opened()) {
+		// TODO error codes
+		return {result::other};
+	}
+
+	fz::file out(dest, fz::file::writing, fz::file::empty);
+	if (!out.opened()) {
+		// TODO error codes
+		return {result::other};
+	}
+
+	dest_opened = true;
+
+	fz::buffer buffer;
+	while (true) {
+		if (buffer.empty()) {
+			auto read = in.read(buffer.get(64 * 1024), 64 * 1024);
+			if (read < 0) {
+				return {result::other};
+			}
+			else if (read) {
+				buffer.add(read);
+			}
+			else {
+				if (buffer.empty()) {
+					return {result::ok};
+				}
+			}
+		}
+		auto written = out.write(buffer.get(), buffer.size());
+		if (written <= 0) {
+			return {result::other};
+		}
+
+		buffer.consume(written);
+	}
+	if (!out.fsync()) {
+		return {result::other};
+	}
+
+	return {result::ok};
+}
+}
+#endif
+
+result rename_file(native_string const& source, native_string const& dest, bool allow_copy)
+{
+#ifdef FZ_WINDOWS
+	DWORD flags = MOVEFILE_REPLACE_EXISTING;
+	if (allow_copy) {
+		flags |= MOVEFILE_COPY_ALLOWED;
+	}
+	DWORD res = MoveFileExW(source.c_str(), dest.c_str(), flags);
+	if (!res) {
+		return {result::ok};
+	}
+
+	DWORD err = GetLastError();
+	switch (err) {
+	switch (GetLastError()) {
+		case ERROR_FILE_NOT_FOUND:
+			return {result::nofile};
+		case ERROR_PATH_NOT_FOUND:
+		return {result::nodir};
+		case ERROR_ACCESS_DENIED:
+			return {result::noperm};
+		case ERROR_DISK_FULL:
+			return {result::nospace}
+		default:
+			return {result::other};
+	}
+#else
+	int res = rename(source.c_str(), dest.c_str());
+	if (!res) {
+		return {result::ok};
+	}
+
+	switch (errno) {
+	case EPERM:
+	case EACCES:
+		return {result::noperm};
+	case ENOSPC:
+		return {result::nospace};
+	case ENOTDIR:
+		return {result::nodir};
+	case ENOENT:
+	case EISDIR:
+		return {result::nofile};
+	case EXDEV:
+		break;
+	default:
+		return {result::other};
+	}
+
+	if (!allow_copy) {
+		return {result::other};
+	}
+
+	bool dest_opened{};
+	auto ret = do_copy(source, dest, dest_opened);
+	if (!ret) {
+		if (dest_opened) {
+			unlink(dest.c_str());
+		}
+		return ret;
+	}
+
+	res = unlink(source.c_str());
+	if (res != 0) {
+		switch (errno) {
+		case EPERM:
+		case EACCES:
+			return {result::noperm};
+		case ENOTDIR:
+			return {result::nodir};
+		case ENOENT:
+		case EISDIR:
+			return {result::nofile};
+		case EXDEV:
+			break;
+		default:
+			return {result::other};
+		}
+	}
+
+	return result{result::ok};
+#endif
+}
+
 }
