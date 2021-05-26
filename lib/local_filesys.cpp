@@ -995,7 +995,6 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 
 	DWORD err = GetLastError();
 	switch (err) {
-	switch (GetLastError()) {
 		case ERROR_FILE_NOT_FOUND:
 			return {result::nofile};
 		case ERROR_PATH_NOT_FOUND:
@@ -1003,7 +1002,7 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 		case ERROR_ACCESS_DENIED:
 			return {result::noperm};
 		case ERROR_DISK_FULL:
-			return {result::nospace}
+			return {result::nospace};
 		default:
 			return {result::other};
 	}
