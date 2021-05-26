@@ -10,7 +10,7 @@
 #include <nettle/memops.h>
 
 #if defined(FZ_WINDOWS) && !defined(_MSC_VER)
-#include "libfilezilla/private/windows.hpp"
+#include "libfilezilla/glue/windows.hpp"
 #include <wincrypt.h>
 #endif
 

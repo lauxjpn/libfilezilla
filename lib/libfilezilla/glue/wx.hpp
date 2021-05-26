@@ -8,7 +8,7 @@
 
 #include "../private/defs.hpp"
 #if FZ_WINDOWS
-#include "../private/windows.hpp"
+#include "windows.hpp"
 #endif
 
 #include <wx/string.h>
