@@ -2200,6 +2200,7 @@ bool tls_layer_impl::do_set_alpn()
 		data[i].size = alpn_[i].size();
 	}
 	int res = gnutls_alpn_set_protocols(session_, data, alpn_.size(), GNUTLS_ALPN_MANDATORY);
+	delete [] data;
 
 	if (res) {
 		log_error(res, L"gnutls_alpn_set_protocols");
