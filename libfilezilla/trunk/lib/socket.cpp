@@ -1513,7 +1513,7 @@ int listen_socket::listen(address_type family, int port)
 
 			if (addr->ai_family == AF_INET6) {
 				int enable = 1;
-				setsockopt(fd_, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<void const*>(&enable), sizeof(enable));
+				setsockopt(fd_, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<char const*>(&enable), sizeof(enable));
 			}
 
 			res = ::bind(fd_, addr->ai_addr, addr->ai_addrlen);
