@@ -40,24 +40,35 @@ struct field final {
 	explicit operator bool() const { return type != 0; }
 };
 
+template<typename Arg>
+bool is_negative([[maybe_unused]] Arg && v)
+{
+	if constexpr (std::is_signed_v<std::decay_t<Arg>>) {
+		return v < 0;
+	}
+	else {
+		return false;
+	}
+}
+
 // Converts integral type to desired string type...
 // ... basic case: simple unsigned value
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(field const& f, Arg && arg)
+typename std::enable_if_t<std::is_integral_v<std::decay_t<Arg>> && !std::is_enum_v<std::decay_t<Arg>>, String> integral_to_string(field const& f, Arg && arg)
 {
 	std::decay_t<Arg> v = arg;
 
 	char lead{};
 
-	format_assert(!Unsigned || !std::is_signed<std::decay_t<Arg>>::value || arg >= 0);
+	format_assert(!Unsigned || !std::is_signed_v<std::decay_t<Arg>> || arg >= 0);
 
-	if (std::is_signed<std::decay_t<Arg>>::value && !(arg >= 0)) {
+	if (is_negative(arg)) {
 		lead = '-';
 	}
-	else if (std::is_signed<std::decay_t<Arg>>::value && f.flags & always_sign) {
+	else if (f.flags & always_sign) {
 		lead = '+';
 	}
-	else if (f.flags & pad_blank && arg >= 0) {
+	else if (f.flags & pad_blank) {
 		lead = ' ';
 	}
 
@@ -114,14 +125,14 @@ typename std::enable_if_t<std::is_integral<std::decay_t<Arg>>::value && !std::is
 
 // ... for strongly typed enums
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(field const& f, Arg && arg)
+typename std::enable_if_t<std::is_enum_v<std::decay_t<Arg>>, String> integral_to_string(field const& f, Arg && arg)
 {
 	return integral_to_string<String, Unsigned>(f, static_cast<std::underlying_type_t<std::decay_t<Arg>>>(arg));
 }
 
 // ... assert otherwise
 template<typename String, bool Unsigned, typename Arg>
-typename std::enable_if_t<!std::is_integral<std::decay_t<Arg>>::value && !std::is_enum<std::decay_t<Arg>>::value, String> integral_to_string(field const&, Arg &&)
+typename std::enable_if_t<!std::is_integral_v<std::decay_t<Arg>> && !std::is_enum_v<std::decay_t<Arg>>, String> integral_to_string(field const&, Arg &&)
 {
 	format_assert(0);
 	return String();
