@@ -44,7 +44,7 @@ auto apply_(Obj&& obj, F&& f, Tuple&& t, std::index_sequence<I...> const&) -> de
  * // v is now 11
  * \endcode
  */
-template<typename Obj, typename F, typename Tuple, typename Seq = typename std::make_index_sequence<std::tuple_size<typename std::remove_reference<Tuple>::type>::value>>
+template<typename Obj, typename F, typename Tuple, typename Seq = typename std::make_index_sequence<std::tuple_size_v<typename std::remove_reference_t<Tuple>>>>
 auto apply(Obj&& obj, F && f, Tuple&& args) -> decltype(apply_(std::forward<Obj>(obj), std::forward<F>(f), std::forward<Tuple>(args), Seq()))
 {
 	return apply_(std::forward<Obj>(obj), std::forward<F>(f), std::forward<Tuple>(args), Seq());

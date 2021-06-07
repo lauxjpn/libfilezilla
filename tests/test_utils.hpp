@@ -7,13 +7,13 @@
 #include <cppunit/extensions/HelperMacros.h>
 
 template<typename T>
-std::string inline value_to_string(T const& t, typename std::enable_if_t<std::is_enum<T>::value>* = nullptr)
+std::string inline value_to_string(T const& t, typename std::enable_if_t<std::is_enum_v<T>>* = nullptr)
 {
 	return std::to_string(std::underlying_type_t<T>(t));
 }
 
 template<typename T>
-std::string inline value_to_string(T const& t, typename std::enable_if_t<std::is_arithmetic<T>::value>* = nullptr)
+std::string inline value_to_string(T const& t, typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr)
 {
 	return std::to_string(t);
 }

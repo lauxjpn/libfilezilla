@@ -170,7 +170,7 @@ inline std::wstring to_wstring(T const& in) {
 
 /// Converts from arithmetic type to std::wstring
 template<typename Arg>
-inline typename std::enable_if<std::is_arithmetic<std::decay_t<Arg>>::value, std::wstring>::type to_wstring(Arg && arg)
+inline typename std::enable_if<std::is_arithmetic_v<std::decay_t<Arg>>, std::wstring>::type to_wstring(Arg && arg)
 {
 	return std::to_wstring(std::forward<Arg>(arg));
 }
@@ -205,7 +205,7 @@ inline std::string to_string(T const& in) {
 
 /// Converts from arithmetic type to std::string
 template<typename Arg>
-inline typename std::enable_if<std::is_arithmetic<std::decay_t<Arg>>::value, std::string>::type to_string(Arg && arg)
+inline typename std::enable_if<std::is_arithmetic_v<std::decay_t<Arg>>, std::string>::type to_string(Arg && arg)
 {
 	return std::to_string(std::forward<Arg>(arg));
 }
@@ -236,13 +236,13 @@ std::string FZ_PUBLIC_SYMBOL to_utf8(std::wstring_view const& in);
 
 /// Calls either fz::to_string or fz::to_wstring depending on the passed template argument
 template<typename String, typename Arg>
-inline auto toString(Arg&& arg) -> typename std::enable_if<std::is_same<String, std::string>::value, decltype(to_string(std::forward<Arg>(arg)))>::type
+inline auto toString(Arg&& arg) -> typename std::enable_if<std::is_same_v<String, std::string>, decltype(to_string(std::forward<Arg>(arg)))>::type
 {
 	return to_string(std::forward<Arg>(arg));
 }
 
 template<typename String, typename Arg>
-inline auto toString(Arg&& arg) -> typename std::enable_if<std::is_same<String, std::wstring>::value, decltype(to_wstring(std::forward<Arg>(arg)))>::type
+inline auto toString(Arg&& arg) -> typename std::enable_if<std::is_same_v<String, std::wstring>, decltype(to_wstring(std::forward<Arg>(arg)))>::type
 {
 	return to_wstring(std::forward<Arg>(arg));
 }
