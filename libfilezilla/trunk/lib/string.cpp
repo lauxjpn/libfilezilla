@@ -207,7 +207,7 @@ std::wstring to_wstring(std::string_view const& in)
 // On some platforms, e.g. NetBSD, the second argument to iconv is const.
 // Depending which one is used, declare iconv_second_arg_type as either char* or char const*
 extern "C" typedef size_t (*iconv_prototype_with_const)(iconv_t, char const**, size_t *, char**, size_t *);
-typedef std::conditional<std::is_same<decltype(&iconv), iconv_prototype_with_const>::value, char const*, char*>::type iconv_second_arg_type;
+typedef std::conditional<std::is_same_v<decltype(&iconv), iconv_prototype_with_const>, char const*, char*>::type iconv_second_arg_type;
 
 namespace {
 // On some platforms, e.g. those derived from SunOS, iconv does not understand "WCHAR_T", so we
