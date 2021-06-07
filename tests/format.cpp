@@ -122,4 +122,7 @@ void format_test::test_sprintf()
 	CPPUNIT_ASSERT_EQUAL(std::string("x"), fz::sprintf("%s", std::wstring_view(L"x", 1)));
 	//CPPUNIT_ASSERT_EQUAL(std::wstring(L"x"), fz::sprintf(L"%s", std::string_view("x", 1)));
 	//CPPUNIT_ASSERT_EQUAL(std::wstring(L"x"), fz::sprintf(L"%s", std::wstring_view(L"x", 1)));
+
+	CPPUNIT_ASSERT_EQUAL(std::string("1"), fz::sprintf("%d", true));
+	CPPUNIT_ASSERT_EQUAL(std::string("0"), fz::sprintf("%d", false));
 }
