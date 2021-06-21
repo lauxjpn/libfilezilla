@@ -635,11 +635,11 @@ void tls_layer_impl::on_read()
 		continue_handshake();
 	}
 	else if (state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) {
-		if (tls_layer_.event_handler_) {
 #if DEBUG_SOCKETEVENTS
-			assert(!debug_can_read_);
-			debug_can_read_ = true;
+		assert(!debug_can_read_);
+		debug_can_read_ = true;
 #endif
+		if (tls_layer_.event_handler_) {
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 		}
 	}
@@ -711,11 +711,11 @@ int tls_layer_impl::continue_write()
 		write_blocked_by_send_buffer_ = false;
 
 		if (state_ == socket_state::connected) {
-			if (tls_layer_.event_handler_) {
 #if DEBUG_SOCKETEVENTS
-				assert(!debug_can_write_);
-				debug_can_write_ = true;
+			assert(!debug_can_write_);
+			debug_can_write_ = true;
 #endif
+			if (tls_layer_.event_handler_) {
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
 			}
 		}
@@ -897,19 +897,19 @@ int tls_layer_impl::continue_handshake()
 		else {
 			state_ = socket_state::connected;
 
+#if DEBUG_SOCKETEVENTS
+			if (can_read_from_socket_) {
+				assert(!debug_can_read_);
+				debug_can_read_ = true;
+			}
+			assert(!debug_can_write_);
+			debug_can_write_ = true;
+#endif
 			if (tls_layer_.event_handler_) {
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::connection, 0);
 				if (can_read_from_socket_) {
-#if DEBUG_SOCKETEVENTS
-					assert(!debug_can_read_);
-					debug_can_read_ = true;
-#endif
 					tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 				}
-#if DEBUG_SOCKETEVENTS
-				assert(!debug_can_write_);
-				debug_can_write_ = true;
-#endif
 			}
 		}
 
@@ -1142,19 +1142,19 @@ void tls_layer_impl::set_verification_result(bool trusted)
 	if (trusted) {
 		state_ = socket_state::connected;
 
+#if DEBUG_SOCKETEVENTS
+		if (can_read_from_socket_) {
+			assert(!debug_can_read_);
+			debug_can_read_ = true;
+		}
+		assert(!debug_can_write_);
+		debug_can_write_ = true;
+#endif
 		if (tls_layer_.event_handler_) {
 			tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::connection, 0);
 			if (can_read_from_socket_) {
-#if DEBUG_SOCKETEVENTS
-				assert(!debug_can_read_);
-				debug_can_read_ = true;
-#endif
 				tls_layer_.event_handler_->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
 			}
-#if DEBUG_SOCKETEVENTS
-			assert(!debug_can_write_);
-			debug_can_write_ = true;
-#endif
 		}
 
 		return;
@@ -2169,21 +2169,20 @@ void tls_layer_impl::set_event_handler(event_handler* pEvtHandler, fz::socket_ev
 	tls_layer_.event_handler_ = pEvtHandler;
 
 	if (pEvtHandler) {
-		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down) && !(pending & (socket_event_flag::write | socket_event_flag::connection)) && !(retrigger_block & socket_event_flag::write)) {
+		if (can_write_to_socket_ && (state_ == socket_state::connected || state_ == socket_state::shutting_down) && !(pending & (socket_event_flag::write | socket_event_flag::connection)) && !(retrigger_block & socket_event_flag::write)) {
 			pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::write, 0);
-		}
-		if ((state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) && !(pending & socket_event_flag::read) && !(retrigger_block & socket_event_flag::read)) {
-			pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
-		}
-
 #if DEBUG_SOCKETEVENTS
-		if (state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down) {
-			debug_can_read_ = true;
-		}
-		if (state_ == socket_state::connected || state_ == socket_state::shutting_down) {
-			debug_can_write_ = true;
-		}
+			assert(debug_can_write_);
 #endif
+		}
+		if (can_read_from_socket_ && (state_ == socket_state::connected || state_ == socket_state::shutting_down || state_ == socket_state::shut_down)) {
+			if (!(pending & socket_event_flag::read) && !(retrigger_block & socket_event_flag::read)) {
+				pEvtHandler->send_event<socket_event>(&tls_layer_, socket_event_flag::read, 0);
+#if DEBUG_SOCKETEVENTS
+				assert(debug_can_read_);
+#endif
+			}
+		}
 	}
 
 }
