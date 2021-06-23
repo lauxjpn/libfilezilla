@@ -141,7 +141,7 @@ public:
 		return 0;
 	}
 
-	static gnutls_datum_t retreive_session(void *ptr, gnutls_datum_t key)
+	static gnutls_datum_t retrieve_session(void *ptr, gnutls_datum_t key)
 	{
 		auto* tls = reinterpret_cast<tls_layer_impl*>(ptr);
 		if (!tls) {
@@ -178,7 +178,7 @@ extern "C" int db_store_func(void *ptr, gnutls_datum_t key, gnutls_datum_t data)
 
 extern "C" gnutls_datum_t db_retr_func(void *ptr, gnutls_datum_t key)
 {
-	return tls_layerCallbacks::retreive_session(ptr, key);
+	return tls_layerCallbacks::retrieve_session(ptr, key);
 }
 
 std::string to_string(gnutls_datum_t const& d)
