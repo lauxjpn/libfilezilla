@@ -143,6 +143,8 @@ private:
 	gnutls_session_t session_{};
 
 	std::vector<uint8_t> ticket_key_;
+	std::vector<uint8_t> session_db_key_;
+	std::vector<uint8_t> session_db_data_;
 
 	gnutls_certificate_credentials_t cert_credentials_{};
 

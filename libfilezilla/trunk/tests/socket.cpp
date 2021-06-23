@@ -14,6 +14,7 @@ class socket_test final : public CppUnit::TestFixture
 	CPPUNIT_TEST_SUITE(socket_test);
 	CPPUNIT_TEST(test_duplex);
 	CPPUNIT_TEST(test_duplex_tls);
+	CPPUNIT_TEST(test_tls_resumption);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -22,6 +23,8 @@ public:
 
 	void test_duplex();
 	void test_duplex_tls();
+
+	void test_tls_resumption();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(socket_test);
@@ -41,8 +44,9 @@ auto const& get_key_and_cert()
 
 struct base : public fz::event_handler
 {
-	base(fz::event_loop & loop)
+	base(fz::event_loop & loop, std::vector<uint8_t> const& tls_session_parameters)
 		: fz::event_handler(loop)
+		, tls_session_parameters_(tls_session_parameters)
 	{
 	}
 
@@ -65,6 +69,9 @@ struct base : public fz::event_handler
 	void check_done()
 	{
 		if (shut_ && eof_) {
+			if (tls_) {
+				tls_session_parameters_ = tls_->get_session_parameters();
+			}
 			fz::scoped_lock l(m_);
 			cond_.signal(l);
 			si_ = nullptr;
@@ -77,8 +84,17 @@ struct base : public fz::event_handler
 	{
 		if (error || source != si_) {
 			fail(__LINE__, error);
+			return;
 		}
-		else if (type == fz::socket_event_flag::read) {
+
+		if (type == fz::socket_event_flag::connection && tls_) {
+			if (tls_->resumed_session() == tls_session_parameters_.empty()) {
+				fail(__LINE__, error);
+				return;
+			}
+		}
+
+		if (type == fz::socket_event_flag::read) {
 			for (int i = 0; i < fz::random_number(1, 20); ++i) {
 				unsigned char buf[1024];
 
@@ -102,6 +118,10 @@ struct base : public fz::event_handler
 					return;
 				}
 				else {
+					if (handshake_only_) {
+						fail(__LINE__, error);
+						return;
+					}
 					received_ += r;
 					received_hash_.update(buf, r);
 				}
@@ -110,7 +130,7 @@ struct base : public fz::event_handler
 			send_event(new fz::socket_event(si_, fz::socket_event_flag::read, 0));
 		}
 		else if (type == fz::socket_event_flag::write || type == fz::socket_event_flag::connection) {
-			if (sent_ > 1024 * 1024 * 10 && (fz::monotonic_clock::now() - start_) > fz::duration::from_seconds(5)) {
+			if (handshake_only_ || (sent_ > 1024 * 1024 * 10 && (fz::monotonic_clock::now() - start_) > fz::duration::from_seconds(5))) {
 				int res = si_->shutdown();
 				if (res && res != EAGAIN) {
 					fail(__LINE__, res);
@@ -156,6 +176,8 @@ struct base : public fz::event_handler
 	std::string failed_;
 	bool eof_{};
 	bool shut_{};
+	bool handshake_only_{};
+	std::vector<uint8_t> tls_session_parameters_;
 	int64_t sent_{};
 	int64_t received_{};
 	fz::monotonic_clock start_{fz::monotonic_clock::now()};
@@ -165,14 +187,14 @@ struct base : public fz::event_handler
 
 struct client final : public base
 {
-	client(fz::event_loop & loop, bool tls = false)
-		: base(loop)
+	client(fz::event_loop & loop, bool tls = false, std::vector<uint8_t> const& tls_session_parameters = {})
+		: base(loop, tls_session_parameters)
 	{
 		s_ = std::make_unique<fz::socket>(pool_, this);
 		if (tls) {
 			tls_ = std::make_unique<fz::tls_layer>(loop, this, *s_, nullptr, logger_);
 			auto const& cert = get_key_and_cert().second;
-			if (!tls_->client_handshake(std::vector<uint8_t>(cert.cbegin(), cert.cend()))) {
+			if (!tls_->client_handshake(std::vector<uint8_t>(cert.cbegin(), cert.cend()), tls_session_parameters_)) {
 				fail(__LINE__);
 			}
 			si_ = tls_.get();
@@ -198,8 +220,8 @@ struct client final : public base
 
 struct server final : public base
 {
-	server(fz::event_loop & loop, bool tls = false)
-		: base(loop)
+	server(fz::event_loop & loop, bool tls = false, std::vector<uint8_t> const& tls_session_parameters = {})
+		: base(loop, tls_session_parameters)
 		, use_tls_(tls)
 	{
 		l_.bind("127.0.0.1");
@@ -236,7 +258,7 @@ struct server final : public base
 					tls_ = std::make_unique<fz::tls_layer>(event_loop_, this, *s_, nullptr, logger_);
 					tls_->set_certificate(get_key_and_cert().first, get_key_and_cert().second, fz::native_string());
 					si_ = tls_.get();
-					if (!tls_->server_handshake()) {
+					if (!tls_->server_handshake(tls_session_parameters_)) {
 						fail(__LINE__);
 					}
 				}
@@ -331,3 +353,47 @@ void socket_test::test_duplex_tls()
 	CPPUNIT_ASSERT(s.sent_hash_.digest() == c.received_hash_.digest());
 }
 
+void socket_test::test_tls_resumption()
+{
+	std::vector<uint8_t> server_parameters;
+	std::vector<uint8_t> client_parameters;
+
+	for (size_t i = 0; i < 2; ++i) {
+		CPPUNIT_ASSERT(!get_key_and_cert().first.empty());
+		CPPUNIT_ASSERT(!get_key_and_cert().second.empty());
+
+		fz::event_loop server_loop;
+		server s(server_loop, true, server_parameters);
+		s.handshake_only_ = true;
+
+		int error;
+		int port  = s.l_.local_port(error);
+		CPPUNIT_ASSERT(port != -1);
+
+		fz::native_string ip = fz::to_native(s.l_.local_ip());
+		CPPUNIT_ASSERT(!ip.empty());
+
+		fz::event_loop client_loop;
+		client c(client_loop, true, client_parameters);
+		c.handshake_only_ = true;
+
+		CPPUNIT_ASSERT(!c.si_->connect(ip, port));
+
+		{
+			fz::scoped_lock l(c.m_);
+			CPPUNIT_ASSERT(c.cond_.wait(l, fz::duration::from_minutes(10)));
+		}
+		ASSERT_EQUAL(std::string(), c.failed_);
+
+		{
+			fz::scoped_lock l(s.m_);
+			CPPUNIT_ASSERT(s.cond_.wait(l, fz::duration::from_minutes(1)));
+		}
+		ASSERT_EQUAL(std::string(), s.failed_);
+
+		client_parameters = c.tls_session_parameters_;
+		server_parameters = s.tls_session_parameters_;
+		CPPUNIT_ASSERT(client_parameters.size() > 10);
+		CPPUNIT_ASSERT(server_parameters.size() > 10);
+	}
+}
