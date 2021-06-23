@@ -123,12 +123,62 @@ public:
 
 		return 0;
 	}
+
+	static int store_session(void* ptr, gnutls_datum_t const& key, gnutls_datum_t const& data)
+	{
+		auto* tls = reinterpret_cast<tls_layer_impl*>(ptr);
+		if (!tls) {
+			return 0;
+		}
+		if (!key.size || !data.size) {
+			return 0;
+		}
+		tls->session_db_key_.resize(key.size);
+		memcpy(tls->session_db_key_.data(), key.data, key.size);
+		tls->session_db_data_.resize(data.size);
+		memcpy(tls->session_db_data_.data(), data.data, data.size);
+
+		return 0;
+	}
+
+	static gnutls_datum_t retreive_session(void *ptr, gnutls_datum_t key)
+	{
+		auto* tls = reinterpret_cast<tls_layer_impl*>(ptr);
+		if (!tls) {
+			return {};
+		}
+		if (!key.size) {
+			return {};
+		}
+
+		if (key.size == tls->session_db_key_.size() && !memcmp(tls->session_db_key_.data(), key.data, key.size)) {
+			gnutls_datum_t d{};
+			d.data = reinterpret_cast<unsigned char*>(gnutls_malloc(tls->session_db_data_.size()));
+			if (d.data) {
+				d.size = tls->session_db_data_.size();
+				memcpy(d.data, tls->session_db_data_.data(), d.size);
+			}
+			return d;
+		}
+
+		return gnutls_datum_t{};
+	}
 };
 
 namespace {
 extern "C" int handshake_hook_func(gnutls_session_t session, unsigned int htype, unsigned int post, unsigned int incoming, gnutls_datum_t const*)
 {
 	return tls_layerCallbacks::handshake_hook_func(session, htype, post, incoming);
+}
+
+extern "C" int db_store_func(void *ptr, gnutls_datum_t key, gnutls_datum_t data)
+{
+	return tls_layerCallbacks::store_session(ptr, key, data);
+}
+
+extern "C" gnutls_datum_t db_retr_func(void *ptr, gnutls_datum_t key)
+{
+	return tls_layerCallbacks::retreive_session(ptr, key);
 }
 
 std::string to_string(gnutls_datum_t const& d)
@@ -374,6 +424,12 @@ bool tls_layer_impl::init_session(bool client)
 	// the actual session lifetime, independend whether the
 	// session is cached or not.
 	gnutls_db_set_cache_expiration(session_, 100000000);
+
+	if (!client) {
+		gnutls_db_set_ptr(session_, this);
+		gnutls_db_set_store_function(session_, &db_store_func);
+		gnutls_db_set_retrieve_function(session_, &db_retr_func);
+	}
 
 	res = gnutls_priority_set_direct(session_, ciphers, nullptr);
 	if (res) {
@@ -807,6 +863,25 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 	return continue_handshake() == EAGAIN;
 }
 
+namespace {
+bool extract_with_size(uint8_t const* &p, uint8_t const* const end, std::vector<uint8_t>& target)
+{
+	size_t s;
+	if (static_cast<size_t>(end - p) < sizeof(s)) {
+		return false;
+	}
+	memcpy(&s, p, sizeof(s));
+	p += sizeof(s);
+	if (static_cast<size_t>(end - p) < s) {
+		return false;
+	}
+	target.resize(s);
+	memcpy(target.data(), p, s);
+	p += s;
+	return true;
+}
+}
+
 bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble)
 {
 	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::server_handshake()");
@@ -818,7 +893,19 @@ bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_res
 
 	server_ = true;
 
-	ticket_key_ = session_to_resume;
+	if (!session_to_resume.empty()) {
+		auto const* p = session_to_resume.data();
+		auto const* const end = p + session_to_resume.size();
+		if (!extract_with_size(p, end, ticket_key_)) {
+			return false;
+		}
+		if (!extract_with_size(p, end, session_db_key_)) {
+			return false;
+		}
+		if (!extract_with_size(p, end, session_db_data_)) {
+			return false;
+		}
+	}
 
 	if (!init() || !init_session(false)) {
 		return false;
@@ -1967,6 +2054,19 @@ int tls_layer_impl::connect(native_string const& host, unsigned int port, addres
 	return tls_layer_.next_layer_.connect(host, port, family);
 }
 
+namespace {
+void append_with_size(uint8_t * &p, std::vector<uint8_t> const& d)
+{
+	size_t s = d.size();
+	memcpy(p, &s, sizeof(s));
+	p += sizeof(s);
+	if (s) {
+		memcpy(p, d.data(), s);
+		p += s;
+	}
+}
+}
+
 std::vector<uint8_t> tls_layer_impl::get_session_parameters() const
 {
 	std::vector<uint8_t> ret;
@@ -1982,7 +2082,11 @@ std::vector<uint8_t> tls_layer_impl::get_session_parameters() const
 		}
 	}
 	else {
-		ret = ticket_key_;
+		ret.resize(sizeof(size_t) * 3 + ticket_key_.size() + session_db_key_.size() + session_db_data_.size());
+		auto* p = ret.data();
+		append_with_size(p, ticket_key_);
+		append_with_size(p, session_db_key_);
+		append_with_size(p, session_db_data_);
 	}
 
 	return ret;
