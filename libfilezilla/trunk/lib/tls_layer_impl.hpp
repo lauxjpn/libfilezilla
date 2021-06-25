@@ -12,6 +12,9 @@ typedef std::make_signed_t<size_t> ssize_t;
 #include "libfilezilla/logger.hpp"
 #include "libfilezilla/socket.hpp"
 #include "libfilezilla/tls_info.hpp"
+#include "libfilezilla/tls_layer.hpp"
+
+#include <optional>
 
 namespace fz {
 class tls_system_trust_store;
@@ -91,6 +94,9 @@ public:
 
 	static int load_certificates(std::string_view const& in, bool pem, gnutls_x509_crt_t *& certs, unsigned int & certs_size, bool & sort);
 	static bool extract_cert(gnutls_x509_crt_t const& cert, x509_certificate& out, bool last, logger_interface * logger);
+
+	void set_min_tls_ver(tls_ver ver);
+	void set_max_tls_ver(tls_ver ver);
 
 private:
 	bool init();
@@ -180,6 +186,9 @@ private:
 	tls_system_trust_store* system_trust_store_{};
 
 	event_handler * verification_handler_{};
+
+	tls_ver min_tls_ver_{tls_ver::v1_0};
+	std::optional<tls_ver> max_tls_ver_;
 
 	int socket_error_{}; // Set in the push and pull functions if reading/writing fails fatally
 	bool socket_eof_{};
