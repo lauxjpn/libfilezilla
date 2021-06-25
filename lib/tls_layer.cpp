@@ -185,4 +185,18 @@ bool tls_layer::is_server() const
 	return impl_ ? impl_->server_ : false;
 }
 
+void tls_layer::set_min_tls_ver(tls_ver ver)
+{
+	if (impl_) {
+		impl_->set_min_tls_ver(ver);
+	}
+}
+
+void tls_layer::set_max_tls_ver(tls_ver ver)
+{
+	if (impl_) {
+		impl_->set_max_tls_ver(ver);
+	}
+}
+
 }

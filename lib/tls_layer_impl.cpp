@@ -418,6 +418,7 @@ bool tls_layer_impl::init_session(bool client)
 
 	// For use in callbacks
 	gnutls_session_set_ptr(session_, this);
+	gnutls_db_set_ptr(session_, this);
 
 	// Even though the name gnutls_db_set_cache_expiration
 	// implies expiration of some cache, it also governs
@@ -431,7 +432,40 @@ bool tls_layer_impl::init_session(bool client)
 		gnutls_db_set_retrieve_function(session_, &db_retr_func);
 	}
 
-	res = gnutls_priority_set_direct(session_, ciphers, nullptr);
+	std::string prio = ciphers;
+	switch (min_tls_ver_) {
+	case tls_ver::v1_3:
+		prio += ":-VERS-TLS1.2";
+		// Fallthrough
+	case tls_ver::v1_2:
+		prio += ":-VERS-TLS1.1";
+		// Fallthrough
+	case tls_ver::v1_1:
+		prio += ":-VERS-TLS1.0";
+		break;
+	default:
+		break;
+	}
+
+	if (max_tls_ver_) {
+		switch (*max_tls_ver_) {
+		case tls_ver::v1_0:
+			prio += ":-VERS-TLS1.1";
+			// Fallthrough
+		case tls_ver::v1_1:
+			prio += ":-VERS-TLS1.2";
+			// Fallthrough
+		case tls_ver::v1_2:
+#if GNUTLS_VERSION_NUMBER >= 0x030603
+			prio += ":-VERS-TLS1.3";
+#endif
+			break;
+		default:
+			break;
+		}
+	}
+
+	res = gnutls_priority_set_direct(session_, prio.c_str(), nullptr);
 	if (res) {
 		log_error(res, L"gnutls_priority_set_direct");
 		deinit();
@@ -2320,6 +2354,16 @@ std::string tls_layer_impl::get_alpn() const
 		}
 	}
 	return {};
+}
+
+void tls_layer_impl::set_min_tls_ver(tls_ver ver)
+{
+	min_tls_ver_ = ver;
+}
+
+void tls_layer_impl::set_max_tls_ver(tls_ver ver)
+{
+	max_tls_ver_ = ver;
 }
 
 }

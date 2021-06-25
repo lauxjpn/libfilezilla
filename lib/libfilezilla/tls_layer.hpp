@@ -23,6 +23,14 @@ struct certificate_verification_event_type;
  */
 typedef simple_event<certificate_verification_event_type, tls_layer*, tls_session_info> certificate_verification_event;
 
+enum class tls_ver
+{
+	v1_0,
+	v1_1,
+	v1_2,
+	v1_3
+};
+
 /**
  * \brief A Transport Layer Security (TLS) layer
  *
@@ -152,9 +160,21 @@ public:
 	 *
 	 * If the peer makes use of ALPN, the handshake fails if no matching protocol is found.
 	 * If the peer does not use/support ALPN, the handshake continues and no protocol is negotiated.
+	 * 
+	 * Needs to be called prior to handshaking.
 	 */
 	bool set_alpn(std::string_view const& alpn);
 	bool set_alpn(std::vector<std::string> const& alpns);
+
+	/** \brief Sets minimum allowed TLS version
+	 */
+	void set_min_tls_ver(tls_ver ver);
+
+	/** \brief Sets maximum allowed TLS versions
+	 *
+	 * Don't set a max version in production, it is for testing things.
+	 */
+	void set_max_tls_ver(tls_ver ver);
 
 	/// After a successful handshake, returns which protocol, if any, has been negotiated
 	std::string get_alpn() const;
