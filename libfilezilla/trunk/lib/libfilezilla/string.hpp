@@ -333,7 +333,10 @@ inline auto FZ_PUBLIC_SYMBOL strtok_view(std::wstring_view const& tokens, wchar_
 template<typename T, typename String>
 T to_integral_impl(String const& s, T const errorval = T())
 {
-	if constexpr (std::is_enum_v<T>) {
+	if constexpr (std::is_same_v<T, bool>) {
+		return static_cast<T>(to_integral_impl<unsigned int>(s, static_cast<unsigned int>(errorval))) != 0;
+	}
+	else if constexpr (std::is_enum_v<T>) {
 		return static_cast<T>(to_integral_impl<std::underlying_type_t<T>>(s, static_cast<std::underlying_type_t<T>>(errorval)));
 	}
 	else {
