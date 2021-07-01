@@ -235,7 +235,9 @@ std::string base32_encode_impl(DataContainer const& in, base32_type type, bool p
 					ret += base32_chars[((c3 & 0xfu) << 1) | ((c4 >> 7) & 0x1u)];
 					ret += base32_chars[(c4 >> 2) & 0x1fu];
 					ret += base32_chars[((c4 & 0x3u) << 3)];
-					ret += '=';
+					if (pad) {
+						ret += '=';
+					}
 				}
 				else {
 					ret += base32_chars[((c3 & 0xfu) << 1)];
