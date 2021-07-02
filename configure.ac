@@ -1,4 +1,4 @@
-﻿AC_INIT([libfilezilla],[0.28.0],[tim.kosse@filezilla-project.org],[],[https://lib.filezilla-project.org/])
+﻿AC_INIT([libfilezilla],[0.29.0],[tim.kosse@filezilla-project.org],[],[https://lib.filezilla-project.org/])
 
 # Update the version information only immediately before a public release of your software
 # If the library source code has changed at all since the last update, then increment revision (‘c:r:a’ becomes ‘c:r+1:a’).
@@ -6,7 +6,7 @@
 # If any interfaces have been added since the last public release, then increment age.
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 # CURRENT:REVISION:AGE
-LIBRARY_VERSION=13:0:0
+LIBRARY_VERSION=14:0:0
 
 
 AC_CONFIG_HEADERS([config/config.hpp])
@@ -256,7 +256,10 @@ if test "$windows" = 1 > /dev/null 2>&1; then
 
   # Set the Large Address Aware flag on 32bit Windows
   if ! echo $host_cpu | grep "x86_64" > /dev/null 2>&1; then
-	AX_CHECK_LINK_FLAG([-Wl,--large-address-aware], [AX_APPEND_FLAG([-Wl,--large-address-aware], LDFLAGS)])
+    AX_CHECK_LINK_FLAG([-Wl,--large-address-aware], [AX_APPEND_FLAG([-Wl,--large-address-aware], LDFLAGS)])
+  else
+     # Base address >4GB to some compatibility mode the kernel uses for old programs
+    AX_CHECK_LINK_FLAG([-Wl,--image-base -Wl,0x120000000], [AX_APPEND_FLAG([-Wl,--image-base -Wl,0x120000000], LDFLAGS)])
   fi
 fi
 
