@@ -229,6 +229,7 @@
     <ClCompile Include="uri.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="version.cpp" />
+    <ClCompile Include="windows\security_descriptor_builder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libfilezilla\apply.hpp" />
@@ -274,6 +275,7 @@
     <ClInclude Include="libfilezilla\version.hpp" />
     <ClInclude Include="tls_layer_impl.hpp" />
     <ClInclude Include="tls_system_trust_store_impl.hpp" />
+    <ClInclude Include="windows\security_descriptor_builder.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

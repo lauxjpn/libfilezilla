@@ -3,7 +3,9 @@
 #include "libfilezilla/buffer.hpp"
 #include "libfilezilla/file.hpp"
 
-#ifndef FZ_WINDOWS
+#ifdef FZ_WINDOWS
+#include "windows/security_descriptor_builder.hpp"
+#else
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
@@ -742,71 +744,34 @@ result do_mkdir(native_string const& path, bool current_user_only)
 {
 	result ret{result::other};
 #ifdef FZ_WINDOWS
+
+	SECURITY_ATTRIBUTES attr{};
+	attr.bInheritHandle = false;
+	attr.nLength = sizeof(SECURITY_ATTRIBUTES);
+
+	security_descriptor_builder sdb;
 	if (current_user_only) {
-		HANDLE token{ INVALID_HANDLE_VALUE };
-		BOOL res = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token);
-		if (!res) {
-			return result{result::other};
+		sdb.add(security_descriptor_builder::self);
+		auto sd = sdb.get_sd();
+		if (!sd) {
+			return {result::other};
 		}
-
-		DWORD needed{};
-		GetTokenInformation(token, TokenUser, NULL, 0, &needed);
-		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-			return result{result::other};
-		}
-
-		PTOKEN_USER tu = static_cast<PTOKEN_USER>(malloc(needed));
-		if (tu) {
-			if (GetTokenInformation(token, TokenUser, tu, needed, &needed)) {
-				needed = sizeof(ACL) + ((sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD)) + GetLengthSid(tu->User.Sid));
-				PACL acl = static_cast<PACL>(malloc(needed));
-				if (acl) {
-					if (InitializeAcl(acl, needed, ACL_REVISION)) {
-						if (AddAccessAllowedAceEx(acl, ACL_REVISION, CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE, GENERIC_ALL | STANDARD_RIGHTS_ALL | SPECIFIC_RIGHTS_ALL, tu->User.Sid)) {
-							SECURITY_DESCRIPTOR sd;
-							InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-							//SetSecurityDescriptorControl(&sd, 
-							SetSecurityDescriptorDacl(&sd, TRUE, acl, FALSE);
-							SetSecurityDescriptorOwner(&sd, tu->User.Sid, FALSE);
-							SetSecurityDescriptorGroup(&sd, NULL, FALSE);
-							SetSecurityDescriptorSacl(&sd, FALSE, NULL, FALSE);
-
-							SECURITY_ATTRIBUTES attr;
-							attr.bInheritHandle = false;
-							attr.nLength = sizeof(SECURITY_ATTRIBUTES);
-							attr.lpSecurityDescriptor = &sd;
-
-							res = CreateDirectory(path.c_str(), &attr);
-							if (res) {
-								ret = result{result::ok};
-							}
-							else if (GetLastError() == ERROR_ACCESS_DENIED) {
-								ret = result{result::noperm};
-							}
-						}
-					}
-					free(acl);
-				}
-			}
-			free(tu);
-		}
-		CloseHandle(token);
+		attr.lpSecurityDescriptor = sd;
 	}
-	else {
-		if (CreateDirectory(path.c_str(), nullptr)) {
-			ret = result{result::ok};
-		}
-		else if (GetLastError() == ERROR_ACCESS_DENIED) {
-			ret = result{result::noperm};
-		}
+	
+	if (CreateDirectory(path.c_str(), &attr)) {
+		ret = {result::ok};
+	}
+	else if (GetLastError() == ERROR_ACCESS_DENIED) {
+		ret = {result::noperm};
 	}
 #else
 	int res = ::mkdir(path.c_str(), current_user_only ? 0700 : 0777);
 	if (!res) {
-		ret = result{result::ok};
+		ret = {result::ok};
 	}
 	else if (errno == EACCES || errno == EPERM) {
-		ret = result{result::noperm};
+		ret = {result::noperm};
 	}
 #endif
 
