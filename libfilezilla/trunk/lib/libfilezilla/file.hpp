@@ -50,7 +50,19 @@ public:
 		 *
 		 * Does not modify permissions if the file already exists.
 		 */
-		current_user_only = 0x4
+		current_user_only = 0x4,
+
+		/**
+		 * If set and a file is created, its permissions will be so
+		 * that it is only accessible by the current user and
+		 * the system administrators.
+		 * 
+		 * On *nix, system adminstrators are just root. On MSW
+		 * it is the built-in Administrators group.
+		 *
+		 * Does not modify permissions if the file already exists.
+		 */
+		 current_user_and_admins_only = 0x8
 	};
 
 	file() = default;

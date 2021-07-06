@@ -80,13 +80,19 @@ nobase_include_HEADERS = \
 	libfilezilla/glue/wx.hpp \
 	libfilezilla/glue/wxinvoker.hpp
 
-nobase_nodist_include_HEADERS = libfilezilla/version.hpp
-
+nobase_nodist_include_HEADERS = \
+	libfilezilla/version.hpp
 
 libfilezilla_la_LDFLAGS = $(AM_LDFLAGS)
 libfilezilla_la_LIBADD = $(libdeps)
 
 if FZ_WINDOWS
+
+libfilezilla_la_SOURCES += \
+	windows/security_descriptor_builder.cpp
+
+nobase_include_HEADERS += \
+	windows/security_descriptor_builder.hpp
 
 windows/libfilezilla_rc.o: $(srcdir)/windows/libfilezilla.rc $(srcdir)/windows/manifest.xml windows/version.rc
 	@if [ -f $@~ ]; then rm $@~; fi
@@ -97,7 +103,6 @@ EXTRA_libfilezilla_la_DEPENDENCIES = windows/libfilezilla_rc.o
 libfilezilla_la_LDFLAGS += -Wl,windows/libfilezilla_rc.o
 
 else
-
 
 libfilezilla_la_SOURCES += \
 	glue/unix.cpp
