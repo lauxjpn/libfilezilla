@@ -143,6 +143,19 @@ private:
 	bool dirs_only_{};
 };
 
+enum class mkdir_permissions
+{
+	/// Normal permissions, on MSW this means inheriting the parent's permissions,
+	/// on *nix the current umask is applied.
+	normal, 
+
+	/// Only current user
+	cur_user, 
+
+	/// Only current user and administrators
+	cur_user_and_admins 
+};
+
 /**
  * \brief Creates directory if it doesn't yet exist.
  *
@@ -155,13 +168,12 @@ private:
  * \param absolute_path The directory to create
  * \param recurse If true, creation is recursive. If false, only the last segment gets
  *                created, all other components already need to exist.
- * \param current_user_only If true when creating the last component, its permissions will be
- *                          restricted to the current user. Otherwise default permissions are used.
- *                          Default permissions on  MSW this means inheriting the parent's permissions,
- *                          on *nix the current umask is applied.
- * \param last_created      If non-null, receives the longest sub-path that was created
+ * \param permissions When creating the last component, these permissions are applied.
+ *                    Does not change existing permissions or permissings of newly
+ *                    created parent directories during recursive mkdir.
+ * \param last_created If non-null, receives the longest sub-path that was created
  */
-result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, bool current_user_only = false, native_string * last_created = nullptr);
+result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions permissions = mkdir_permissions::normal, native_string * last_created = nullptr);
 
 /**
  * \brief Rename/move the passed file or directory
