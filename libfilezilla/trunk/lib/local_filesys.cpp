@@ -740,7 +740,7 @@ native_string local_filesys::get_link_target(native_string const& path)
 }
 
 namespace {
-result do_mkdir(native_string const& path, bool current_user_only)
+result do_mkdir(native_string const& path, mkdir_permissions permissions)
 {
 	result ret{result::other};
 #ifdef FZ_WINDOWS
@@ -750,8 +750,11 @@ result do_mkdir(native_string const& path, bool current_user_only)
 	attr.nLength = sizeof(SECURITY_ATTRIBUTES);
 
 	security_descriptor_builder sdb;
-	if (current_user_only) {
+	if (permissions != mkdir_permissions::normal) {
 		sdb.add(security_descriptor_builder::self);
+		if (permissions == mkdir_permissions::cur_user_and_admins) {
+			sdb.add(security_descriptor_builder::administrators);
+		}
 		auto sd = sdb.get_sd();
 		if (!sd) {
 			return {result::other};
@@ -766,7 +769,7 @@ result do_mkdir(native_string const& path, bool current_user_only)
 		ret = {result::noperm};
 	}
 #else
-	int res = ::mkdir(path.c_str(), current_user_only ? 0700 : 0777);
+	int res = ::mkdir(path.c_str(), (permissions == mkdir_permissions::normal) ? 0777 : 0700);
 	if (!res) {
 		ret = {result::ok};
 	}
@@ -779,7 +782,7 @@ result do_mkdir(native_string const& path, bool current_user_only)
 }
 }
 
-result mkdir(native_string const& absolute_path, bool recurse, bool current_user_only, native_string* last_created)
+result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions permissions, native_string* last_created)
 {
 	// Step 0: Require an absolute path
 #ifdef FZ_WINDOWS
@@ -873,7 +876,7 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 		for (size_t i = 0; i < segments.size(); ++i) {
 			work += local_filesys::path_separator;
 			work += segments[segments.size() - i - 1];
-			result r = do_mkdir(work, current_user_only && (i + 1) == segments.size());
+			result r = do_mkdir(work, ((i + 1) == segments.size()) ? permissions : mkdir_permissions::normal);
 			if (!r) {
 				return r;
 			}
@@ -883,7 +886,7 @@ result mkdir(native_string const& absolute_path, bool recurse, bool current_user
 		}
 	}
 	else {
-		result r = do_mkdir(absolute_path, current_user_only);
+		result r = do_mkdir(absolute_path, permissions);
 		if (!r) {
 			return r;
 		}
