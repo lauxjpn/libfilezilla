@@ -1,3 +1,8 @@
+0.30.0 (2021-07-09)
+
++ Added a flag to fz::file::creation_flags to create files with permissions only granting the current user and administrators access
++ Added mkdir_permissions flags to fz::mkdir
+
 0.29.0 (2021-07-02)
 
 + Added fz::tls_layer::set_min_tls_ver and for testing purposes set_max_tls_ver
