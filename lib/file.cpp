@@ -24,6 +24,22 @@ file::~file()
 }
 
 #ifdef FZ_WINDOWS
+file::file(file && op) noexcept
+	: hFile_{op.hFile_}
+{
+	op.hFile_ = INVALID_HANDLE_VALUE;
+}
+
+file& file::operator=(file && op) noexcept
+{
+	if (this != &op) {
+		close();
+		hFile_ = op.hFile_;
+		op.hFile_ = INVALID_HANDLE_VALUE;
+	}
+	return *this;
+}
+
 bool file::open(native_string const& f, mode m, creation_flags d)
 {
 	close();
@@ -159,6 +175,22 @@ bool file::fsync()
 }
 
 #else
+
+file::file(file && op) noexcept
+	: fd_{op.fd_}
+{
+	op.fd_ = -1;
+}
+
+file& file::operator=(file && op) noexcept
+{
+	if (this != &op) {
+		close();
+		fd_ = op.fd_;
+		op.fd_ = -1;
+	}
+	return *this;
+}
 
 bool file::open(native_string const& f, mode m, creation_flags d)
 {

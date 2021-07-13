@@ -73,7 +73,11 @@ public:
 	file(file const&) = delete;
 	file& operator=(file const&) = delete;
 
+	file(file && op) noexcept;
+	file& operator=(file && op) noexcept;
+
 	bool opened() const;
+	explicit operator bool() const { return opened(); }
 
 	bool open(native_string const& f, mode m, creation_flags d = existing);
 
