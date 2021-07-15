@@ -1,6 +1,18 @@
 #include "libfilezilla/json.hpp"
 
 namespace fz {
+json const& json::operator[](std::string const& name) const
+{
+	static json const nil;
+	auto it = children_.find(name);
+	if (it == children_.end()) {
+		return nil;
+	}
+	else {
+		return it->second;
+	}
+}
+
 bool json::set(std::string const& name, json const& j)
 {
 	if (!j || name.empty()) {
@@ -80,10 +92,78 @@ bool json::set(std::string const& name, uint64_t v)
 	return true;
 }
 
+bool json::append(json const& j)
+{
+	if (!j) {
+		return false;
+	}
+
+	if (type_ == none) {
+		type_ = array;
+	}
+	else if (type_ != array) {
+		return false;
+	}
+
+	entries_.push_back(j);
+
+	return true;
+}
+
+bool json::append(std::string_view const& s)
+{
+	if (type_ == none) {
+		type_ = array;
+	}
+	else if (type_ != array) {
+		return false;
+	}
+
+	json j;
+	j.type_ = string;
+	j.value_ = s;
+	entries_.emplace_back(std::move(j));
+
+	return true;
+}
+
+bool json::append(int64_t v)
+{
+	if (type_ == none) {
+		type_ = array;
+	}
+	else if (type_ != array) {
+		return false;
+	}
+
+	json j;
+	j.type_ = number;
+	j.value_ = fz::to_string(v);
+	entries_.emplace_back(std::move(j));
+	return true;
+}
+
+bool json::append(uint64_t v)
+{
+	if (type_ == none) {
+		type_ = array;
+	}
+	else if (type_ != array) {
+		return false;
+	}
+
+	json j;
+	j.type_ = number;
+	j.value_ = fz::to_string(v);
+	entries_.emplace_back(std::move(j));
+	return true;
+}
+
 void json::clear()
 {
 	type_ = none;
 	children_.clear();
+	entries_.clear();
 	value_.clear();
 }
 
@@ -142,6 +222,20 @@ std::string json::to_string() const
 		}
 		ret += '}';
 		break;
+	case array:
+		ret += '[';
+		for (auto const& c : entries_) {
+			if (!c) {
+				continue;
+			}
+			if (ret.size() > 1) {
+				ret += ',';
+			}
+			ret += c.to_string();
+		}
+		ret += ']';
+		break;
+	case boolean:
 	case number:
 		ret = value_;
 		break;
@@ -324,4 +418,11 @@ json json::parse(char const*& p, char const* end, int depth)
 	return {};
 }
 
+json& json::operator=(std::string_view const& v)
+{
+	clear();
+	type_ = string;
+	value_ = v;
+	return *this;
+}
 }
