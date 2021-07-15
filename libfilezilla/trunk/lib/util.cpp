@@ -107,21 +107,27 @@ std::vector<uint8_t> random_bytes(size_t size)
 {
 	std::vector<uint8_t> ret;
 	ret.resize(size);
+	random_bytes(size, ret.data());
+	return ret;
+}
+
+void random_bytes(size_t size, uint8_t* destination)
+{
+	if (!size) {
+		return;
+	}
 
 	working_random_device rd;
 
-	ret.resize(size);
 	size_t i;
-	for (i = 0; i + sizeof(std::random_device::result_type) <= ret.size(); i += sizeof(std::random_device::result_type)) {
-		*reinterpret_cast<std::random_device::result_type*>(&ret[i]) = rd();
+	for (i = 0; i + sizeof(std::random_device::result_type) <= size; i += sizeof(std::random_device::result_type)) {
+		*reinterpret_cast<std::random_device::result_type*>(destination + i) = rd();
 	}
 
 	if (i < size) {
 		auto v = rd();
-		memcpy(&ret[i], &v, size - i);
+		memcpy(destination + i, &v, size - i);
 	}
-
-	return ret;
 }
 
 
