@@ -6,13 +6,13 @@
 #include <map>
 
 namespace fz {
-class nonowning_buffer;
 class FZ_PUBLIC_SYMBOL json
 {
 public:
 	enum node_type {
 		none,
 		object,
+		array, // todo
 		string,
 		number
 	};
