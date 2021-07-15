@@ -14,7 +14,8 @@ public:
 		object,
 		array, // todo
 		string,
-		number
+		number,
+		boolean
 	};
 
 	json() noexcept = default;
@@ -40,15 +41,41 @@ public:
 		children_.erase(name);
 	}
 	json& operator[](std::string const& name) {
+		if (type_ == none) {
+			type_ = object;
+		}
 		return children_[name];
 	}
 
-	uint64_t uint_value() const;
+	json const& operator[](std::string const& name) const;
 
 	bool set(std::string const& name, json const& j);
 	bool set(std::string const& name, std::string_view const& s);
+	template<typename Bool, std::enable_if_t<std::is_same_v<bool, typename std::decay_t<Bool>>, int> = 0>
+	bool set(std::string const& name, Bool b)
+	{
+		json j(boolean);
+		j.value_ = b ? "true" : "false";
+		return set(name, j);
+	}
+
 	bool set(std::string const& name, int64_t v);
 	bool set(std::string const& name, uint64_t v);
+
+	bool append(json const& j);
+	bool append(std::string_view const& s);
+	bool append(int64_t v);
+	bool append(uint64_t v);
+
+	template<typename Bool, std::enable_if_t<std::is_same_v<bool, typename std::decay_t<Bool>>, int> = 0>
+	json& operator=(Bool b) {
+		clear();
+		type_ = boolean;
+		value_ = b ? "true" : "false";
+		return *this;
+	}
+
+	json& operator=(std::string_view const& v);
 
 	explicit operator bool() const { return type_ != none; }
 
@@ -64,6 +91,7 @@ private:
 
 	// todo variant
 	std::map<std::string, json, std::less<>> children_;
+	std::vector<json> entries_;
 	std::string value_;
 };
 }
