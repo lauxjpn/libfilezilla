@@ -1,5 +1,4 @@
 #include "libfilezilla/json.hpp"
-#include "libfilezilla/nonowning_buffer.hpp"
 
 namespace fz {
 bool json::set(std::string const& name, json const& j)
@@ -198,6 +197,7 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 	while (p < end) {
 		char c = *(p++);
 		if (in_escape) {
+			in_escape = false;
 			switch (c) {
 			    case 'r':
 				    ret += '\r';
@@ -229,6 +229,7 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 			return {ret, true};
 		}
 		else if (c == '\\') {
+			in_escape = true;
 		}
 		else {
 			ret += c;
