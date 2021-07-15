@@ -36,6 +36,8 @@ int64_t FZ_PUBLIC_SYMBOL random_number(int64_t min, int64_t max);
  */
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL random_bytes(size_t size);
 
+void FZ_PUBLIC_SYMBOL random_bytes(size_t size, uint8_t* destination);
+
 /** \brief Returns index of the least-significant set bit
  *
  * For example \c bitscan(12) returns 2
