@@ -12,6 +12,7 @@ libfilezilla_la_SOURCES = \
 	hostname_lookup.cpp \
 	invoker.cpp \
 	iputils.cpp \
+	json.cpp \
 	local_filesys.cpp \
 	mutex.cpp \
 	nonowning_buffer.cpp \
@@ -49,6 +50,7 @@ nobase_include_HEADERS = \
 	libfilezilla/hostname_lookup.hpp \
 	libfilezilla/invoker.hpp \
 	libfilezilla/iputils.hpp \
+	libfilezilla/json.hpp \
 	libfilezilla/libfilezilla.hpp \
 	libfilezilla/local_filesys.hpp \
 	libfilezilla/logger.hpp \
