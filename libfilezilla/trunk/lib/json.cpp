@@ -4,11 +4,54 @@
 #include "string.h"
 
 namespace fz {
+void json::set_type(json_type t)
+{
+	type_ = t;
+	switch (t) {
+		case json_type::object:
+			value_ = value_type{std::in_place_type<std::map<std::string, json, std::less<>>>};
+			break;
+		case json_type::array:
+			value_ = value_type{std::in_place_type<std::vector<json>>};
+			break;
+		case json_type::boolean:
+			value_ = false;
+			break;
+		default:
+			value_ = value_type{std::in_place_type<std::string>};
+			break;
+	}
+}
+
+bool json::check_type(json_type t)
+{
+	if (type_ == t) {
+		return true;
+	}
+	if (type_ == json_type::none) {
+		set_type(t);
+		return true;
+	}
+
+	return false;
+}
+
+void json::erase(std::string const& name)
+{
+	if (type_ == json_type::object) {
+		std::get<1>(value_).erase(name);
+	}
+}
+
 json const& json::operator[](std::string const& name) const
 {
 	static json const nil;
-	auto it = children_.find(name);
-	if (it == children_.end()) {
+	if (type_ != json_type::object) {
+		return nil;
+	}
+	auto const& m = std::get<1>(value_);
+	auto it = m.find(name);
+	if (it == m.end()) {
 		return nil;
 	}
 	else {
@@ -16,158 +59,52 @@ json const& json::operator[](std::string const& name) const
 	}
 }
 
-bool json::set(std::string const& name, json const& j)
+json& json::operator[](std::string const& name)
 {
-	if (!j || name.empty()) {
-		return false;
+	if (!check_type(json_type::object)) {
+		static thread_local json nil;
+		return nil;
 	}
-
-	if (type_ == json_type::none) {
-		type_ = json_type::object;
-	}
-	else if (type_ != json_type::object) {
-		return false;
-	}
-
-	children_[name] = j;
-
-	return true;
+	return std::get<1>(value_)[name];
 }
 
-bool json::set(std::string const& name, std::string_view const& s)
+json const& json::operator[](size_t i) const
 {
-	if (name.empty()) {
-		return false;
+	static json const nil;
+	if (type_ != json_type::array || i >= std::get<2>(value_).size()) {
+		return nil;
 	}
-
-	if (type_ == json_type::none) {
-		type_ = json_type::object;
-	}
-	else if (type_ != json_type::object) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::string;
-	j.value_ = s;
-	children_[name] = std::move(j);
-
-	return true;
+	return std::get<2>(value_)[i];
 }
 
-bool json::set(std::string const& name, int64_t v)
+json& json::operator[](size_t i)
 {
-	if (name.empty()) {
-		return false;
+	if (!check_type(json_type::array)) {
+		static thread_local json nil;
+		return nil;
 	}
-
-	if (type_ == json_type::none) {
-		type_ = json_type::object;
+	auto & v = std::get<2>(value_);
+	if (v.size() <= i) {
+		v.resize(i + 1);
 	}
-	else if (type_ != json_type::object) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::number;
-	j.value_ = fz::to_string(v);
-	children_[name] = std::move(j);
-	return true;
+	return v[i];
 }
 
-bool json::set(std::string const& name, uint64_t v)
+size_t json::children() const
 {
-	if (name.empty()) {
-		return false;
+	if (type_ == json_type::array) {
+		return std::get<2>(value_).size();
 	}
-
-	if (type_ == json_type::none) {
-		type_ = json_type::object;
+	else if (type_ == json_type::object) {
+		return std::get<1>(value_).size();
 	}
-	else if (type_ != json_type::object) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::number;
-	j.value_ = fz::to_string(v);
-	children_[name] = std::move(j);
-	return true;
-}
-
-bool json::append(json const& j)
-{
-	if (!j) {
-		return false;
-	}
-
-	if (type_ == json_type::none) {
-		type_ = json_type::array;
-	}
-	else if (type_ != json_type::array) {
-		return false;
-	}
-
-	entries_.push_back(j);
-
-	return true;
-}
-
-bool json::append(std::string_view const& s)
-{
-	if (type_ == json_type::none) {
-		type_ = json_type::array;
-	}
-	else if (type_ != json_type::array) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::string;
-	j.value_ = s;
-	entries_.emplace_back(std::move(j));
-
-	return true;
-}
-
-bool json::append(int64_t v)
-{
-	if (type_ == json_type::none) {
-		type_ = json_type::array;
-	}
-	else if (type_ != json_type::array) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::number;
-	j.value_ = fz::to_string(v);
-	entries_.emplace_back(std::move(j));
-	return true;
-}
-
-bool json::append(uint64_t v)
-{
-	if (type_ == json_type::none) {
-		type_ = json_type::array;
-	}
-	else if (type_ != json_type::array) {
-		return false;
-	}
-
-	json j;
-	j.type_ = json_type::number;
-	j.value_ = fz::to_string(v);
-	entries_.emplace_back(std::move(j));
-	return true;
+	return 0;
 }
 
 void json::clear()
 {
 	type_ = json_type::none;
-	children_.clear();
-	entries_.clear();
-	value_.clear();
+	value_ = value_type();
 }
 
 namespace {
@@ -204,50 +141,90 @@ void json_append_escaped(std::string& out, std::string const& s)
 }
 }
 
-std::string json::to_string() const
+std::string json::to_string(bool pretty, size_t depth) const
 {
 	std::string ret;
-
 	switch (type_) {
-	case json_type::object:
+	case json_type::object: {
 		ret += '{';
-		for (auto const& c : children_) {
+		if (pretty) {
+			ret += '\n';
+			ret.append(depth * 2 + 2, ' ');
+		}
+		bool first{true};
+		for (auto const& c : std::get<1>(value_)) {
 			if (!c.second) {
 				continue;
 			}
-			if (ret.size() > 1) {
+			if (first) {
+				first = false;
+			}
+			else {
 				ret += ',';
+				if (pretty) {
+					ret += '\n';
+					ret.append(depth * 2 + 2, ' ');
+				}
 			}
 			ret += '"';
 			json_append_escaped(ret, c.first);
 			ret += "\":";
-			ret += c.second.to_string();
+			if (pretty) {
+				ret += ' ';
+			}
+			ret += c.second.to_string(pretty, depth + 1);
+		}
+		if (pretty) {
+			ret += '\n';
+			ret.append(depth * 2, ' ');
 		}
 		ret += '}';
 		break;
-	case json_type::array:
+	}
+	case json_type::array: {
 		ret += '[';
-		for (auto const& c : entries_) {
-			if (!c) {
-				continue;
+		if (pretty) {
+			ret += '\n';
+			ret.append(depth * 2 + 2, ' ');
+		}
+		bool first = true;
+		for (auto const& c : std::get<2>(value_)) {
+			if (first) {
+				first = false;
 			}
-			if (ret.size() > 1) {
+			else {
 				ret += ',';
+				if (pretty) {
+					ret += '\n';
+					ret.append(depth * 2 + 2, ' ');
+				}
 			}
-			ret += c.to_string();
+			if (!c) {
+				ret += "null";
+			}
+			else {
+				ret += c.to_string(pretty, depth + 1);
+			}
+		}
+		if (pretty) {
+			ret += '\n';
+			ret.append(depth * 2, ' ');
 		}
 		ret += ']';
 		break;
+	}
 	case json_type::boolean:
+		ret = std::get<3>(value_) ? "true" : "false";
+		break;
 	case json_type::number:
-		ret = value_;
+		ret = std::get<0>(value_);
 		break;
 	case json_type::null:
 		ret = "null";
 		break;
 	case json_type::string:
 		ret = '"';
-		json_append_escaped(ret, value_);
+		json_append_escaped(ret, std::get<0>(value_));
 		ret += '"';
 		break;
 	case json_type::none:
@@ -257,14 +234,14 @@ std::string json::to_string() const
 	return ret;
 }
 
-json json::parse(std::string_view const& s)
+json json::parse(std::string_view const& s, size_t max_depth)
 {
 	if (s.empty()) {
 		return {};
 	}
 
 	auto p = s.data();
-	return parse(p, s.data() + s.size(), 0);
+	return parse(p, s.data() + s.size(), max_depth);
 }
 
 namespace {
@@ -287,7 +264,7 @@ void skip_ws(char const*& p, char const* end)
 
 // Leading " has already been consumed
 // Consumes trailing "
-std::pair<std::string, bool> json_unescape_string(char const*& p, char const* end)
+std::pair<std::string, bool> json_unescape_string(char const*& p, char const* end, bool allow_null)
 {
 	std::string ret;
 
@@ -336,6 +313,10 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 						u <<= 4;
 						u += static_cast<wchar_t>(h);
 					}
+					if (!u && !allow_null) {
+						p = end;
+						return {};
+					}
 					auto u8 = fz::to_utf8(std::wstring_view(&u, 1));
 					if (u8.empty()) {
 						p = end;
@@ -355,6 +336,10 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 		else if (c == '\\') {
 			in_escape = true;
 		}
+		else if (!c && !allow_null) {
+			p = end;
+			return {};
+		}
 		else {
 			ret += c;
 		}
@@ -364,9 +349,9 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 }
 }
 
-json json::parse(char const*& p, char const* end, int depth)
+json json::parse(char const*& p, char const* end, size_t max_depth)
 {
-	if (depth > 100) {
+	if (!max_depth) {
 		return {};
 	}
 
@@ -378,19 +363,19 @@ json json::parse(char const*& p, char const* end, int depth)
 
 	json j;
 	if (*p == '"') {
-		j.type_ = json_type::string;
 		++p;
-		auto [s, r] = json_unescape_string(p, end);
+		auto [s, r] = json_unescape_string(p, end, false);
 		if (!r) {
 			return {};
 		}
 
+		j.type_ = json_type::string;
 		j.value_ = std::move(s);
-		return j;
 	}
 	else if (*p == '{') {
-		j.type_ = json_type::object;
 		++p;
+
+		std::map<std::string, json, std::less<>> children;
 		while (true) {
 			skip_ws(p, end);
 			if (p == end) {
@@ -398,10 +383,10 @@ json json::parse(char const*& p, char const* end, int depth)
 			}
 			if (*p == '}') {
 				++p;
-				return j;
+				break;
 			}
 
-			if (!j.children_.empty()) {
+			if (!children.empty()) {
 				if (*(p++) != ',') {
 					return {};
 				}
@@ -411,14 +396,14 @@ json json::parse(char const*& p, char const* end, int depth)
 				}
 				if (*p == '}') {
 					++p;
-					return j;
+					break;
 				}
 			}
 
 			if (*(p++) != '"') {
 				return {};
 			}
-			auto [name, r] = json_unescape_string(p, end);
+			auto [name, r] = json_unescape_string(p, end, false);
 			if (!r || name.empty()) {
 				return {};
 			}
@@ -428,16 +413,21 @@ json json::parse(char const*& p, char const* end, int depth)
 				return {};
 			}
 
-			auto v = parse(p, end, ++depth);
+			auto v = parse(p, end, max_depth - 1);
 			if (!v) {
 				return {};
 			}
-			j.children_[name] = std::move(v);
+			if (!children.emplace(std::move(name), std::move(v)).second) {
+				return {};
+			}
 		}
+		j.type_ = json_type::object;
+		j.value_ = std::move(children);
 	}
 	else if (*p == '[') {
-		j.type_ = json_type::array;
 		++p;
+
+		std::vector<json> children;
 		while (true) {
 			skip_ws(p, end);
 			if (p == end) {
@@ -445,10 +435,10 @@ json json::parse(char const*& p, char const* end, int depth)
 			}
 			if (*p == ']') {
 				++p;
-				return j;
+				break;
 			}
 
-			if (!j.entries_.empty()) {
+			if (!children.empty()) {
 				if (*(p++) != ',') {
 					return {};
 				}
@@ -458,52 +448,50 @@ json json::parse(char const*& p, char const* end, int depth)
 				}
 				if (*p == ']') {
 					++p;
-					return j;
+					break;
 				}
 			}
 
-			auto v = parse(p, end, ++depth);
+			auto v = parse(p, end, max_depth - 1);
 			if (!v) {
 				return {};
 			}
-			j.entries_.emplace_back(std::move(v));
+			children.emplace_back(std::move(v));
 		}
+		j.type_ = json_type::array;
+		j.value_ = std::move(children);
 	}
 	else if ((*p >= '0' && *p <= '9') || *p == '-') {
-		j.type_ = json_type::number;
-		j.value_ = *(p++);
-
+		std::string v;
+		v = *(p++);
 		while (p < end && *p >= '0' && *p <= '9') {
-			j.value_ += *(p++);
+			v += *(p++);
 		}
-		return j;
+		j.type_ = json_type::object;
+		j.value_ = std::move(v);
 	}
 	else if (end - p >= 4 && !memcmp(p, "null", 4)) {
 		j.type_ = json_type::null;
 		p += 4;
-		return j;
 	}
 	else if (end - p >= 4 && !memcmp(p, "true", 4)) {
 		j.type_ = json_type::boolean;
-		j.value_ = "true";
+		j.value_ = true;
 		p += 4;
-		return j;
 	}
 	else if (end - p >= 5 && !memcmp(p, "false", 5)) {
 		j.type_ = json_type::boolean;
-		j.value_ = "false";
+		j.value_ = false;
 		p += 5;
-		return j;
 	}
 
-	return {};
+	return j;
 }
 
 json& json::operator=(std::string_view const& v)
 {
-	clear();
 	type_ = json_type::string;
-	value_ = v;
+	value_ = std::string(v);
 	return *this;
 }
 }
