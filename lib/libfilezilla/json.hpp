@@ -64,12 +64,8 @@ public:
 		return *this;
 	}
 
-	json& operator=(uint64_t n) {
-		type_ = json_type::number;
-		value_ = fz::to_string(n);
-		return *this;
-	}
-	json& operator=(int64_t n) {
+	template<typename T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<bool, typename std::decay_t<T>>, int> = 0>
+	json& operator=(T n) {
 		type_ = json_type::number;
 		value_ = fz::to_string(n);
 		return *this;
