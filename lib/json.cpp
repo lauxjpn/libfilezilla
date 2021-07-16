@@ -467,7 +467,31 @@ json json::parse(char const*& p, char const* end, size_t max_depth)
 		while (p < end && *p >= '0' && *p <= '9') {
 			v += *(p++);
 		}
-		j.type_ = json_type::object;
+		if (p < end && *p == '.') {
+			if (v.empty() || v.back() < '0' || v.back() > '9') {
+				return {};
+			}
+			v += *(p++);
+			while (p < end && *p >= '0' && *p <= '9') {
+				v += *(p++);
+			}
+		}
+		if (p < end && (*p == 'e' || *p == 'E')) {
+			if (v.empty() || v.back() < '0' || v.back() > '9') {
+				return {};
+			}
+			v += *(p++);
+			if (p < end && (*p == '+' || *p == '-')) {
+				v += *(p++);
+			}
+			while (p < end && *p >= '0' && *p <= '9') {
+				v += *(p++);
+			}
+		}
+		if (v.empty() || v.back() < '0' || v.back() > '9') {
+			return {};
+		}
+		j.type_ = json_type::number;
 		j.value_ = std::move(v);
 	}
 	else if (end - p >= 4 && !memcmp(p, "null", 4)) {
@@ -494,4 +518,75 @@ json& json::operator=(std::string_view const& v)
 	value_ = std::string(v);
 	return *this;
 }
+
+namespace {
+char get_radix() {
+	static char const radix = []{
+		// Hackish to the max. Sadly nl_langinfo isn't available everywhere
+		char buf[20];
+		double d = 0.1;
+		snprintf(buf, 19, "%f", d);
+		char* p = buf;
+		while (*p) {
+			if (*p < '0' || *p > '9') {
+				return *p;
+			}
+			++p;
+		}
+		return '.';
+	}();
+	return radix;
+}
+}
+
+double json::number_value_double() const
+{
+	if (type_ != json_type::number) {
+		return {};
+	}
+
+	std::string v = std::get<0>(value_);
+	size_t pos = v.find('.');
+	if (pos != std::string::npos) {
+		v[pos] = get_radix();
+	}
+
+	char* res{};
+	double d = strtod(v.c_str(), &res);
+	if (res && *res != 0) {
+		return {};
+	}
+
+	return d;
+}
+
+uint64_t json::number_value_integer() const
+{
+	if (type_ != json_type::number) {
+		return {};
+	}
+
+	std::string const& v = std::get<0>(value_);
+	bool floating{};
+
+	size_t i = 0;
+	if (!v.empty() && v[0] == '-') {
+		++i;
+	}
+	for (; i < v.size(); ++i) {
+		if (v[i] < '0' || v[i] > '9') {
+			floating = true;
+		}
+	}
+
+	// Only go through floating point if needed, so that large 64bit integers stay exact
+	if (floating) {
+		return static_cast<uint64_t>(number_value_double());
+	}
+	else {
+		return to_integral<uint64_t>(v);
+	}
+}
+
+
 }

@@ -38,9 +38,13 @@ public:
 		return type_ == json_type::string ? std::get<0>(value_) : "";
 	}
 
-	template<typename T>
+	template<typename T, std::enable_if_t<std::is_integral_v<typename std::decay_t<T>>, int> = 0>
 	T number_value() const {
-		return type_ == json_type::number ? to_integral<T>(std::get<0>(value_)) : T{};
+		return static_cast<T>(number_value_integer());
+	}
+	template<typename T, std::enable_if_t<std::is_floating_point_v<typename std::decay_t<T>>, int> = 0>
+	T number_value() const {
+		return static_cast<T>(number_value_double());
 	}
 
 	bool bool_value() const {
@@ -85,6 +89,9 @@ public:
 	void clear();
 
 private:
+	uint64_t number_value_integer() const;
+	double number_value_double() const;
+
 	bool check_type(json_type t);
 	void set_type(json_type t);
 
