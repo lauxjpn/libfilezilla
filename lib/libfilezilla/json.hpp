@@ -6,43 +6,45 @@
 #include <map>
 
 namespace fz {
+
+enum class json_type {
+	none,
+	null,
+	object,
+	array,
+	string,
+	number,
+	boolean
+};
+
 class FZ_PUBLIC_SYMBOL json
 {
 public:
-	enum node_type {
-		none,
-		object,
-		array, // todo
-		string,
-		number,
-		boolean
-	};
-
 	json() noexcept = default;
 
-	explicit json(node_type t)
+	explicit json(json_type t)
 	    : type_(t)
 	{}
 
-	node_type type() const {
+	json_type type() const {
 		return type_;
 	}
 
 	std::string string_value() const {
-		return type_ == string ? value_ : "";
+		return type_ == json_type::string ? value_ : "";
 	}
 
 	template<typename T>
 	T number_value() const {
-		return type_ == number ? to_integral<T>(value_) : T{};
+		return type_ == json_type::number ? to_integral<T>(value_) : T{};
 	}
 
 	void erase(std::string const& name) {
 		children_.erase(name);
 	}
 	json& operator[](std::string const& name) {
-		if (type_ == none) {
-			type_ = object;
+		if (type_ == json_type::none) {
+			type_ = json_type::object;
 		}
 		return children_[name];
 	}
@@ -54,7 +56,7 @@ public:
 	template<typename Bool, std::enable_if_t<std::is_same_v<bool, typename std::decay_t<Bool>>, int> = 0>
 	bool set(std::string const& name, Bool b)
 	{
-		json j(boolean);
+		json j(json_type::boolean);
 		j.value_ = b ? "true" : "false";
 		return set(name, j);
 	}
@@ -70,14 +72,14 @@ public:
 	template<typename Bool, std::enable_if_t<std::is_same_v<bool, typename std::decay_t<Bool>>, int> = 0>
 	json& operator=(Bool b) {
 		clear();
-		type_ = boolean;
+		type_ = json_type::boolean;
 		value_ = b ? "true" : "false";
 		return *this;
 	}
 
 	json& operator=(std::string_view const& v);
 
-	explicit operator bool() const { return type_ != none; }
+	explicit operator bool() const { return type_ != json_type::none; }
 
 	std::string to_string() const;
 
@@ -87,7 +89,7 @@ public:
 
 private:
 	static json parse(char const*& p, char const* end, int depth);
-	node_type type_{none};
+	json_type type_{json_type::none};
 
 	// todo variant
 	std::map<std::string, json, std::less<>> children_;

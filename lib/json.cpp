@@ -1,4 +1,7 @@
+#include "libfilezilla/encode.hpp"
 #include "libfilezilla/json.hpp"
+
+#include "string.h"
 
 namespace fz {
 json const& json::operator[](std::string const& name) const
@@ -19,10 +22,10 @@ bool json::set(std::string const& name, json const& j)
 		return false;
 	}
 
-	if (type_ == none) {
-		type_ = object;
+	if (type_ == json_type::none) {
+		type_ = json_type::object;
 	}
-	else if (type_ != object) {
+	else if (type_ != json_type::object) {
 		return false;
 	}
 
@@ -37,15 +40,15 @@ bool json::set(std::string const& name, std::string_view const& s)
 		return false;
 	}
 
-	if (type_ == none) {
-		type_ = object;
+	if (type_ == json_type::none) {
+		type_ = json_type::object;
 	}
-	else if (type_ != object) {
+	else if (type_ != json_type::object) {
 		return false;
 	}
 
 	json j;
-	j.type_ = string;
+	j.type_ = json_type::string;
 	j.value_ = s;
 	children_[name] = std::move(j);
 
@@ -58,15 +61,15 @@ bool json::set(std::string const& name, int64_t v)
 		return false;
 	}
 
-	if (type_ == none) {
-		type_ = object;
+	if (type_ == json_type::none) {
+		type_ = json_type::object;
 	}
-	else if (type_ != object) {
+	else if (type_ != json_type::object) {
 		return false;
 	}
 
 	json j;
-	j.type_ = number;
+	j.type_ = json_type::number;
 	j.value_ = fz::to_string(v);
 	children_[name] = std::move(j);
 	return true;
@@ -78,15 +81,15 @@ bool json::set(std::string const& name, uint64_t v)
 		return false;
 	}
 
-	if (type_ == none) {
-		type_ = object;
+	if (type_ == json_type::none) {
+		type_ = json_type::object;
 	}
-	else if (type_ != object) {
+	else if (type_ != json_type::object) {
 		return false;
 	}
 
 	json j;
-	j.type_ = number;
+	j.type_ = json_type::number;
 	j.value_ = fz::to_string(v);
 	children_[name] = std::move(j);
 	return true;
@@ -98,10 +101,10 @@ bool json::append(json const& j)
 		return false;
 	}
 
-	if (type_ == none) {
-		type_ = array;
+	if (type_ == json_type::none) {
+		type_ = json_type::array;
 	}
-	else if (type_ != array) {
+	else if (type_ != json_type::array) {
 		return false;
 	}
 
@@ -112,15 +115,15 @@ bool json::append(json const& j)
 
 bool json::append(std::string_view const& s)
 {
-	if (type_ == none) {
-		type_ = array;
+	if (type_ == json_type::none) {
+		type_ = json_type::array;
 	}
-	else if (type_ != array) {
+	else if (type_ != json_type::array) {
 		return false;
 	}
 
 	json j;
-	j.type_ = string;
+	j.type_ = json_type::string;
 	j.value_ = s;
 	entries_.emplace_back(std::move(j));
 
@@ -129,15 +132,15 @@ bool json::append(std::string_view const& s)
 
 bool json::append(int64_t v)
 {
-	if (type_ == none) {
-		type_ = array;
+	if (type_ == json_type::none) {
+		type_ = json_type::array;
 	}
-	else if (type_ != array) {
+	else if (type_ != json_type::array) {
 		return false;
 	}
 
 	json j;
-	j.type_ = number;
+	j.type_ = json_type::number;
 	j.value_ = fz::to_string(v);
 	entries_.emplace_back(std::move(j));
 	return true;
@@ -145,15 +148,15 @@ bool json::append(int64_t v)
 
 bool json::append(uint64_t v)
 {
-	if (type_ == none) {
-		type_ = array;
+	if (type_ == json_type::none) {
+		type_ = json_type::array;
 	}
-	else if (type_ != array) {
+	else if (type_ != json_type::array) {
 		return false;
 	}
 
 	json j;
-	j.type_ = number;
+	j.type_ = json_type::number;
 	j.value_ = fz::to_string(v);
 	entries_.emplace_back(std::move(j));
 	return true;
@@ -161,7 +164,7 @@ bool json::append(uint64_t v)
 
 void json::clear()
 {
-	type_ = none;
+	type_ = json_type::none;
 	children_.clear();
 	entries_.clear();
 	value_.clear();
@@ -206,7 +209,7 @@ std::string json::to_string() const
 	std::string ret;
 
 	switch (type_) {
-	case object:
+	case json_type::object:
 		ret += '{';
 		for (auto const& c : children_) {
 			if (!c.second) {
@@ -222,7 +225,7 @@ std::string json::to_string() const
 		}
 		ret += '}';
 		break;
-	case array:
+	case json_type::array:
 		ret += '[';
 		for (auto const& c : entries_) {
 			if (!c) {
@@ -235,16 +238,19 @@ std::string json::to_string() const
 		}
 		ret += ']';
 		break;
-	case boolean:
-	case number:
+	case json_type::boolean:
+	case json_type::number:
 		ret = value_;
 		break;
-	case string:
+	case json_type::null:
+		ret = "null";
+		break;
+	case json_type::string:
 		ret = '"';
 		json_append_escaped(ret, value_);
 		ret += '"';
 		break;
-	case none:
+	case json_type::none:
 		break;
 	}
 
@@ -271,8 +277,6 @@ void skip_ws(char const*& p, char const* end)
 		case '\r':
 		case '\n':
 		case '\t':
-		case '\b':
-		case '\f':
 			++p;
 			break;
 		default:
@@ -293,30 +297,56 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 		if (in_escape) {
 			in_escape = false;
 			switch (c) {
-			    case 'r':
-				    ret += '\r';
-				    break;
-			    case 'n':
-				    ret += '\n';
-				    break;
-			    case 't':
-				    ret += '\t';
-				    break;
-			    case 'v':
-				    ret += '\v';
-				    break;
-			    case 'b':
-				    ret += '\b';
-				    break;
-			    case '\\':
-				    ret += '\\';
-				    break;
-			    case '"':
-				    ret += '"';
-				    break;
-			    default:
-				    p = end;
-				    return {};
+				case '"':
+					ret += '"';
+					break;
+				case '\\':
+					ret += '\\';
+					break;
+				case '/':
+					ret += '/';
+					break;
+				case 'b':
+					ret += '\b';
+					break;
+				case 'f':
+					ret += '\f';
+					break;
+				case 'n':
+					ret += '\n';
+					break;
+				case 'r':
+					ret += '\r';
+					break;
+				case 't':
+					ret += '\t';
+					break;
+				case 'u': {
+					wchar_t u{};
+					if (end - p < 4) {
+						p = end;
+						return {};
+					}
+					for (size_t i = 0; i < 4; ++i) {
+						int h = hex_char_to_int(*(p++));
+						if (h == -1) {
+							p = end;
+							return {};
+						}
+						u <<= 4;
+						u += static_cast<wchar_t>(h);
+					}
+					auto u8 = fz::to_utf8(std::wstring_view(&u, 1));
+					if (u8.empty()) {
+						p = end;
+						return {};
+					}
+					ret += u8;
+					break;
+				}
+				default:
+					p = end;
+					return {};
 			}
 		}
 		else if (c == '"') {
@@ -348,7 +378,7 @@ json json::parse(char const*& p, char const* end, int depth)
 
 	json j;
 	if (*p == '"') {
-		j.type_ = string;
+		j.type_ = json_type::string;
 		++p;
 		auto [s, r] = json_unescape_string(p, end);
 		if (!r) {
@@ -359,7 +389,7 @@ json json::parse(char const*& p, char const* end, int depth)
 		return j;
 	}
 	else if (*p == '{') {
-		j.type_ = object;
+		j.type_ = json_type::object;
 		++p;
 		while (true) {
 			skip_ws(p, end);
@@ -405,13 +435,64 @@ json json::parse(char const*& p, char const* end, int depth)
 			j.children_[name] = std::move(v);
 		}
 	}
+	else if (*p == '[') {
+		j.type_ = json_type::array;
+		++p;
+		while (true) {
+			skip_ws(p, end);
+			if (p == end) {
+				return {};
+			}
+			if (*p == ']') {
+				++p;
+				return j;
+			}
+
+			if (!j.entries_.empty()) {
+				if (*(p++) != ',') {
+					return {};
+				}
+				skip_ws(p, end);
+				if (p == end) {
+					return {};
+				}
+				if (*p == ']') {
+					++p;
+					return j;
+				}
+			}
+
+			auto v = parse(p, end, ++depth);
+			if (!v) {
+				return {};
+			}
+			j.entries_.emplace_back(std::move(v));
+		}
+	}
 	else if ((*p >= '0' && *p <= '9') || *p == '-') {
-		j.type_ = number;
+		j.type_ = json_type::number;
 		j.value_ = *(p++);
 
 		while (p < end && *p >= '0' && *p <= '9') {
 			j.value_ += *(p++);
 		}
+		return j;
+	}
+	else if (end - p >= 4 && !memcmp(p, "null", 4)) {
+		j.type_ = json_type::null;
+		p += 4;
+		return j;
+	}
+	else if (end - p >= 4 && !memcmp(p, "true", 4)) {
+		j.type_ = json_type::boolean;
+		j.value_ = "true";
+		p += 4;
+		return j;
+	}
+	else if (end - p >= 5 && !memcmp(p, "false", 5)) {
+		j.type_ = json_type::boolean;
+		j.value_ = "false";
+		p += 5;
 		return j;
 	}
 
@@ -421,7 +502,7 @@ json json::parse(char const*& p, char const* end, int depth)
 json& json::operator=(std::string_view const& v)
 {
 	clear();
-	type_ = string;
+	type_ = json_type::string;
 	value_ = v;
 	return *this;
 }
