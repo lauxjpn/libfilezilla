@@ -127,7 +127,7 @@ dist_noinst_HEADERS = \
 libfilezilla_la_CPPFLAGS = $(AM_CPPFLAGS)
 libfilezilla_la_CPPFLAGS += -I$(top_builddir)/config
 libfilezilla_la_CPPFLAGS += -DBUILDING_LIBFILEZILLA
-libfilezilla_la_CPPFLAGS += $(NETTLE_CFLAGS) $(GNUTLS_CFLAGS)
+libfilezilla_la_CPPFLAGS += $(GMP_CFLAGS) $(NETTLE_CFLAGS) $(GNUTLS_CFLAGS)
 
 # Needed for version.hpp in out-of-tree builds
 libfilezilla_la_CPPFLAGS += -I. -I$(srcdir)/libfilezilla
@@ -138,7 +138,7 @@ libfilezilla_la_CXXFLAGS += -fvisibility=hidden
 libfilezilla_la_LDFLAGS += -no-undefined
 libfilezilla_la_LDFLAGS += -version-info $(LIBRARY_VERSION)
 
-libfilezilla_la_LIBADD += $(NETTLE_LIBS) $(HOGWEED_LIBS) $(GNUTLS_LIBS)
+libfilezilla_la_LIBADD += $(GNUTLS_LIBS) $(NETTLE_LIBS) $(HOGWEED_LIBS) $(GMP_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libfilezilla.pc
