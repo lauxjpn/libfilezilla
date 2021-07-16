@@ -152,7 +152,7 @@ fi
 # GMP
 # ---
 
-PKG_CHECK_MODULES([NETTLE], [gmp],, [
+PKG_CHECK_MODULES([GMP], [gmp],, [
   AC_MSG_ERROR([gmplib was not found. You can get it from https://gmplib.org/])
 ])
 
