@@ -44,7 +44,7 @@ std::pair<json, json> create_jwk()
 	mpz_init(d);
 	nettle_ecc_scalar_get(&key, d);
 
-	json jpriv(json::object);
+	json jpriv;
 	jpriv["kty"] = "EC";
 	jpriv["crv"] = "P-256";
 	jpriv["d"] = fz::base64_encode(to_string(d), base64_type::url, false);
@@ -56,7 +56,7 @@ std::pair<json, json> create_jwk()
 	mpz_init(y);
 	nettle_ecc_point_get(&pub, x, y);
 
-	json jpub(json::object);
+	json jpub;
 	jpub["kty"] = "EC";
 	jpub["crv"] = "P-256";
 	jpub["x"] = fz::base64_encode(to_string(x), base64_type::url, false);
@@ -99,7 +99,7 @@ json jws_sign_flattened(json const& priv, json const& payload, json const& extra
 	auto encoded_payload = fz::base64_encode(payload.to_string(), fz::base64_type::url, false);
 
 	json prot;
-	if (extra_protected.type() == json::object) {
+	if (extra_protected.type() == json_type::object) {
 		prot = extra_protected;
 	}
 	prot["alg"] = "ES256";
@@ -110,13 +110,13 @@ json jws_sign_flattened(json const& priv, json const& payload, json const& extra
 	acc << encoded_prot << "." << encoded_payload;
 	auto digest = acc.digest();
 
-	json ret{json::object};
 
 	struct dsa_signature sig;
 	nettle_dsa_signature_init(&sig);
 
 	nettle_ecdsa_sign(&key, nullptr, rnd, digest.size(), digest.data(), &sig);
 
+	json ret;
 	ret["protected"] = std::move(encoded_prot);
 	ret["payload"] = std::move(encoded_payload);
 	ret["signature"] = fz::base64_encode(to_string(sig.r) + to_string(sig.s), base64_type::url, false);
