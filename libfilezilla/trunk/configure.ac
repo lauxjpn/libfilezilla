@@ -149,6 +149,15 @@ if test -z "$PKG_CONFIG"; then
   AC_MSG_ERROR([pkg-config not found. pkg-config is required to check for some dependencies.])
 fi
 
+# GMP
+# ---
+
+PKG_CHECK_MODULES([NETTLE], [gmp],, [
+  AC_MSG_ERROR([gmplib was not found. You can get it from https://gmplib.org/])
+])
+
+AC_SUBST(GMP_LIBS)
+AC_SUBST(GMP_CFLAGS)
 
 # Nettle
 # ------
