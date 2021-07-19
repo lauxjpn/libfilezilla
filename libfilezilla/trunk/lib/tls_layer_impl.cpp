@@ -910,8 +910,10 @@ bool extract_with_size(uint8_t const* &p, uint8_t const* const end, std::vector<
 		return false;
 	}
 	target.resize(s);
-	memcpy(target.data(), p, s);
-	p += s;
+	if (s) {
+		memcpy(target.data(), p, s);
+		p += s;
+	}
 	return true;
 }
 }
