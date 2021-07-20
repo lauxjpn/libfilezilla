@@ -1,3 +1,4 @@
+#include "libfilezilla/buffer.hpp"
 #include "libfilezilla/encode.hpp"
 #include "libfilezilla/json.hpp"
 
@@ -242,6 +243,11 @@ json json::parse(std::string_view const& s, size_t max_depth)
 
 	auto p = s.data();
 	return parse(p, s.data() + s.size(), max_depth);
+}
+
+json json::parse(buffer const& b, size_t max_depth)
+{
+	return parse(b.to_view(), max_depth);
 }
 
 namespace {
@@ -541,7 +547,7 @@ char get_radix() {
 
 double json::number_value_double() const
 {
-	if (type_ != json_type::number) {
+	if (type_ != json_type::number && type_ != json_type::string) {
 		return {};
 	}
 
@@ -562,7 +568,7 @@ double json::number_value_double() const
 
 uint64_t json::number_value_integer() const
 {
-	if (type_ != json_type::number) {
+	if (type_ != json_type::number && type_ != json_type::string) {
 		return {};
 	}
 

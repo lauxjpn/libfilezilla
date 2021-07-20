@@ -25,7 +25,7 @@ namespace fz {
 class FZ_PUBLIC_SYMBOL buffer final
 {
 public:
-	buffer() = default;
+	buffer() noexcept = default;
 
 	/// Initially reserves the passed capacity
 	explicit buffer(size_t capacity);
@@ -106,6 +106,8 @@ public:
 	bool operator!=(buffer const& rhs) const {
 		return !(*this == rhs);
 	}
+
+	std::string_view to_view() const;
 private:
 
 	// Invariants:

@@ -226,4 +226,13 @@ bool buffer::operator==(buffer const& rhs) const
 	return memcmp(get(), rhs.get(), size()) == 0;
 }
 
+std::string_view buffer::to_view() const
+{
+	if (!size()) {
+		return {};
+	}
+
+	return {reinterpret_cast<char const*>(get()), size()};
+}
+
 }
