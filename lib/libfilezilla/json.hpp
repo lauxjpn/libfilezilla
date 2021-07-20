@@ -18,6 +18,8 @@ enum class json_type {
 	boolean
 };
 
+class buffer;
+
 class FZ_PUBLIC_SYMBOL json final
 {
 public:
@@ -36,6 +38,9 @@ public:
 
 	std::string string_value() const {
 		return type_ == json_type::string ? std::get<0>(value_) : "";
+	}
+	std::wstring wstring_value() const {
+		return fz::to_wstring_from_utf8(string_value());
 	}
 
 	template<typename T, std::enable_if_t<std::is_integral_v<typename std::decay_t<T>>, int> = 0>
@@ -76,6 +81,9 @@ public:
 	}
 
 	json& operator=(std::string_view const& v);
+	json& operator=(std::wstring_view const& v) {
+		return *this = to_utf8(v);
+	}
 
 	json& operator=(json const&) = default;
 	json& operator=(json &&) noexcept = default;
@@ -85,6 +93,7 @@ public:
 	std::string to_string(bool pretty = false, size_t depth = 0) const;
 
 	static json parse(std::string_view const& v, size_t max_depth = 20);
+	static json parse(fz::buffer const& b, size_t max_depth = 20);
 
 	void clear();
 
