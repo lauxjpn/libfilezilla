@@ -37,7 +37,7 @@ public:
 	}
 
 	std::string string_value() const {
-		return type_ == json_type::string ? std::get<0>(value_) : "";
+		return (type_ == json_type::string || type_ == json_type::number) ? std::get<0>(value_) : "";
 	}
 	std::wstring wstring_value() const {
 		return fz::to_wstring_from_utf8(string_value());
