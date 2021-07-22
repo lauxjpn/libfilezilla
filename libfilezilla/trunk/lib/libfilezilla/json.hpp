@@ -36,9 +36,7 @@ public:
 		return type_;
 	}
 
-	std::string string_value() const {
-		return (type_ == json_type::string || type_ == json_type::number) ? std::get<0>(value_) : "";
-	}
+	std::string string_value() const;
 	std::wstring wstring_value() const {
 		return fz::to_wstring_from_utf8(string_value());
 	}
@@ -52,9 +50,7 @@ public:
 		return static_cast<T>(number_value_double());
 	}
 
-	bool bool_value() const {
-		return type_ == json_type::boolean ? std::get<3>(value_) : false;
-	}
+	bool bool_value() const;
 
 	void erase(std::string const& name);
 

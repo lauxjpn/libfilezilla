@@ -594,5 +594,25 @@ uint64_t json::number_value_integer() const
 	}
 }
 
+bool json::bool_value() const
+{
+	if (type_ == json_type::boolean) {
+		return std::get<3>(value_);
+	}
+	else if (type_ == json_type::string) {
+		return std::get<0>(value_) == "true";
+	}
+	return false;
+}
 
+std::string json::string_value() const
+{
+	if (type_ == json_type::string || type_ == json_type::number) {
+		return std::get<0>(value_);
+	}
+	else if (type_ == json_type::boolean) {
+		return std::get<3>(value_) ? "true" : "false";
+	}
+	return {};
+}
 }
