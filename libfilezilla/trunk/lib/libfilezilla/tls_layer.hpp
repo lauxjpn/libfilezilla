@@ -155,6 +155,7 @@ public:
 	 * The output pair is in PEM, first element is the key and the second the certificate.
 	 */
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
+	static std::pair<std::string, std::string> generate_csr(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames, bool csr_as_pem = true);
 
 	/** \brief Negotiate application protocol
 	 *

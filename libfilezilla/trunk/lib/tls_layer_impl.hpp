@@ -84,6 +84,7 @@ public:
 	ssize_t pull_function(void* data, size_t len);
 
 	static std::pair<std::string, std::string> generate_selfsigned_certificate(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames);
+	static std::pair<std::string, std::string> generate_csr(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames, bool csr_as_pem);
 
 	int shutdown_read();
 

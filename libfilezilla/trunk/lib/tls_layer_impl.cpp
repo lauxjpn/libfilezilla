@@ -2274,6 +2274,116 @@ std::pair<std::string, std::string> tls_layer_impl::generate_selfsigned_certific
 	return ret;
 }
 
+std::pair<std::string, std::string> tls_layer_impl::generate_csr(native_string const& password, std::string const& distinguished_name, std::vector<std::string> const& hostnames, bool csr_as_pem)
+{
+	std::pair<std::string, std::string> ret;
+
+	gnutls_x509_privkey_t priv;
+	int res = gnutls_x509_privkey_init(&priv);
+	if (res) {
+		return ret;
+	}
+
+	auto fmt = GNUTLS_PK_ECDSA;
+	unsigned int bits = gnutls_sec_param_to_pk_bits(fmt, GNUTLS_SEC_PARAM_HIGH);
+	if (fmt == GNUTLS_PK_RSA && bits < 2048) {
+		bits = 2048;
+	}
+
+	res = gnutls_x509_privkey_generate(priv, fmt, bits, 0);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	datum_holder kh;
+
+	if (password.empty()) {
+		res = gnutls_x509_privkey_export2(priv, GNUTLS_X509_FMT_PEM, &kh);
+	}
+	else {
+		res = gnutls_x509_privkey_export2_pkcs8(priv, GNUTLS_X509_FMT_PEM, to_utf8(password).c_str(), 0, &kh);
+	}
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	gnutls_x509_crq_t crq;
+	res = gnutls_x509_crq_init(&crq);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		return ret;
+	}
+
+	res = gnutls_x509_crq_set_version(crq, 3);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	res = gnutls_x509_crq_set_key(crq, priv);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	char const* out{};
+	res = gnutls_x509_crq_set_dn(crq, distinguished_name.c_str(), &out);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	for (auto const& hostname : hostnames) {
+		res = gnutls_x509_crq_set_subject_alt_name(crq, GNUTLS_SAN_DNSNAME, hostname.c_str(), hostname.size(), GNUTLS_FSAN_APPEND);
+		if (res) {
+			gnutls_x509_privkey_deinit(priv);
+			gnutls_x509_crq_deinit(crq);
+			return ret;
+		}
+	}
+
+	res = gnutls_x509_crq_set_key_usage(crq, GNUTLS_KEY_DIGITAL_SIGNATURE | GNUTLS_KEY_KEY_ENCIPHERMENT);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	res = gnutls_x509_crq_set_basic_constraints(crq, 0, -1);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	res = gnutls_x509_crq_sign2(crq, priv, GNUTLS_DIG_SHA256, 0);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	datum_holder ch;
+	res = gnutls_x509_crq_export2(crq, csr_as_pem ? GNUTLS_X509_FMT_PEM : GNUTLS_X509_FMT_DER, &ch);
+	if (res) {
+		gnutls_x509_privkey_deinit(priv);
+		gnutls_x509_crq_deinit(crq);
+		return ret;
+	}
+
+	gnutls_x509_privkey_deinit(priv);
+	gnutls_x509_crq_deinit(crq);
+	ret.first = kh.to_string();
+	ret.second = ch.to_string();
+
+	return ret;
+}
+
 int tls_layer_impl::shutdown_read()
 {
 	if (!can_read_from_socket_) {
