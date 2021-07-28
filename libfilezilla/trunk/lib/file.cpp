@@ -46,7 +46,7 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 
 	DWORD dispositionFlags;
 	if (m == writing) {
-		if (d == empty) {
+		if (d & empty) {
 			dispositionFlags = CREATE_ALWAYS;
 		}
 		else {
@@ -202,7 +202,7 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 	}
 	else {
 		flags |= O_WRONLY | O_CREAT;
-		if (d == empty) {
+		if (d & empty) {
 			flags |= O_TRUNC;
 		}
 	}
