@@ -1,3 +1,10 @@
+3.31.0 (2021-07-28)
+
++ Added simple JSON parser
++ Added basic JWS generator
+- Made fz::file movable
+- Fixed empty creation_flag for fz::file if other flags are also passed
+
 0.30.0 (2021-07-09)
 
 + Added a flag to fz::file::creation_flags to create files with permissions only granting the current user and administrators access
