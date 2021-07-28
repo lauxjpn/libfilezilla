@@ -1,4 +1,4 @@
-3.31.0 (2021-07-28)
+0.31.0 (2021-07-28)
 
 + Added simple JSON parser
 + Added basic JWS generator
