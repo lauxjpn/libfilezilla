@@ -7,6 +7,10 @@
 namespace fz {
 void json::set_type(json_type t)
 {
+	if (type_ == t) {
+		return;
+	}
+
 	type_ = t;
 	switch (t) {
 		case json_type::object:
