@@ -437,6 +437,9 @@ namespace {
 template<typename String, typename View>
 inline bool do_replace_substrings(String& in, View const& find, View const& replacement)
 {
+	if (find.empty()) {
+		return false;
+	}
 	bool ret = false;
 	size_t pos = in.find(find);
 	while (pos != std::string::npos) {
