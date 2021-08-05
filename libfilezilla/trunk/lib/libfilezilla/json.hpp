@@ -7,6 +7,7 @@
 #include "string.hpp"
 
 #include <map>
+#include <type_traits>
 #include <variant>
 
 namespace fz {
@@ -156,6 +157,48 @@ private:
 	value_type value_;
 	json_type type_{json_type::none};
 };
+
+template <bool isconst>
+struct json_array_iterator final {
+	using json_ref_t = std::conditional_t<isconst, json const&, json &>;
+
+	struct sentinel final {};
+
+	json_array_iterator(json_ref_t j)
+	    // 0 if it's an array, -1 otherwise
+	    : idx_((j.type() == json_type::array)-1)
+	    , json_(j)
+	{}
+
+	json_array_iterator & operator++()
+	{
+		++idx_;
+
+		return *this;
+	}
+
+
+	json_ref_t operator*() const
+	{
+		return json_[idx_];
+	}
+
+	bool operator!=(json_array_iterator::sentinel const&) const
+	{
+		return idx_ < json_.children();
+	}
+
+private:
+	std::size_t idx_;
+	json_ref_t json_;
+};
+
+inline json_array_iterator<false> begin(json &j) { return {j};	}
+inline json_array_iterator<false>::sentinel end(json &) { return {}; }
+
+inline json_array_iterator<true> begin(json const& j) { return {j}; }
+inline json_array_iterator<true>::sentinel end(json const&) { return {}; }
+
 }
 
 #endif
