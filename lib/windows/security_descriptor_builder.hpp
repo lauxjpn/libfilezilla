@@ -2,11 +2,11 @@
 #define LIBFILEZILLA_WINDOWS_SECURITY_DESCRIPTOR_BUILDER_HEADER
 
 #include "../libfilezilla/libfilezilla.hpp"
-#include "../libfilezilla/glue/windows.hpp"
 
 #ifdef FZ_WINDOWS
 
-#include <map>
+#include "../libfilezilla/glue/windows.hpp"
+#include <memory>
 
 namespace fz {
 class security_descriptor_builder final
@@ -17,7 +17,7 @@ public:
 		administrators
 	};
 
-	security_descriptor_builder() = default;
+	security_descriptor_builder();
 	~security_descriptor_builder();
 
 	security_descriptor_builder(security_descriptor_builder const&) = delete;
@@ -29,14 +29,8 @@ public:
 	SECURITY_DESCRIPTOR* get_sd();
 
 private:
-	std::pair<PSID, bool> get_sid(entity e);
-	bool init_user();
-
-	std::map<entity, DWORD> rights_;
-
-	TOKEN_USER* user_{};
-	ACL* acl_{};
-	SECURITY_DESCRIPTOR sd_{};
+	struct impl;
+	std::unique_ptr<impl> impl_;
 };
 }
 
