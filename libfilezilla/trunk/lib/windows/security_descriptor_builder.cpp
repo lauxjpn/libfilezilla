@@ -2,96 +2,167 @@
 
 #ifdef FZ_WINDOWS
 
+#include <map>
+
 namespace fz {
+
+namespace {
+template<typename T>
+struct holder final
+{
+	holder() = default;
+	~holder()
+	{
+		clear();
+	}
+
+	static holder create(size_t s) {
+		holder h;
+		h.v_ = reinterpret_cast<T*>(new uint8_t[s]);
+		h.delete_ = true;
+		return h;
+	}
+
+	void clear()
+	{
+		if (delete_) {
+			delete[] reinterpret_cast<uint8_t*>(v_);
+		}
+		v_ = nullptr;
+	}
+
+	static holder create(void* v, bool del)
+	{
+		holder h;
+		h.v_ = reinterpret_cast<T*>(v);
+		h.delete_ = del;
+		return h;
+	}
+
+	holder(holder&& h)
+		: v_(h.v_)
+	{
+		h.v_ = nullptr;
+		delete_ = h.delete_;
+	}
+
+	holder& operator=(holder&& h) {
+		if (this != &h) {
+			clear();
+			v_ = h.v_;
+			h.v_ = nullptr;
+			delete_ = h.delete_;
+		}
+		return *this;
+	}
+
+	explicit operator bool() const { return v_ != nullptr; }
+
+	holder(holder const&) = delete;
+	holder& operator=(holder const&) = delete;
+
+	T* get() { return v_; }
+	T& operator*() { return *v_; }
+	T* operator->() { return v_; }
+
+	bool delete_{};
+	T* v_;
+};
+}
+
+struct security_descriptor_builder::impl
+{
+	holder<SID> get_sid(entity e);
+	bool init_user();
+
+	std::map<entity, DWORD> rights_;
+
+	holder<TOKEN_USER> user_;
+	holder<ACL> acl_;
+	SECURITY_DESCRIPTOR sd_{};
+};
+
+security_descriptor_builder::security_descriptor_builder()
+	: impl_(std::make_unique<impl>())
+{
+}
+
 security_descriptor_builder::~security_descriptor_builder()
 {
-	delete[] acl_;
-	delete[] user_;
 }
 
 void security_descriptor_builder::add(entity e, DWORD rights)
 {
-	delete[] acl_;
-	acl_ = nullptr;
-	rights_[e] = rights;
+	impl_->acl_.clear();
+	impl_->rights_[e] = rights;
 }
 
 ACL* security_descriptor_builder::get_acl()
 {
-	if (acl_) {
-		return acl_;
+	if (impl_->acl_) {
+		return impl_->acl_.get();
 	}
 
-	if (!init_user()) {
+	if (!impl_->init_user()) {
 		return nullptr;
 	}
 
-	DWORD needed = static_cast<DWORD>(sizeof(ACL) + (sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD) + SECURITY_MAX_SID_SIZE) * rights_.size());
+	DWORD const needed = static_cast<DWORD>(sizeof(ACL) + (sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD) + SECURITY_MAX_SID_SIZE) * impl_->rights_.size());
+	auto acl = holder<ACL>::create(needed);
 
-	ACL* acl = reinterpret_cast<ACL*>(new uint8_t[needed]);
-	if (InitializeAcl(acl, needed, ACL_REVISION)) {
-		for (auto it = rights_.cbegin(); acl && it != rights_.cend(); ++it) {
-			auto [sid, del] = get_sid(it->first);
-			if (!sid || !AddAccessAllowedAce(acl, ACL_REVISION, it->second, sid)) {
-				delete[] acl;
-				acl = nullptr;
-			}
-			if (del) {
-				delete[] sid;
+	if (InitializeAcl(acl.get(), needed, ACL_REVISION)) {
+		for (auto it = impl_->rights_.cbegin(); acl && it != impl_->rights_.cend(); ++it) {
+			auto sid = impl_->get_sid(it->first);
+			if (!sid || !AddAccessAllowedAce(acl.get(), ACL_REVISION, it->second, sid.get())) {
+				return {};
 			}
 		}
-		acl_ = acl;
-	}
-	else {
-		delete[] acl;
+		impl_->acl_ = std::move(acl);
 	}
 
-	if (acl_) {
-		InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION);
-		SetSecurityDescriptorDacl(&sd_, TRUE, acl_, FALSE);
-		SetSecurityDescriptorOwner(&sd_, user_->User.Sid, FALSE);
-		SetSecurityDescriptorGroup(&sd_, NULL, FALSE);
-		SetSecurityDescriptorSacl(&sd_, FALSE, NULL, FALSE);
+	if (impl_->acl_) {
+		InitializeSecurityDescriptor(&impl_->sd_, SECURITY_DESCRIPTOR_REVISION);
+		SetSecurityDescriptorDacl(&impl_->sd_, TRUE, impl_->acl_.get(), FALSE);
+		SetSecurityDescriptorOwner(&impl_->sd_, impl_->user_->User.Sid, FALSE);
+		SetSecurityDescriptorGroup(&impl_->sd_, NULL, FALSE);
+		SetSecurityDescriptorSacl(&impl_->sd_, FALSE, NULL, FALSE);
 	}
 
-	return acl_;
+	return impl_->acl_.get();
 }
 
 SECURITY_DESCRIPTOR* security_descriptor_builder::get_sd()
 {
-	init_user();
-	get_acl();
-	if (!user_ || !acl_) {
+	if (!get_acl()) {
 		return nullptr;
 	}
 
-	return &sd_;
+	return &impl_->sd_;
 }
 
-std::pair<PSID, bool> security_descriptor_builder::get_sid(entity e)
+holder<SID> security_descriptor_builder::impl::get_sid(entity e)
 {
 	if (e == self) {
 		init_user();
-		return { user_ ? user_->User.Sid : nullptr, false };
+		return holder<SID>::create(user_ ? user_->User.Sid : nullptr, false);
 	}
 	else {
-		PSID p = new unsigned char[SECURITY_MAX_SID_SIZE];
+		auto sid = holder<SID>::create(SECURITY_MAX_SID_SIZE);
 		DWORD l = SECURITY_MAX_SID_SIZE;
-		if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, p, &l)) {
-			delete[] p;
-			return { nullptr, false };
+		if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, sid.get(), &l)) {
+			return {};
 		}
-		return { p, true };
+		return sid;
 	}
 }
 
-bool security_descriptor_builder::init_user()
+bool security_descriptor_builder::impl::init_user()
 {
 	if (user_) {
 		return true;
 	}
 
-	HANDLE token{ INVALID_HANDLE_VALUE };
+	HANDLE token{INVALID_HANDLE_VALUE};
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
 		return false;
 	}
@@ -99,18 +170,15 @@ bool security_descriptor_builder::init_user()
 	DWORD needed{};
 	GetTokenInformation(token, TokenUser, NULL, 0, &needed);
 	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-		TOKEN_USER* user = reinterpret_cast<TOKEN_USER*>(new uint8_t[needed]);
-		if (!GetTokenInformation(token, TokenUser, user, needed, &needed)) {
-			delete[] user;
-		}
-		else {
-			user_ = user;
+		auto user = holder<TOKEN_USER>::create(needed);
+		if (GetTokenInformation(token, TokenUser, user.get(), needed, &needed)) {
+			user_ = std::move(user);
 		}
 	}
 
 	CloseHandle(token);
 
-	return user_ != nullptr;
+	return user_.operator bool();
 }
 }
 #endif
