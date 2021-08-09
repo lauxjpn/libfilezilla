@@ -24,6 +24,12 @@ bool FZ_PUBLIC_SYMBOL set_cloexec(int fd);
  */
 bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2], bool require_atomic_creation = false);
 
+/** \brief Disables SIGPIPE
+ *
+ * \note This is implicitly called by create_pipe and when a socket is created.
+ */
+void FZ_PUBLIC_SYMBOL disable_sigpipe();
+
 }
 
 #else

@@ -572,6 +572,10 @@ public:
 protected:
 	static socket::socket_t create_socket_fd(addrinfo const& addr)
 	{
+#ifndef FZ_WINDOWS
+		disable_sigpipe();
+#endif
+
 		socket::socket_t fd;
 #if defined(SOCK_CLOEXEC) && !defined(FZ_WINDOWS)
 		fd = ::socket(addr.ai_family, addr.ai_socktype | SOCK_CLOEXEC, addr.ai_protocol);
@@ -1763,15 +1767,6 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 	const int flags = MSG_NOSIGNAL;
 #else
 	const int flags = 0;
-
-#if !defined(SO_NOSIGPIPE) && !defined(FZ_WINDOWS)
-	// Some systems have neither. Need to block signal
-	struct sigaction old_action;
-	struct sigaction action = {};
-	action.sa_handler = SIG_IGN;
-	int signal_set = sigaction(SIGPIPE, &action, &old_action);
-#endif
-
 #endif
 
 #if DEBUG_SOCKETEVENTS
@@ -1783,13 +1778,6 @@ int socket::write(void const* buffer, unsigned int size, int& error)
 #endif
 
 	int res = send(fd_, (const char*)buffer, size, flags);
-
-#if !defined(MSG_NOSIGNAL) && !defined(SO_NOSIGPIPE) && !defined(FZ_WINDOWS)
-	// Restore previous signal handler
-	if (!signal_set) {
-		sigaction(SIGPIPE, &old_action, 0);
-	}
-#endif
 
 	if (res == -1) {
 		error = last_socket_error();
