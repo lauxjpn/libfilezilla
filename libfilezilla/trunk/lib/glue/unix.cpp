@@ -2,7 +2,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
+
+#include <mutex>
 
 namespace fz {
 
@@ -23,6 +26,8 @@ bool set_cloexec(int fd)
 
 bool create_pipe(int fds[2], bool require_atomic_creation)
 {
+	disable_sigpipe();
+
 	fds[0] = -1;
 	fds[1] = -1;
 
@@ -52,4 +57,9 @@ bool create_pipe(int fds[2], bool require_atomic_creation)
 	return true;
 }
 
+void FZ_PUBLIC_SYMBOL disable_sigpipe()
+{
+	std::once_flag flag;
+	std::call_once(flag, [](){ signal(SIGPIPE, SIG_IGN); });
+}
 }
