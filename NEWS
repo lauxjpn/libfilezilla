@@ -1,3 +1,9 @@
+0.31.1 (2021-08-09)
+
++ Added iterator for JSON arrays
+- *nix: SIGPIPE is now set to SIG_IGN the first time a pipe or socket gets created
+- Handle empty search string in replace_subscripts
+
 0.31.0 (2021-07-28)
 
 + Added simple JSON parser
