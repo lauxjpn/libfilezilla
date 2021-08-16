@@ -123,7 +123,7 @@ public:
 		return *this = to_utf8(v);
 	}
 
-	json& operator=(json const&) = default;
+	json& operator=(json const&);
 	json& operator=(json &&) noexcept = default;
 
 	explicit operator bool() const { return type_ != json_type::none; }
@@ -176,7 +176,6 @@ struct json_array_iterator final {
 
 		return *this;
 	}
-
 
 	json_ref_t operator*() const
 	{
