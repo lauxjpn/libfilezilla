@@ -525,7 +525,9 @@ json json::parse(char const*& p, char const* end, size_t max_depth)
 json& json::operator=(std::string_view const& v)
 {
 	type_ = json_type::string;
-	value_ = std::string(v);
+	// see comment in operator=(json const&)
+	auto s = std::string(v);
+	value_ = std::move(s);
 	return *this;
 }
 
@@ -618,5 +620,20 @@ std::string json::string_value() const
 		return std::get<3>(value_) ? "true" : "false";
 	}
 	return {};
+}
+
+json& json::operator=(json const& j)
+{
+	if (&j != this) {
+		// First make a copy, then destroy own value, as the argument may depend on our value:
+		// fz::json j;
+		// j["child"] = 1;
+		// fz::json const& ref = j;
+		// j = ref["child"];
+		auto v = j.value_;
+		value_ = std::move(v);
+		type_ = j.type_;
+	}
+	return *this;
 }
 }
