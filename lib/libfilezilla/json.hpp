@@ -124,7 +124,7 @@ public:
 	}
 
 	json& operator=(json const&);
-	json& operator=(json &&) noexcept = default;
+	json& operator=(json &&) noexcept;
 
 	explicit operator bool() const { return type_ != json_type::none; }
 
