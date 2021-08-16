@@ -631,9 +631,20 @@ json& json::operator=(json const& j)
 		// fz::json const& ref = j;
 		// j = ref["child"];
 		auto v = j.value_;
-		value_ = std::move(v);
 		type_ = j.type_;
+		value_ = std::move(v);
 	}
 	return *this;
 }
+
+json& json::operator=(json && j) noexcept
+{
+	if (&j != this) {
+		auto v = std::move(j.value_);
+		type_ = j.type_;
+		value_ = std::move(v);
+	}
+	return *this;
+}
+
 }
