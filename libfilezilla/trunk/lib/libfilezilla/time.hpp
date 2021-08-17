@@ -61,7 +61,7 @@ public:
 	};
 
 	/// A default-constructed timestamp is \ref empty()
-	datetime() = default;
+	datetime() noexcept = default;
 
 	datetime(zone z, int year, int month, int day, int hour = -1, int minute = -1, int second = -1, int millisecond = -1);
 
@@ -110,6 +110,7 @@ public:
 	bool operator<(datetime const& op) const;
 	bool operator<=(datetime const& op) const;
 	bool operator>(datetime const& op) const { return op < *this; }
+	bool operator>=(datetime const& op) const { return op <= *this; }
 	/// \}
 
 	/**
@@ -285,7 +286,7 @@ private:
 class FZ_PUBLIC_SYMBOL duration final
 {
 public:
-	duration() = default;
+	duration() noexcept = default;
 
 	/** \name Getters
 	 * All getters return the total time of the duration, rounded down to the requested granularity.
