@@ -282,6 +282,8 @@ private:
  * have the time unit as part of the function name.
  *
  * In contract to \ref datetime, \c duration does not track accuracy.
+ * 
+ * \note Arithmetic operations on duration do not check for integer over/underflow
  */
 class FZ_PUBLIC_SYMBOL duration final
 {
@@ -337,6 +339,10 @@ public:
 	duration& operator*=(int64_t op) {
 		ms_ *= op;
 		return *this;
+	}
+
+	duration absolute() const {
+		return (ms_ < 0) ? duration(-ms_) : *this;
 	}
 
 	bool operator<(duration const& op) const { return ms_ < op.ms_; }
