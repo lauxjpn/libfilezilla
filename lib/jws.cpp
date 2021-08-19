@@ -14,13 +14,17 @@ extern "C" void rnd(void *, size_t length, uint8_t *dst)
 	random_bytes(length, dst);
 }
 
-std::string to_string(mpz_t n)
+std::string to_string(mpz_t n, size_t pad = 0)
 {
 	std::string ret;
 	size_t s = nettle_mpz_sizeinbase_256_u(n);
 	if (s) {
-		ret.resize(s);
-		nettle_mpz_get_str_256(s, reinterpret_cast<unsigned char*>(ret.data()), n);
+		ret.resize(std::max(s, pad));
+		size_t offset{};
+		if (s < pad) {
+			offset = pad - s;
+		}
+		nettle_mpz_get_str_256(s, reinterpret_cast<unsigned char*>(ret.data() + offset), n);
 	}
 	return ret;
 }
@@ -119,7 +123,7 @@ json jws_sign_flattened(json const& priv, json const& payload, json const& extra
 	json ret;
 	ret["protected"] = std::move(encoded_prot);
 	ret["payload"] = std::move(encoded_payload);
-	ret["signature"] = fz::base64_encode(to_string(sig.r) + to_string(sig.s), base64_type::url, false);
+	ret["signature"] = fz::base64_encode(to_string(sig.r, 32) + to_string(sig.s, 32), base64_type::url, false);
 
 	nettle_dsa_signature_clear(&sig);
 
