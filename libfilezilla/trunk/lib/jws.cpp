@@ -119,6 +119,7 @@ json jws_sign_flattened(json const& priv, json const& payload, json const& extra
 	nettle_dsa_signature_init(&sig);
 
 	nettle_ecdsa_sign(&key, nullptr, rnd, digest.size(), digest.data(), &sig);
+	nettle_ecc_scalar_clear(&key);
 
 	json ret;
 	ret["protected"] = std::move(encoded_prot);
