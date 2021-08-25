@@ -25,6 +25,12 @@ namespace fz {
 class FZ_PUBLIC_SYMBOL file final
 {
 public:
+#ifdef FZ_WINDOWS
+	typedef HANDLE file_t;
+#else
+	typedef int file_t;
+#endif
+
 	/// Files can be opened for reading or writing, but not both
 	enum mode {
 		reading,
@@ -68,6 +74,13 @@ public:
 	file() = default;
 	file(native_string const& f, mode m, creation_flags d = existing);
 
+
+	/** \brief Creates file from descriptor
+	 *
+	 * Takes ownership of descriptor/handle.
+	 */
+	explicit file(file_t fd);
+
 	~file();
 
 	file(file const&) = delete;
@@ -82,6 +95,13 @@ public:
 	bool open(native_string const& f, mode m, creation_flags d = existing);
 
 	void close();
+
+	/// Returns the raw file descriptor, but retains ownership.
+	file_t fd() {
+		return fd_;
+	}
+
+	file_t detach();
 
 	/// Used by \ref seek
 	enum seek_mode {
@@ -160,7 +180,7 @@ public:
 
 private:
 #ifdef FZ_WINDOWS
-	HANDLE hFile_{INVALID_HANDLE_VALUE};
+	HANDLE fd_{INVALID_HANDLE_VALUE};
 #else
 	int fd_{-1};
 #endif
