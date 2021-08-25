@@ -18,6 +18,11 @@ file::file(native_string const& f, mode m, creation_flags d)
 	open(f, m, d);
 }
 
+file::file(file::file_t fd)
+	: fd_(fd)
+{
+}
+
 file::~file()
 {
 	close();
@@ -25,17 +30,17 @@ file::~file()
 
 #ifdef FZ_WINDOWS
 file::file(file && op) noexcept
-	: hFile_{op.hFile_}
+	: fd_{op.fd_}
 {
-	op.hFile_ = INVALID_HANDLE_VALUE;
+	op.fd_ = INVALID_HANDLE_VALUE;
 }
 
 file& file::operator=(file && op) noexcept
 {
 	if (this != &op) {
 		close();
-		hFile_ = op.hFile_;
-		op.hFile_ = INVALID_HANDLE_VALUE;
+		fd_ = op.fd_;
+		op.fd_ = INVALID_HANDLE_VALUE;
 	}
 	return *this;
 }
@@ -79,17 +84,24 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 		}
 		attr.lpSecurityDescriptor = sd;
 	}
-	hFile_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, &attr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+	fd_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, &attr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	
-	return hFile_ != INVALID_HANDLE_VALUE;
+	return fd_ != INVALID_HANDLE_VALUE;
 }
 
 void file::close()
 {
-	if (hFile_ != INVALID_HANDLE_VALUE) {
-		CloseHandle(hFile_);
-		hFile_ = INVALID_HANDLE_VALUE;
+	if (fd_ != INVALID_HANDLE_VALUE) {
+		CloseHandle(fd_);
+		fd_ = INVALID_HANDLE_VALUE;
 	}
+}
+
+file_t file::detach()
+{
+	file_t fd = fd_;
+	fd_ = INVALID_HANDLE_VALUE;
+	return fd;
 }
 
 int64_t file::size() const
@@ -97,7 +109,7 @@ int64_t file::size() const
 	int64_t ret = -1;
 
 	LARGE_INTEGER size{};
-	if (GetFileSizeEx(hFile_, &size)) {
+	if (GetFileSizeEx(fd_, &size)) {
 		ret = static_cast<int64_t>(size.QuadPart);
 	}
 	return ret;
@@ -119,7 +131,7 @@ int64_t file::seek(int64_t offset, seek_mode m)
 	}
 
 	LARGE_INTEGER newPos{};
-	if (SetFilePointerEx(hFile_, dist, &newPos, method)) {
+	if (SetFilePointerEx(fd_, dist, &newPos, method)) {
 		ret = newPos.QuadPart;
 	}
 	return ret;
@@ -127,7 +139,7 @@ int64_t file::seek(int64_t offset, seek_mode m)
 
 bool file::truncate()
 {
-	return !!SetEndOfFile(hFile_);
+	return !!SetEndOfFile(fd_);
 }
 
 int64_t file::read(void *buf, int64_t count)
@@ -135,7 +147,7 @@ int64_t file::read(void *buf, int64_t count)
 	int64_t ret = -1;
 
 	DWORD read = 0;
-	if (ReadFile(hFile_, buf, static_cast<DWORD>(count), &read, nullptr)) {
+	if (ReadFile(fd_, buf, static_cast<DWORD>(count), &read, nullptr)) {
 		ret = static_cast<int64_t>(read);
 	}
 
@@ -147,7 +159,7 @@ int64_t file::write(void const* buf, int64_t count)
 	int64_t ret = -1;
 
 	DWORD written = 0;
-	if (WriteFile(hFile_, buf, static_cast<DWORD>(count), &written, nullptr)) {
+	if (WriteFile(fd_, buf, static_cast<DWORD>(count), &written, nullptr)) {
 		ret = static_cast<int64_t>(written);
 	}
 
@@ -156,7 +168,7 @@ int64_t file::write(void const* buf, int64_t count)
 
 bool file::opened() const
 {
-	return hFile_ != INVALID_HANDLE_VALUE;
+	return fd_ != INVALID_HANDLE_VALUE;
 }
 
 bool remove_file(native_string const& name)
@@ -171,7 +183,7 @@ bool remove_file(native_string const& name)
 
 bool file::fsync()
 {
-	return FlushFileBuffers(hFile_) != 0;
+	return FlushFileBuffers(fd_) != 0;
 }
 
 #else
@@ -227,6 +239,13 @@ void file::close()
 		::close(fd_);
 		fd_ = -1;
 	}
+}
+
+file::file_t file::detach()
+{
+	file_t fd = fd_;
+	fd_ = -1;
+	return fd;
 }
 
 int64_t file::size() const
