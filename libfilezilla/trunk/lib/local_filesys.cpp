@@ -216,13 +216,13 @@ local_filesys::type get_file_info_impl(int(*do_stat)(struct stat & buf, char con
 	return local_filesys::file;
 }
 
-local_filesys::type get_file_info_at(char const* path, DIR* dir, bool &is_link, int64_t* size, datetime* modification_time, int *mode)
+local_filesys::type get_file_info_at(char const* path, DIR* dir, bool &is_link, int64_t* size, datetime* modification_time, int *mode, bool follow)
 {
 	auto do_stat = [](struct stat & buf, char const* path, DIR * dir, bool follow)
 	{
 		return fstatat(dirfd(dir), path, &buf, follow ? 0 : AT_SYMLINK_NOFOLLOW);
 	};
-	return get_file_info_impl(do_stat, path, dir, is_link, size, modification_time, mode, true);
+	return get_file_info_impl(do_stat, path, dir, is_link, size, modification_time, mode, follow);
 }
 #endif
 
@@ -367,15 +367,17 @@ local_filesys::type local_filesys::get_file_info(native_string const& path, bool
 	return do_get_file_info(path, is_link, size, modification_time, mode, follow_links);
 }
 
-result local_filesys::begin_find_files(native_string path, bool dirs_only)
+result local_filesys::begin_find_files(native_string path, bool dirs_only, bool query_symlink_targets)
 {
+	end_find_files();
+
 	if (path.empty()) {
 		return result{result::nodir};
 	}
 
-	end_find_files();
-
 	dirs_only_ = dirs_only;
+	query_symlink_targets_ = query_symlink_targets;
+
 #ifdef FZ_WINDOWS
 	if (is_separator(path.back())) {
 		m_find_path = path;
@@ -421,6 +423,36 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only)
 	return result{result::ok};
 #endif
 }
+
+#if FZ_UNIX
+result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlink_targets)
+{
+	end_find_files();
+
+	if (fd == -1) {
+		return {result::nodir};
+	}
+
+	dirs_only_ = dirs_only;
+	query_symlink_targets_ = query_symlink_targets;
+
+	dir_ = fdopendir(fd);
+	if (!dir_) {
+		switch (errno) {
+			case EACCES:
+			case EPERM:
+				return result{result::noperm};
+			case ENOTDIR:
+			case ENOENT:
+				return result{result::nodir};
+			default:
+				return result{result::other};
+		}
+	}
+
+	return result{result::ok};
+}
+#endif
 
 void local_filesys::end_find_files()
 {
@@ -479,7 +511,7 @@ bool local_filesys::get_next_file(native_string& name)
 #if HAVE_STRUCT_DIRENT_D_TYPE
 			if (entry->d_type == DT_LNK) {
 				bool wasLink{};
-				if (get_file_info_at(entry->d_name, dir_, wasLink, nullptr, nullptr, nullptr) != dir) {
+				if (get_file_info_at(entry->d_name, dir_, wasLink, nullptr, nullptr, nullptr, query_symlink_targets_) != dir) {
 					continue;
 				}
 			}
@@ -489,7 +521,7 @@ bool local_filesys::get_next_file(native_string& name)
 #else
 			// Solaris doesn't have d_type
 			bool wasLink{};
-			if (get_file_info_at(entry->d_name, dir_, wasLink, nullptr, nullptr, nullptr) != dir) {
+			if (get_file_info_at(entry->d_name, dir_, wasLink, nullptr, nullptr, nullptr, query_symlink_targets_) != dir) {
 				continue;
 			}
 #endif
@@ -526,7 +558,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 		t = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
 
 		is_link = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsReparseTagNameSurrogate(m_find_data.dwReserved0);
-		if (is_link) {
+		if (is_link && query_symlink_targets_) {
 			// Follow the reparse point
 			HANDLE hFile = CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 			if (hFile != INVALID_HANDLE_VALUE) {
@@ -616,7 +648,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 #if HAVE_STRUCT_DIRENT_D_TYPE
 		if (dirs_only_) {
 			if (entry->d_type == DT_LNK) {
-				if (get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode) != dir) {
+				if (get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode, query_symlink_targets_) != dir) {
 					continue;
 				}
 
@@ -630,7 +662,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 		}
 #endif
 
-		t = get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode);
+		t = get_file_info_at(entry->d_name, dir_, is_link, size, modification_time, mode, query_symlink_targets_);
 		if (t == unknown) { // Happens for example in case of permission denied
 #if HAVE_STRUCT_DIRENT_D_TYPE
 			t = (entry->d_type == DT_DIR) ? dir : file;

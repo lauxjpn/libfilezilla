@@ -103,7 +103,12 @@ public:
 	/// \brief Begins enumerating a directory.
 	///
 	/// \param dirs_only If true, only directories are enumerated.
-	result begin_find_files(native_string path, bool dirs_only = false);
+	result begin_find_files(native_string path, bool dirs_only = false, bool query_symlink_targets = true);
+
+#ifdef FZ_UNIX
+	// Takes ownership of fd
+	result begin_find_files(int fd, bool dirs_only = false, bool query_symlink_targets = true);
+#endif
 
 	/// Gets the next file in the directory. Call until it returns false.
 	bool get_next_file(native_string& name);
@@ -141,6 +146,7 @@ private:
 
 	// State for directory enumeration
 	bool dirs_only_{};
+	bool query_symlink_targets_{true};
 };
 
 enum class mkdir_permissions
