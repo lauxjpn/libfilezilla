@@ -10,6 +10,7 @@ libfilezilla_la_SOURCES = \
 	file.cpp \
 	hash.cpp \
 	hostname_lookup.cpp \
+	impersonation.cpp \
 	invoker.cpp \
 	iputils.cpp \
 	json.cpp \
@@ -49,6 +50,7 @@ nobase_include_HEADERS = \
 	libfilezilla/format.hpp \
 	libfilezilla/hash.hpp \
 	libfilezilla/hostname_lookup.hpp \
+	libfilezilla/impersonation.hpp \
 	libfilezilla/invoker.hpp \
 	libfilezilla/iputils.hpp \
 	libfilezilla/json.hpp \
@@ -118,6 +120,10 @@ endif
 
 if FZ_MAC
 libfilezilla_la_LDFLAGS += -framework CoreServices
+endif
+
+if FZ_UNIX
+libfilezilla_la_LDFLAGS += -lcrypt
 endif
 
 dist_noinst_HEADERS = \
