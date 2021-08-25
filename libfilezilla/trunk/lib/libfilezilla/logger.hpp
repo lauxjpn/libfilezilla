@@ -79,8 +79,14 @@ public:
 		}
 	}
 
+	/// Is any of the passed log levels set
 	bool should_log(logmsg::type t) const {
 		return level_ & t;
+	}
+
+	/// Returns all currently enabled log levels
+	logmsg::type levels() const {
+		return static_cast<logmsg::type>(level_.load());
 	}
 
 	/// Sets which message types should be logged
