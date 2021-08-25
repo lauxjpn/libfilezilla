@@ -14,6 +14,7 @@
 #endif
 
 namespace fz {
+class impersonation_token;
 
 /** \brief The process class manages an asynchronous process with redirected IO.
  *
@@ -54,6 +55,8 @@ public:
 	 * DuplicateHandle() can be used instead with the target process as argument.
 	 */
 	bool spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io = true);
+
+	bool spawn(impersonation_token const& it, native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io = true);
 #endif
 
 	/** \brief Stops the spawned process

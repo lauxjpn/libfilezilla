@@ -1,3 +1,4 @@
+#include "libfilezilla/impersonation.hpp"
 #include "libfilezilla/process.hpp"
 
 #ifdef FZ_WINDOWS
@@ -373,7 +374,7 @@ public:
 			err_.create();
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io, std::vector<int> const& extra_fds = std::vector<int>())
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io, std::vector<int> const& extra_fds = std::vector<int>(), impersonation_token const* it = nullptr)
 	{
 		if (pid_ != -1) {
 			return false;
@@ -420,6 +421,14 @@ public:
 					_exit(1);
 				}
 			}
+
+#if FZ_UNIX
+			if (it && *it) {
+				if (!set_process_impersonation(*it)) {
+					_exit(1);
+				}
+			}
+#endif
 
 			// Execute process
 			execv(cmd.c_str(), argV.get()); // noreturn on success
@@ -519,6 +528,12 @@ bool process::spawn(native_string const& cmd, std::vector<native_string> const& 
 {
 	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io, extra_fds) : false;
 }
+
+bool process::spawn(impersonation_token const& it, native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io)
+{
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io, extra_fds, &it) : false;
+}
+
 #endif
 
 bool process::spawn(std::vector<native_string> const& command_with_args, bool redirect_io)

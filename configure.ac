@@ -109,6 +109,13 @@ else
   mac=0
 fi
 
+# If neither, we're Unix(-like)
+if test "$mac" = "0" && test "$windows" = "0"; then
+  unix=1
+else
+  unix=0
+fi
+
 if test "$windows" = "1"; then
   libdeps=-lws2_32
 else
@@ -355,6 +362,7 @@ AC_SUBST(LIBFILEZILLA_LINGUAS_MO)
 
 AM_CONDITIONAL(FZ_WINDOWS, test "$windows" = "1")
 AM_CONDITIONAL(FZ_MAC, test "$mac" = "1")
+AM_CONDITIONAL(FZ_UNIX, test "$unix" = "1")
 AM_CONDITIONAL(HAVE_CPPUNIT, [test "$have_cppunit" = "yes"])
 AM_CONDITIONAL([LOCALES_ONLY], [test "$localesonly" = "yes"])
 AM_CONDITIONAL([LOCALES], [test "$locales" = "yes"])
