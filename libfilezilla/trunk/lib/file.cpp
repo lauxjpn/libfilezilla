@@ -85,7 +85,7 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 		attr.lpSecurityDescriptor = sd;
 	}
 	fd_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, &attr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-	
+
 	return fd_ != INVALID_HANDLE_VALUE;
 }
 
@@ -97,7 +97,7 @@ void file::close()
 	}
 }
 
-file_t file::detach()
+file::file_t file::detach()
 {
 	file_t fd = fd_;
 	fd_ = INVALID_HANDLE_VALUE;
