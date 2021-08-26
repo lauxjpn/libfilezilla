@@ -576,6 +576,8 @@ public:
 
 	virtual int shutdown_read() override { return 0; }
 
+	socket_t get_descriptor();
+
 private:
 	friend class socket_base;
 	friend class listen_socket;
