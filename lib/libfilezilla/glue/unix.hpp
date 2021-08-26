@@ -30,6 +30,36 @@ bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2], bool require_atomic_creation = fal
  */
 void FZ_PUBLIC_SYMBOL disable_sigpipe();
 
+/// Creates a connected pair of unix domain sockets of SOCK_STREAM type
+bool FZ_PUBLIC_SYMBOL create_socketpair(int fds[2]);
+
+/** Sends file descriptors over a Unix Domain Socket.
+ *
+ * fd may be -1.
+ * If fd is not -1, the buffer must not be empty.
+ *
+ * Returns the amount of bytes sent, which may be less than requested, or -1 on error.
+ *
+ * If any bytes got sent then the descriptor has been sent as well.
+ *
+ * If having sent an fd, you should not send any other fd until the buffer has been completely
+ * sent.
+ *
+ * The data you sent should be structured such that the receiving end can detect which
+ * parts of data in the stream have a descriptor associated with it.
+ */
+int FZ_PUBLIC_SYMBOL send_fd(int socket, fz::buffer & buf, int fd, int & error);
+
+/** Reads data and file descriptors from a Unix Domain Socket
+ *
+ * Appends any read data to the buffer, returns the number of bytes added.
+ *
+ * Returns 0 on EOF, -1 on error.
+ *
+ * If a descriptor got read, it is returned in the fd argument. If no descriptor got read,
+ * fd is set to -1.
+ */
+int FZ_PUBLIC_SYMBOL read_fd(int socket, fz::buffer & buf, int &fd, int & error);
 }
 
 #else
