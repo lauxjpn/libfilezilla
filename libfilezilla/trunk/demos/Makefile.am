@@ -55,6 +55,22 @@ list_LDADD += $(libdeps)
 
 list_DEPENDENCIES = ../lib/libfilezilla.la
 
+if FZ_UNIX
+noinst_PROGRAMS = impersonation
+
+impersonation_SOURCES = impersonation.cpp
+
+impersonation_CPPFLAGS = $(AM_CPPFLAGS)
+impersonation_CPPFLAGS += -I$(top_srcdir)/lib
+
+impersonation_LDFLAGS = $(AM_LDFLAGS)
+impersonation_LDFLAGS += -no-install
+
+impersonation_LDADD = ../lib/libfilezilla.la
+impersonation_LDADD += $(libdeps)
+
+impersonation_DEPENDENCIES = ../lib/libfilezilla.la
+endif
 
 dist_noinst_DATA = \
 	demo_events.vcxproj \
