@@ -152,6 +152,9 @@ String integral_to_hex_string(Arg && arg) noexcept
 		// Special handling for enum, cast to underlying type
 		return integral_to_hex_string<String, Lowercase>(static_cast<std::underlying_type_t<std::decay_t<Arg>>>(arg));
 	}
+	else if constexpr (std::is_signed_v<std::decay_t<Arg>>) {
+		return integral_to_hex_string<String, Lowercase>(static_cast<std::make_unsigned_t<std::decay_t<Arg>>>(arg));
+	}
 	else if constexpr (std::is_integral_v<std::decay_t<Arg>>) {
 		std::decay_t<Arg> v = arg;
 		typename String::value_type buf[sizeof(v) * 2];

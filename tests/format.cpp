@@ -125,4 +125,11 @@ void format_test::test_sprintf()
 
 	CPPUNIT_ASSERT_EQUAL(std::string("1"), fz::sprintf("%d", true));
 	CPPUNIT_ASSERT_EQUAL(std::string("0"), fz::sprintf("%d", false));
+
+	int16_t const neg16 = -42;
+	CPPUNIT_ASSERT_EQUAL(std::string("ffd6"), fz::sprintf("%x", neg16));
+	int32_t const neg32 = -42;
+	CPPUNIT_ASSERT_EQUAL(std::string("ffffffd6"), fz::sprintf("%x", neg32));
+	int64_t const neg64 = -42;
+	CPPUNIT_ASSERT_EQUAL(std::string("ffffffffffffffd6"), fz::sprintf("%x", neg64));
 }
