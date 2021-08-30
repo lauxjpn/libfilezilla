@@ -90,7 +90,7 @@ struct guaranteed_random_device
 	{
 		result_type ret{};
 		for (size_t i = 0; i < 10; ++i) { // Loop in case of transient errors
-#if FZ_WINDDOWS
+#if FZ_WINDOWS
 			thread_local provider prov;
 			if (prov.h_ && CryptGenRandom(prov.h_, sizeof(ret), reinterpret_cast<BYTE*>(&ret))) {
 				return ret;
