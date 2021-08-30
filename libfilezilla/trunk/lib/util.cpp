@@ -9,9 +9,23 @@
 
 #include <nettle/memops.h>
 
-#if defined(FZ_WINDOWS) && !defined(_MSC_VER)
-#include "libfilezilla/glue/windows.hpp"
-#include <wincrypt.h>
+#if FZ_WINDOWS
+	#include "libfilezilla/glue/windows.hpp"
+	#include <wincrypt.h>
+#else
+	#if HAVE_GETRANDOM
+		#include <sys/random.h>
+	#endif
+	#if HAVE_GETENTROPY
+		#ifdef __APPLE__
+			#include <Availability.h>
+			#include <sys/random.h>
+		#endif
+		#include <unistd.h>
+	#endif
+	#include "libfilezilla/file.hpp"
+	#include <stdio.h>
+	#include <sys/stat.h>
 #endif
 
 namespace fz {
@@ -40,10 +54,12 @@ void yield()
 }
 
 namespace {
-#if defined(FZ_WINDOWS) && !defined(_MSC_VER)
+// Don't trust std::random_device, it may not actually use a random device. Such idiotic decision to allow such behavior.
+// On Windows, use CryptGenRandom.
+// On other platforms, use in order (and if available) getrandom(), getentropy() and /dev/urandom
+// If all fails, abort(), a crash is more desirable than accidentally handing out non-randm data
+#if FZ_WINDOWS
 // Unfortunately MiNGW does not have a working random_device
-// Implement our own in terms of CryptGenRandom.
-// Fall back to time-seeded mersenne twister on error
 struct provider
 {
 	provider()
@@ -51,7 +67,6 @@ struct provider
 		if (!CryptAcquireContextW(&h_, nullptr, nullptr, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 			h_ = 0;
 		}
-		mt_.seed(datetime::now().get_time_t());
 	}
 	~provider()
 	{
@@ -61,10 +76,10 @@ struct provider
 	}
 
 	HCRYPTPROV h_{};
-	std::mt19937_64 mt_;
 };
+#endif
 
-struct working_random_device
+struct guaranteed_random_device
 {
 	typedef uint64_t result_type;
 
@@ -73,22 +88,47 @@ struct working_random_device
 
 	result_type operator()()
 	{
-		thread_local provider prov;
-
 		result_type ret{};
-		if (!prov.h_ || !CryptGenRandom(prov.h_, sizeof(ret), reinterpret_cast<BYTE*>(&ret))) {
-			ret = prov.mt_();
+		for (size_t i = 0; i < 10; ++i) { // Loop in case of transient errors
+#if FZ_WINDDOWS
+			thread_local provider prov;
+			if (prov.h_ && CryptGenRandom(prov.h_, sizeof(ret), reinterpret_cast<BYTE*>(&ret))) {
+				return ret;
+			}
+#else
+	#if HAVE_GETRANDOM
+			int res{};
+			do {
+				res = getrandom(&ret, sizeof(ret), 0);
+			} while (res != 0 && errno == EINTR);
+			if (!res) {
+				return ret;
+			}
+	#endif
+	#if HAVE_GETENTROPY
+			if (!getentropy(&ret, sizeof(ret))) {
+				return ret;
+			}
+	#endif
+			thread_local file f;
+			if (f.opened() || f.open("/dev/urandom", fz::file::reading)) {
+				// Check it's a character device
+				struct stat statbuf{};
+				if (!fstat(f.fd(), &statbuf) && statbuf.st_mode & S_IFCHR) {
+					if (f.read(&ret, sizeof(ret)) == sizeof(ret)) {
+						return ret;
+					}
+				}
+			}
+			f.close();
+#endif
+			sleep(duration::from_milliseconds(1 + i));
 		}
-
-		return ret;
+		// We gave our best.
+		fprintf(stderr, "Could not generate random number\n");
+		abort();
 	}
 };
-
-static_assert(working_random_device::max() == std::mt19937_64::max(), "Unsupported std::mt19937_64::max()");
-static_assert(working_random_device::min() == std::mt19937_64::min(), "Unsupported std::mt19937_64::min()");
-#else
-typedef std::random_device working_random_device;
-#endif
 }
 
 int64_t random_number(int64_t min, int64_t max)
@@ -99,7 +139,7 @@ int64_t random_number(int64_t min, int64_t max)
 	}
 
 	std::uniform_int_distribution<int64_t> dist(min, max);
-	working_random_device rd;
+	guaranteed_random_device rd;
 	return dist(rd);
 }
 
@@ -117,7 +157,7 @@ void random_bytes(size_t size, uint8_t* destination)
 		return;
 	}
 
-	working_random_device rd;
+	guaranteed_random_device rd;
 
 	size_t i;
 	for (i = 0; i + sizeof(std::random_device::result_type) <= size; i += sizeof(std::random_device::result_type)) {

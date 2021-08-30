@@ -121,6 +121,8 @@ if test "$windows" = "1"; then
 else
   libdeps=-lpthread
   CHECK_ICONV([libdeps="$libdeps -liconv"])
+
+  CHECK_RANDOM
 fi
 
 if test "$windows" = "0" && test "$mac" = "0"; then

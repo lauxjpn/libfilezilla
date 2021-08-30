@@ -29,10 +29,14 @@ void FZ_PUBLIC_SYMBOL sleep(duration const& d);
 void FZ_PUBLIC_SYMBOL yield();
 
 /** \brief Get a secure random integer uniformly distributed in the closed interval [min, max]
+ *
+ * If generation of random number fails, the program is aborted.
  */
 int64_t FZ_PUBLIC_SYMBOL random_number(int64_t min, int64_t max);
 
 /** \brief Get random uniformly distributed bytes
+ *
+ * If generation of random bytes fails, the program is aborted.
  */
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL random_bytes(size_t size);
 
