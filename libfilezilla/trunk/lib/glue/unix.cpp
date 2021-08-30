@@ -61,12 +61,13 @@ bool create_pipe(int fds[2], bool require_atomic_creation)
 	return true;
 }
 
-void FZ_PUBLIC_SYMBOL disable_sigpipe()
+void disable_sigpipe()
 {
 	std::once_flag flag;
 	std::call_once(flag, [](){ signal(SIGPIPE, SIG_IGN); });
 }
 
+#if FZ_UNIX
 bool create_socketpair(int fds[2])
 {
 	disable_sigpipe();
@@ -191,5 +192,6 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 
 	return res;
 }
+#endif
 
 }
