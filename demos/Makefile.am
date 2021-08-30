@@ -56,7 +56,7 @@ list_LDADD += $(libdeps)
 list_DEPENDENCIES = ../lib/libfilezilla.la
 
 if FZ_UNIX
-noinst_PROGRAMS = impersonation
+noinst_PROGRAMS += impersonation
 
 impersonation_SOURCES = impersonation.cpp
 
