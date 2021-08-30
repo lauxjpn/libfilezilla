@@ -1,3 +1,16 @@
+0.32.0-beta1 (2021-08-30)
+
++ *nix: Impersonation support
++ *nix: Sending of file descriptors over Unix Domain Sockets
+* nix: Add local_filesys::begin_find_files overload accepting a directory file descriptor
++ Allow creating fz::file from a file descriptors/handle, add function to detach the descriptor/handle
++ Added fz::datetime::operator>=
++ Added fz::duration::absolute()
+- fz::sprintf no longer crashes on x and X conversion specifiers if a negative signed integer is passed as argument
+- Replace std::random_device as the C++ standard allows it to not be random
+- JSON: Fixed crash if assigning values from nested values
+- JWS: Fixed memory leak and padding of signature components
+
 0.31.1 (2021-08-09)
 
 + Added iterator for JSON arrays
