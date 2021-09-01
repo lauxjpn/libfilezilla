@@ -97,12 +97,20 @@ struct guaranteed_random_device
 			}
 #else
 	#if HAVE_GETRANDOM
-			int res{};
-			do {
-				res = getrandom(&ret, sizeof(ret), 0);
-			} while (res != 0 && errno == EINTR);
-			if (!res) {
-				return ret;
+			size_t len = sizeof(ret);
+			uint8_t* p = reinterpret_cast<uint8_t*>(ret);
+			while (len) {
+				int res = getrandom(p, len, 0);
+				if (res >= static_cast<int>(len)) {
+					return ret;
+				}
+				else if (res > 0) {
+					len -= res;
+					p += res;
+				}
+				else if (res != -1 || errno != EINTR) {
+					break;
+				}
 			}
 	#endif
 	#if HAVE_GETENTROPY
