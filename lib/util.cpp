@@ -98,7 +98,7 @@ struct guaranteed_random_device
 #else
 	#if HAVE_GETRANDOM
 			size_t len = sizeof(ret);
-			uint8_t* p = reinterpret_cast<uint8_t*>(ret);
+			uint8_t* p = reinterpret_cast<uint8_t*>(&ret);
 			while (len) {
 				int res = getrandom(p, len, 0);
 				if (res >= static_cast<int>(len)) {
