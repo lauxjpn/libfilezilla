@@ -23,6 +23,7 @@ AC_DEFUN([CHECK_RANDOM],
     AC_MSG_CHECKING([for getentropy])
     AC_LINK_IFELSE([
       AC_LANG_PROGRAM([[
+        #include <sys/types.h>
         #ifdef __APPLE__
           #include <Availability.h>
           #include <sys/random.h>
