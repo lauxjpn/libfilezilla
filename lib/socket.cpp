@@ -1593,6 +1593,10 @@ socket_descriptor listen_socket::fast_accept(int &error)
 #endif
 		}
 
+		if (fd == -1) {
+			error = errno;
+		}
+
 #if !defined(FZ_WINDOWS) && !defined(HAVE_POLL)
 		if (fd >= FD_SETSIZE) {
 			::close(fd);
@@ -2024,5 +2028,15 @@ void socket_layer::set_event_passthrough(socket_event_flag retrigger_block)
 int socket_layer::shutdown_read()
 {
 	return next_layer_.shutdown_read();
+}
+
+socket_base::socket_t socket::get_descriptor()
+{
+	if (!socket_thread_) {
+		return fd_;
+	}
+
+	scoped_lock l(socket_thread_->mutex_);
+	return fd_; // Mutex as fd_ might change during connect
 }
 }
