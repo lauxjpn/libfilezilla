@@ -168,8 +168,8 @@ void random_bytes(size_t size, uint8_t* destination)
 	guaranteed_random_device rd;
 
 	size_t i;
-	for (i = 0; i + sizeof(std::random_device::result_type) <= size; i += sizeof(std::random_device::result_type)) {
-		*reinterpret_cast<std::random_device::result_type*>(destination + i) = rd();
+	for (i = 0; i + sizeof(guaranteed_random_device::result_type) <= size; i += sizeof(guaranteed_random_device::result_type)) {
+		*reinterpret_cast<guaranteed_random_device::result_type*>(destination + i) = rd();
 	}
 
 	if (i < size) {
