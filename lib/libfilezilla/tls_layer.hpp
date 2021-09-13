@@ -31,6 +31,22 @@ enum class tls_ver
 	v1_3
 };
 
+enum class tls_server_flags : unsigned int
+{
+	none = 0,
+
+	/// In TLS 1.3, do not automatically send PSKs after finishing handshake. Ignored if not TLS 1.3
+	no_auto_ticket = 0x1
+};
+
+inline bool operator&(tls_server_flags lhs, tls_server_flags rhs) {
+	return (static_cast<std::underlying_type_t<tls_server_flags>>(lhs) & static_cast<std::underlying_type_t<tls_server_flags>>(rhs)) != 0;
+}
+inline tls_server_flags operator|(tls_server_flags lhs, tls_server_flags rhs) {
+	return static_cast<tls_server_flags>(static_cast<std::underlying_type_t<tls_server_flags>>(lhs) | static_cast<std::underlying_type_t<tls_server_flags>>(rhs));
+}
+
+
 /**
  * \brief A Transport Layer Security (TLS) layer
  *
@@ -95,7 +111,7 @@ public:
 	 *
 	 * The preamble is sent out after setting up all the parameters, but before the first handshake message
 	 */
-	bool server_handshake(std::vector<uint8_t> const& session_to_resume = {}, std::string_view const& preamble = {});
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume = {}, std::string_view const& preamble = {}, tls_server_flags flags = {});
 
 	/// Gets session parameters for resumption
 	std::vector<uint8_t> get_session_parameters() const;
@@ -184,6 +200,16 @@ public:
 	native_string get_hostname() const;
 
 	bool is_server() const;
+
+	/** \brief If running as server with TLS1.3, send out a new session ticket before the next data payload.
+	 *
+	 * Returns 0 on success, socket error otheerwise. Never returns EAGAIN.
+	 *
+	 * It's a NOOP if TLS version != 1.3
+	 *
+	 * Returns EINVAL if not server.
+	 */
+	int new_session_ticket();
 
 	virtual socket_state get_state() const override;
 
