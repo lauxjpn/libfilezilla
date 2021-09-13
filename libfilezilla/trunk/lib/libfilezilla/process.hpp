@@ -47,6 +47,10 @@ public:
 
 	bool spawn(std::vector<native_string> const& command_with_args, bool redirect_io = true);
 
+#if FZ_WINDOWS || FZ_UNIX
+	bool spawn(impersonation_token const& it, native_string const& cmd, std::vector<native_string> const& args, bool redirect_io = true);
+#endif
+
 #ifndef FZ_WINDOWS
 	/**
 	 * \brief Allows passing additional file descriptors to the process

@@ -154,6 +154,65 @@ bool set_process_impersonation(impersonation_token const& token)
 }
 }
 
+
+#elif FZ_WINDOWS
+
+#include "libfilezilla/glue/windows.hpp"
+
+namespace fz {
+class impersonation_token_impl final
+{
+public:
+	impersonation_token_impl() = default;
+
+	static impersonation_token_impl* get(impersonation_token const& t) {
+		return t.impl_.get();
+	}
+
+	~impersonation_token_impl() {
+		if (h_ != INVALID_HANDLE_VALUE) {
+			CloseHandle(h_);
+		}
+	}
+
+	static HANDLE get_handle(impersonation_token const& t) {
+		return t.impl_ ? t.impl_->h_ : INVALID_HANDLE_VALUE;
+	}
+
+	impersonation_token_impl(impersonation_token_impl const&) = delete;
+	impersonation_token_impl& operator=(impersonation_token_impl const&) = delete;
+
+	fz::native_string name_;
+	HANDLE h_{INVALID_HANDLE_VALUE};
+};
+
+impersonation_token::impersonation_token() = default;
+impersonation_token::~impersonation_token() noexcept = default;
+
+impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
+{
+	if (username.find_first_of(L"\"/\\[]:;|=,+*?<>") != fz::native_string::npos) {
+		return;
+	}
+
+	HANDLE token{INVALID_HANDLE_VALUE};
+	DWORD res = LogonUserW(username.c_str(), nullptr, passwd.c_str(), LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, &token);
+	if (res != 0) {
+		HANDLE primary{INVALID_HANDLE_VALUE};
+		res = DuplicateTokenEx(token, 0, nullptr, SecurityImpersonation, TokenPrimary, &primary);
+		if (res != 0) {
+			impl_ = std::make_unique<impersonation_token_impl>();
+			impl_->h_ = primary;
+		}
+		CloseHandle(token);
+	}
+}
+
+HANDLE get_handle(impersonation_token const& t) {
+	return impersonation_token_impl::get_handle(t);
+}
+}
+
 #elif 0
 namespace fz {
 struct impersonation_token_impl{};
