@@ -46,7 +46,7 @@ public:
 
 	bool client_handshake(std::vector<uint8_t> const& session_to_resume, native_string const& session_hostname, std::vector<uint8_t> const& required_certificate, event_handler * verification_handler);
 
-	bool server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble);
+	bool server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble, tls_server_flags flags);
 
 	int connect(native_string const& host, unsigned int port, address_type family);
 
@@ -103,7 +103,7 @@ private:
 	bool init();
 	void deinit();
 
-	bool init_session(bool client);
+	bool init_session(bool client, int extra_flags = 0);
 	void deinit_session();
 
 	int continue_write();
@@ -137,11 +137,9 @@ private:
 
 	void set_hostname(native_string const& host);
 
-	bool is_client() const {
-		return ticket_key_.empty();
-	}
-
 	bool do_set_alpn();
+
+	int new_session_ticket();
 
 	tls_layer& tls_layer_;
 
@@ -198,6 +196,8 @@ private:
 	bool server_{};
 
 	bool write_blocked_by_send_buffer_{};
+
+	bool send_new_ticket_{};
 
 #if DEBUG_SOCKETEVENTS
 	bool debug_can_read_{};

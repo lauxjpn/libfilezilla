@@ -119,7 +119,7 @@ public:
 
 		char const* name = gnutls_handshake_description_get_name(static_cast<gnutls_handshake_description_t>(htype));
 
-		tls->logger_.log(logmsg::debug_debug, L"TLS handshake: %s %s", prefix, name);
+		tls->logger_.log(logmsg::debug_debug, L"TLS handshakep: %s %s", prefix, name);
 
 		return 0;
 	}
@@ -377,16 +377,17 @@ bool tls_layer_impl::set_certificate(std::string_view const& key, std::string_vi
 
 	return true;
 }
-// Convert them all to PEM
 
-bool tls_layer_impl::init_session(bool client)
+bool tls_layer_impl::init_session(bool client, int extra_flags)
 {
 	if (!cert_credentials_) {
 		deinit();
 		return false;
 	}
 
-	int res = gnutls_init(&session_, client ? GNUTLS_CLIENT : GNUTLS_SERVER);
+	int flags = client ? GNUTLS_CLIENT : GNUTLS_SERVER;
+	flags |= extra_flags;
+	int res = gnutls_init(&session_, flags);
 	if (res) {
 		log_error(res, L"gnutls_init");
 		deinit();
@@ -768,11 +769,7 @@ void tls_layer_impl::on_send()
 
 int tls_layer_impl::continue_write()
 {
-	if (send_buffer_.empty()) {
-		return 0;
-	}
-
-	do {
+	while (!send_buffer_.empty()) {
 		ssize_t res = GNUTLS_E_AGAIN;
 		while ((res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) && can_write_to_socket_) {
 			res = gnutls_record_send(session_, send_buffer_.get(), send_buffer_.size());
@@ -795,7 +792,24 @@ int tls_layer_impl::continue_write()
 
 		send_buffer_.consume(static_cast<size_t>(res));
 	}
-	while (!send_buffer_.empty());
+
+	if (send_new_ticket_) {
+		int res = GNUTLS_E_AGAIN;
+		while ((res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) && can_write_to_socket_) {
+			res = gnutls_session_ticket_send(session_, 1, 0);
+		}
+
+		if (res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) {
+			return EAGAIN;
+		}
+
+		if (res < 0) {
+			failure(static_cast<int>(res), true);
+			return ECONNABORTED;
+		}
+
+		send_new_ticket_ = false;
+	}
 
 	if (write_blocked_by_send_buffer_) {
 		write_blocked_by_send_buffer_ = false;
@@ -827,6 +841,8 @@ bool tls_layer_impl::client_handshake(std::vector<uint8_t> const& session_to_res
 		logger_.log(logmsg::debug_warning, L"Called tls_layer_impl::client_handshake on a socket that isn't idle");
 		return false;
 	}
+
+	server_ = false;
 
 	if (!init() || !init_session(true)) {
 		return false;
@@ -918,7 +934,7 @@ bool extract_with_size(uint8_t const* &p, uint8_t const* const end, std::vector<
 }
 }
 
-bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble)
+bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble, tls_server_flags flags)
 {
 	logger_.log(logmsg::debug_verbose, L"tls_layer_impl::server_handshake()");
 
@@ -943,7 +959,11 @@ bool tls_layer_impl::server_handshake(std::vector<uint8_t> const& session_to_res
 		}
 	}
 
-	if (!init() || !init_session(false)) {
+	int extra_flags{};
+	if (flags & tls_server_flags::no_auto_ticket) {
+		extra_flags |= GNUTLS_NO_AUTO_SEND_TICKET;
+	}
+	if (!init() || !init_session(false, extra_flags)) {
 		return false;
 	}
 
@@ -1014,7 +1034,7 @@ int tls_layer_impl::continue_handshake()
 
 		logger_.log(logmsg::debug_info, L"Protocol: %s, Key exchange: %s, Cipher: %s, MAC: %s", protocol, keyExchange, cipherName, macName);
 
-		if (is_client()) {
+		if (!server_) {
 			return verify_certificate();
 		}
 		else {
@@ -1090,6 +1110,7 @@ int tls_layer_impl::read(void *buffer, unsigned int len, int& error)
 
 int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 {
+//	for(size_t i = 0; i < 20; ++i) {logger_.log(logmsg::error, "Why not Zoidberg?");}
 	if (state_ == socket_state::connecting) {
 		error = EAGAIN;
 		return -1;
@@ -1108,7 +1129,7 @@ int tls_layer_impl::write(void const* buffer, unsigned int len, int& error)
 	assert(!has_pending_event(tls_layer_.event_handler_, &tls_layer_, socket_event_flag::write));
 #endif
 
-	if (!send_buffer_.empty()) {
+	if (!send_buffer_.empty() || send_new_ticket_) {
 		write_blocked_by_send_buffer_ = true;
 #if DEBUG_SOCKETEVENTS
 		debug_can_write_ = false;
@@ -1204,7 +1225,7 @@ int tls_layer_impl::shutdown()
 
 	state_ = socket_state::shutting_down;
 
-	if (!send_buffer_.empty()) {
+	if (!send_buffer_.empty() || send_new_ticket_) {
 		logger_.log(logmsg::debug_verbose, L"Postponing shutdown, send_buffer_ not empty");
 		return EAGAIN;
 	}
@@ -2107,7 +2128,7 @@ std::vector<uint8_t> tls_layer_impl::get_session_parameters() const
 {
 	std::vector<uint8_t> ret;
 
-	if (is_client()) {
+	if (!server_) {
 		datum_holder d;
 		int res = gnutls_session_get_data2(session_, &d);
 		if (res) {
@@ -2476,6 +2497,50 @@ void tls_layer_impl::set_min_tls_ver(tls_ver ver)
 void tls_layer_impl::set_max_tls_ver(tls_ver ver)
 {
 	max_tls_ver_ = ver;
+}
+
+int tls_layer_impl::new_session_ticket()
+{
+	if (state_ == socket_state::shutting_down || state_ == socket_state::shut_down) {
+		return ESHUTDOWN;
+	}
+	else if (state_ != socket_state::connected) {
+		return ENOTCONN;
+	}
+
+	if (!server_) {
+		return EINVAL;
+	}
+
+	if (gnutls_protocol_get_version(session_) != GNUTLS_TLS1_3) {
+		return 0;
+	}
+
+#if DEBUG_SOCKETEVENTS
+	assert(debug_can_write_);
+	assert(!has_pending_event(tls_layer_.event_handler_, &tls_layer_, socket_event_flag::write));
+#endif
+
+	if (!send_buffer_.empty()|| send_new_ticket_) {
+		send_new_ticket_ = true;
+		return 0;
+	}
+
+	int res = GNUTLS_E_AGAIN;
+	while ((res == GNUTLS_E_INTERRUPTED || res == GNUTLS_E_AGAIN) && can_write_to_socket_) {
+		res = gnutls_session_ticket_send(session_, 1, 0);
+	}
+
+	if (res == GNUTLS_E_SUCCESS) {
+		return 0;
+	}
+	else if (res == GNUTLS_E_AGAIN) {
+		send_new_ticket_ = true;
+		return 0;
+	}
+
+	failure(res, false, L"gnutls_session_ticket_send");
+	return socket_error_ ? socket_error_ : ECONNABORTED;
 }
 
 }

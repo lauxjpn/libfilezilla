@@ -26,9 +26,9 @@ bool tls_layer::client_handshake(event_handler* const verification_handler, std:
 	return impl_->client_handshake(session_to_resume, session_hostname, std::vector<uint8_t>(), verification_handler);
 }
 
-bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble)
+bool tls_layer::server_handshake(std::vector<uint8_t> const& session_to_resume, std::string_view const& preamble, tls_server_flags flags)
 {
-	return impl_->server_handshake(session_to_resume, preamble);
+	return impl_->server_handshake(session_to_resume, preamble, flags);
 }
 
 int tls_layer::read(void *buffer, unsigned int size, int& error)
@@ -204,4 +204,8 @@ void tls_layer::set_max_tls_ver(tls_ver ver)
 	}
 }
 
+int tls_layer::new_session_ticket()
+{
+	return impl_ ? impl_->new_session_ticket() : false;
+}
 }
