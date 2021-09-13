@@ -205,6 +205,7 @@
     <ClCompile Include="file.cpp" />
     <ClCompile Include="hash.cpp" />
     <ClCompile Include="hostname_lookup.cpp" />
+    <ClCompile Include="impersonation.cpp" />
     <ClCompile Include="invoker.cpp" />
     <ClCompile Include="iputils.cpp" />
     <ClCompile Include="local_filesys.cpp" />
@@ -243,6 +244,7 @@
     <ClInclude Include="libfilezilla\format.hpp" />
     <ClInclude Include="libfilezilla\hash.hpp" />
     <ClInclude Include="libfilezilla\hostname_lookup.hpp" />
+    <ClInclude Include="libfilezilla\impersonation.hpp" />
     <ClInclude Include="libfilezilla\invoker.hpp" />
     <ClInclude Include="libfilezilla\iputils.hpp" />
     <ClInclude Include="libfilezilla\libfilezilla.hpp" />

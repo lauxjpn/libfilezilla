@@ -135,6 +135,7 @@ native_string get_cmd_line(native_string const& cmd, std::vector<native_string>:
 }
 }
 
+HANDLE get_handle(impersonation_token const& t);
 class process::impl
 {
 public:
@@ -155,7 +156,7 @@ public:
 			err_.create(true);
 	}
 
-	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io)
+	bool spawn(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, bool redirect_io, impersonation_token const* it = nullptr)
 	{
 		if (process_ != INVALID_HANDLE_VALUE) {
 			return false;
@@ -182,7 +183,13 @@ public:
 		auto cmdline_buf = cmdline.data();
 
 		DWORD const flags = CREATE_UNICODE_ENVIRONMENT | CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW;
-		BOOL res = CreateProcess(cmd.c_str(), cmdline_buf, nullptr, nullptr, TRUE, flags, nullptr, nullptr, &si, &pi);
+		BOOL res;
+		if (it) {
+			 res = CreateProcessAsUser(get_handle(*it), cmd.c_str(), cmdline_buf, nullptr, nullptr, TRUE, flags, nullptr, nullptr, &si, &pi);
+		}
+		else {
+			res = CreateProcess(cmd.c_str(), cmdline_buf, nullptr, nullptr, TRUE, flags, nullptr, nullptr, &si, &pi);
+		}
 		if (!res) {
 			return false;
 		}
@@ -522,6 +529,17 @@ bool process::spawn(native_string const& cmd, std::vector<native_string> const& 
 {
 	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io) : false;
 }
+
+#if FZ_WINDOWS || FZ_UNIX
+bool process::spawn(impersonation_token const& it, native_string const& cmd, std::vector<native_string> const& args, bool redirect_io)
+{
+#if FZ_WINDOWS
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io, &it) : false;
+#else
+	return impl_ ? impl_->spawn(cmd, args.cbegin(), args.cend(), redirect_io, {}, &it) : false;
+#endif
+}
+#endif
 
 #ifndef FZ_WINDOWS
 bool process::spawn(native_string const& cmd, std::vector<native_string> const& args, std::vector<int> const& extra_fds, bool redirect_io)

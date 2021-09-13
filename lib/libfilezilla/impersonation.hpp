@@ -3,16 +3,18 @@
 
 #include "string.hpp"
 
-#if FZ_UNIX
+#if FZ_UNIX || FZ_WINDOWS
 
 #include <memory>
 
 namespace fz {
 
+#if FZ_UNIX
 enum class impersonation_flag
 {
 	pwless
 };
+#endif
 
 class impersonation_token_impl;
 class FZ_PUBLIC_SYMBOL impersonation_token final
@@ -25,7 +27,10 @@ public:
 	impersonation_token();
 
 	explicit impersonation_token(fz::native_string const& username, fz::native_string const& password);
+
+#if FZ_UNIX
 	explicit impersonation_token(fz::native_string const& username, impersonation_flag flag);
+#endif
 
 	~impersonation_token() noexcept;
 
@@ -40,8 +45,10 @@ private:
 	std::unique_ptr<impersonation_token_impl> impl_;
 };
 
+#if FZ_UNIX
 // Applies to the entire current process
 bool FZ_PUBLIC_SYMBOL set_process_impersonation(impersonation_token const& token);
+#endif
 
 }
 #endif
