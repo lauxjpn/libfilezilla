@@ -135,7 +135,7 @@ void buffer::append(unsigned char const* data, size_t len)
 	if (capacity_ - (pos_ - data_) - size_ < len) {
 		if (capacity_ - size_ >= len) {
 			// Also offset data in case of self-assignment
-			if (data >= pos_ && data_ < (pos_ + size_)) {
+			if (data >= pos_ && data < (pos_ + size_)) {
 				data -= pos_ - data_;
 			}
 
