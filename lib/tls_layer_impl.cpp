@@ -25,8 +25,6 @@ bool FZ_PRIVATE_SYMBOL has_pending_event(event_handler * handler, socket_event_s
 }
 #endif
 
-static_assert(GNUTLS_VERSION_NUMBER != 0x030604, "Using TLS 1.3 with this version of GnuTLS does not work, update your version of GnuTLS");
-
 namespace fz {
 
 namespace {
@@ -34,11 +32,7 @@ namespace {
 #if FZ_USE_GNUTLS_SYSTEM_CIPHERS
 char const ciphers[] = "@SYSTEM:-ARCFOUR-128:-3DES-CBC:-MD5:-SIGN-RSA-MD5:-VERS-SSL3.0";
 #else
-	#if GNUTLS_VERSION_NUMBER >= 0x030600
-		char const ciphers[] = "SECURE256:+SECURE128:-ARCFOUR-128:-3DES-CBC:-MD5:+SIGN-ALL:-SIGN-RSA-MD5:+CTYPE-X509:-VERS-SSL3.0";
-	#else
-		char const ciphers[] = "SECURE256:+SECURE128:-ARCFOUR-128:-3DES-CBC:-MD5:+SIGN-ALL:-SIGN-RSA-MD5:+CTYPE-X509:-CTYPE-OPENPGP:-VERS-SSL3.0";
-	#endif
+	char const ciphers[] = "SECURE256:+SECURE128:-ARCFOUR-128:-3DES-CBC:-MD5:+SIGN-ALL:-SIGN-RSA-MD5:+CTYPE-X509:-VERS-SSL3.0";
 #endif
 
 #define TLSDEBUG 0
@@ -457,9 +451,7 @@ bool tls_layer_impl::init_session(bool client, int extra_flags)
 			prio += ":-VERS-TLS1.2";
 			// Fallthrough
 		case tls_ver::v1_2:
-#if GNUTLS_VERSION_NUMBER >= 0x030603
 			prio += ":-VERS-TLS1.3";
-#endif
 			break;
 		default:
 			break;
@@ -1931,13 +1923,11 @@ std::string tls_layer_impl::get_key_exchange() const
 	if (dh || ecdh) {
 		char const* const signature_name = gnutls_sign_get_name(static_cast<gnutls_sign_algorithm_t>(gnutls_sign_algorithm_get(session_)));
 		ret = (ecdh ? "ECDHE" : "DHE");
-#if GNUTLS_VERSION_NUMBER >= 0x030600
 		s = gnutls_group_get_name(gnutls_group_get(session_));
 		if (s && *s) {
 			ret += "-";
 			ret += s;
 		}
-#endif
 		if (signature_name && *signature_name) {
 			ret += "-";
 			ret += signature_name;
