@@ -189,8 +189,8 @@ AC_SUBST(HOGWEED_CFLAGS)
 # GnuTLS
 # ------
 
-PKG_CHECK_MODULES([GNUTLS], [gnutls >= 3.5.8],, [
-  AC_MSG_ERROR([GnuTLS 3.5.8 or greater was not found. You can get it from https://gnutls.org/])
+PKG_CHECK_MODULES([GNUTLS], [gnutls >= 3.6.14],, [
+  AC_MSG_ERROR([GnuTLS 3.6.14 or greater was not found. You can get it from https://gnutls.org/])
 ])
 
 AC_SUBST(GNUTLS_LIBS)
