@@ -33,7 +33,7 @@ namespace logmsg
 		debug_debug   = 1ull << 7,
 
 
-		private1     = 1ull << 31,
+		private1     = 1ull << 32,
 		private32    = 1ull << 63
 	};
 }
