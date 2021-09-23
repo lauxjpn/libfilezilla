@@ -362,7 +362,7 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 					}
 
 					if (u <= 0x7f) {
-						ret += static_cast<unsigned char>(u);
+						ret += static_cast<char>(u);
 					}
 					else if (u <= 0x7ff) {
 						ret += static_cast<char>(0xc0u | ((u >> 6u) & 0x1fu));
