@@ -105,7 +105,10 @@ public:
 	/// \param dirs_only If true, only directories are enumerated.
 	result begin_find_files(native_string path, bool dirs_only = false, bool query_symlink_targets = true);
 
-#ifdef FZ_UNIX
+#if FZ_WINDOWS
+	// Takes ownership of handle
+	result begin_find_files(HANDLE dir, bool dirs_only = false, bool query_symlink_targets = true);
+#elif FZ_UNIX
 	// Takes ownership of fd
 	result begin_find_files(int fd, bool dirs_only = false, bool query_symlink_targets = true);
 #endif
@@ -134,12 +137,11 @@ public:
 	static native_string get_link_target(native_string const& path);
 
 private:
-
 #ifdef FZ_WINDOWS
-	WIN32_FIND_DATA m_find_data{};
-	HANDLE m_hFind{INVALID_HANDLE_VALUE};
-	native_string m_find_path;
-	bool has_next_{};
+	bool check_buffer();
+	std::vector<unsigned char> buffer_;
+	unsigned char* cur_{};
+	HANDLE dir_{INVALID_HANDLE_VALUE};
 #else
 	DIR* dir_{};
 #endif

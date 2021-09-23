@@ -39,7 +39,7 @@ local_filesys::~local_filesys()
 
 namespace {
 #ifdef FZ_WINDOWS
-	bool IsNameSurrogateReparsePoint(std::wstring const& file)
+bool IsNameSurrogateReparsePoint(std::wstring const& file)
 {
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFile(file.c_str(), &data);
@@ -379,27 +379,21 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only, bool 
 	query_symlink_targets_ = query_symlink_targets;
 
 #ifdef FZ_WINDOWS
-	if (is_separator(path.back())) {
-		m_find_path = path;
-		path += '*';
-	}
-	else {
-		m_find_path = path + fzT("\\");
-		path += fzT("\\*");
+	if (!is_separator(path.back())) {
+		path += '\\';
 	}
 
-	m_hFind = FindFirstFileEx(path.c_str(), FindExInfoStandard, &m_find_data, dirs_only ? FindExSearchLimitToDirectories : FindExSearchNameMatch, nullptr, 0);
-	if (m_hFind == INVALID_HANDLE_VALUE) {
-		has_next_ = false;
+	dir_ = CreateFile(path.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	if (dir_ == INVALID_HANDLE_VALUE) {
 		switch (GetLastError()) {
-			case ERROR_ACCESS_DENIED:
-				return result{result::noperm};
-			default:
-				return result{result::other};
+		case ERROR_ACCESS_DENIED:
+			return result{result::noperm};
+		default:
+			return result{result::other};
 		}
 	}
 
-	has_next_ = true;
+	buffer_.resize(64 * 1024);
 	return result{result::ok};
 #else
 	if (path.size() > 1 && path.back() == '/') {
@@ -424,7 +418,23 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only, bool 
 #endif
 }
 
-#if FZ_UNIX
+#if FZ_WINDOWS
+result local_filesys::begin_find_files(HANDLE dir, bool dirs_only, bool query_symlink_targets)
+{
+	end_find_files();
+
+	if (dir == INVALID_HANDLE_VALUE) {
+		return {result::nodir};
+	}
+
+	dirs_only_ = dirs_only;
+	query_symlink_targets_ = query_symlink_targets;
+
+	dir_ = dir;
+	buffer_.resize(64 * 1024);
+	return result{result::ok};
+}
+#elif FZ_UNIX
 result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlink_targets)
 {
 	end_find_files();
@@ -438,6 +448,7 @@ result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlin
 
 	dir_ = fdopendir(fd);
 	if (!dir_) {
+		close(fd);
 		switch (errno) {
 			case EACCES:
 			case EPERM:
@@ -457,11 +468,12 @@ result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlin
 void local_filesys::end_find_files()
 {
 #ifdef FZ_WINDOWS
-	has_next_ = false;
-	if (m_hFind != INVALID_HANDLE_VALUE) {
-		FindClose(m_hFind);
-		m_hFind = INVALID_HANDLE_VALUE;
+	if (dir_ != INVALID_HANDLE_VALUE) {
+		FindClose(dir_);
+		dir_ = INVALID_HANDLE_VALUE;
 	}
+	buffer_.clear();
+	cur_ = nullptr;
 #else
 	if (dir_) {
 		closedir(dir_);
@@ -470,30 +482,106 @@ void local_filesys::end_find_files()
 #endif
 }
 
+#ifdef FZ_WINDOWS
+namespace {
+extern "C" {
+// Sadly ddk/ntifs.h is unusuable. Manually declare the needed things.
+typedef struct {
+	union {
+		DWORD Status;
+		void* Pointer;
+	};
+	ULONG_PTR Information;
+} lfzIO_STATUS_BLOCK;
+
+typedef enum
+{
+	lfzFileDirectoryInformation = 1
+} lfzFILE_INFORMATION_CLASS;
+
+typedef struct {
+	ULONG NextEntryOffset;
+	ULONG unused1;
+	LARGE_INTEGER CreationTime;
+	LARGE_INTEGER LastAccessTime;
+	LARGE_INTEGER LastWriteTime;
+	LARGE_INTEGER ChangeTime;
+	LARGE_INTEGER EndOfFile;
+	LARGE_INTEGER unused2;
+	ULONG FileAttributes;
+	ULONG FileNameLength;
+	WCHAR FileName[1];
+} lfzFILE_DIRECTORY_INFORMATION;
+
+typedef DWORD(NTAPI* lfzNtQueryDirectoryFile)(HANDLE dir, HANDLE ev, void*, void*, lfzIO_STATUS_BLOCK* status, void* buffer, ULONG size, lfzFILE_INFORMATION_CLASS c, BOOL single, void*, BOOL restart);
+}
+
+struct dll final
+{
+	explicit dll(wchar_t const* name)
+	{
+		h_ = LoadLibraryW(name);
+	}
+
+	~dll() {
+		if (h_) {
+			FreeLibrary(h_);
+		}
+	}
+
+	dll(dll const&) = delete;
+	dll& operator=(dll const&) = delete;
+
+	HMODULE h_{};
+};
+}
+bool local_filesys::check_buffer()
+{
+	if (!cur_) {
+		static dll ntdll(L"ntdll.dll");
+		static lfzNtQueryDirectoryFile f = ntdll.h_ ? reinterpret_cast<lfzNtQueryDirectoryFile>(GetProcAddress(ntdll.h_, "NtQueryDirectoryFile")) : nullptr;
+		if (!f) {
+			return false;
+		}
+		lfzIO_STATUS_BLOCK s{};
+		DWORD res = f(dir_, nullptr, nullptr, nullptr, &s, buffer_.data(), buffer_.size(), lfzFileDirectoryInformation, FALSE, nullptr, FALSE);
+		if (res != 0 || !s.Information) {
+			return false;
+		}
+		cur_ = buffer_.data();
+	}
+	return true;
+}
+#endif
+
 bool local_filesys::get_next_file(native_string& name)
 {
 #ifdef FZ_WINDOWS
-	if (!has_next_) {
-		return false;
-	}
-	do {
-		name = m_find_data.cFileName;
-		if (name.empty()) {
-			has_next_ = FindNextFile(m_hFind, &m_find_data) != 0;
-			return true;
+	while (dir_ != INVALID_HANDLE_VALUE) {
+		if (!check_buffer()) {
+			name.clear();
+			end_find_files();
+			return false;
 		}
+
+		auto & data = *reinterpret_cast<lfzFILE_DIRECTORY_INFORMATION*>(cur_);
+		cur_ = data.NextEntryOffset ? (cur_ + data.NextEntryOffset) : nullptr;
+
+		if (!data.FileNameLength || (data.FileNameLength % sizeof(wchar_t))) {
+			continue;
+		}
+		if (dirs_only_ && !(data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			continue;
+		}
+		name.assign(data.FileName, data.FileNameLength / sizeof(wchar_t));
 		if (name == fzT(".") || name == fzT("..")) {
 			continue;
 		}
 
-		if (dirs_only_ && !(m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-			continue;
-		}
-
-		has_next_ = FindNextFile(m_hFind, &m_find_data) != 0;
 		return true;
-	} while ((has_next_ = FindNextFile(m_hFind, &m_find_data) != 0));
+	}
 
+	name.clear();
 	return false;
 #else
 	if (!dir_) {
@@ -539,25 +627,31 @@ bool local_filesys::get_next_file(native_string& name)
 bool local_filesys::get_next_file(native_string& name, bool &is_link, local_filesys::type & t, int64_t* size, datetime* modification_time, int* mode)
 {
 #ifdef FZ_WINDOWS
-	if (!has_next_) {
-		return false;
-	}
-	do {
-		if (!m_find_data.cFileName[0]) {
+	while (dir_ != INVALID_HANDLE_VALUE) {
+		if (!check_buffer()) {
+			name.clear();
+			end_find_files();
+			return false;
+		}
+
+		auto& data = *reinterpret_cast<lfzFILE_DIRECTORY_INFORMATION*>(cur_);
+		cur_ = data.NextEntryOffset ? (cur_ + data.NextEntryOffset) : nullptr;
+
+		if (!data.FileNameLength || (data.FileNameLength % sizeof(wchar_t))) {
 			continue;
 		}
-		if (dirs_only_ && !(m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+		if (dirs_only_ && !(data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			continue;
+		}
+		name.assign(data.FileName, data.FileNameLength / sizeof(wchar_t));
+		if (name == fzT(".") || name == fzT("..")) {
 			continue;
 		}
 
-		if (m_find_data.cFileName[0] == '.' && (!m_find_data.cFileName[1] || (m_find_data.cFileName[1] == '.' && !m_find_data.cFileName[2]))) {
-			continue;
-		}
-		name = m_find_data.cFileName;
+		t = (data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
 
-		t = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
-
-		is_link = (m_find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsReparseTagNameSurrogate(m_find_data.dwReserved0);
+		is_link = (data.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;//FIXME&& IsNameSurrogateReparsePoint(m_find_path + name);
+#if FIXME
 		if (is_link && query_symlink_targets_) {
 			// Follow the reparse point
 			HANDLE hFile = CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
@@ -566,7 +660,6 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 				int ret = GetFileInformationByHandle(hFile, &info);
 				CloseHandle(hFile);
 				if (ret != 0) {
-
 					if (modification_time) {
 						*modification_time = datetime(info.ftLastWriteTime, datetime::milliseconds);
 						if (modification_time->empty()) {
@@ -588,7 +681,6 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 						}
 					}
 
-					has_next_ = FindNextFile(m_hFind, &m_find_data) != 0;
 					return true;
 				}
 			}
@@ -607,16 +699,23 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 				*modification_time = datetime();
 			}
 		}
-		else {
+		else
+#endif
+		{
 			if (modification_time) {
-				*modification_time = datetime(m_find_data.ftLastWriteTime, datetime::milliseconds);
+				FILETIME ft;
+				ft.dwLowDateTime = data.LastWriteTime.LowPart;
+				ft.dwHighDateTime = data.LastWriteTime.HighPart;
+				*modification_time = datetime(ft, datetime::milliseconds);
 				if (modification_time->empty()) {
-					*modification_time = datetime(m_find_data.ftLastWriteTime, datetime::milliseconds);
+					ft.dwLowDateTime = data.CreationTime.LowPart;
+					ft.dwHighDateTime = data.CreationTime.HighPart;
+					*modification_time = datetime(ft, datetime::milliseconds);
 				}
 			}
 
 			if (mode) {
-				*mode = (int)m_find_data.dwFileAttributes;
+				*mode = (int)data.FileAttributes;
 			}
 
 			if (size) {
@@ -624,13 +723,12 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 					*size = -1;
 				}
 				else {
-					*size = make_int64fzT(m_find_data.nFileSizeHigh, m_find_data.nFileSizeLow);
+					*size = data.EndOfFile.QuadPart;
 				}
 			}
 		}
-		has_next_ = FindNextFile(m_hFind, &m_find_data) != 0;
 		return true;
-	} while ((has_next_ = FindNextFile(m_hFind, &m_find_data) != 0));
+	}
 
 	return false;
 #else
