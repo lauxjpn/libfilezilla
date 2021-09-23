@@ -11,6 +11,7 @@ test_SOURCES =  test.cpp \
 		format.cpp \
 		invoker.cpp \
 		iputils.cpp \
+		json.cpp \
 		smart_pointer.cpp \
 		socket.cpp \
 		string.cpp \
