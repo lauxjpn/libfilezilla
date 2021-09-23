@@ -5,6 +5,7 @@
 
 #ifdef FZ_WINDOWS
 #include "windows/security_descriptor_builder.hpp"
+#include <winternl.h>
 #else
 #include <errno.h>
 #include <sys/fcntl.h>
@@ -469,7 +470,7 @@ void local_filesys::end_find_files()
 {
 #ifdef FZ_WINDOWS
 	if (dir_ != INVALID_HANDLE_VALUE) {
-		FindClose(dir_);
+		CloseHandle(dir_);
 		dir_ = INVALID_HANDLE_VALUE;
 	}
 	buffer_.clear();
@@ -486,14 +487,6 @@ void local_filesys::end_find_files()
 namespace {
 extern "C" {
 // Sadly ddk/ntifs.h is unusuable. Manually declare the needed things.
-typedef struct {
-	union {
-		DWORD Status;
-		void* Pointer;
-	};
-	ULONG_PTR Information;
-} lfzIO_STATUS_BLOCK;
-
 typedef enum
 {
 	lfzFileDirectoryInformation = 1
@@ -513,8 +506,8 @@ typedef struct {
 	WCHAR FileName[1];
 } lfzFILE_DIRECTORY_INFORMATION;
 
-typedef DWORD(NTAPI* lfzNtQueryDirectoryFile)(HANDLE dir, HANDLE ev, void*, void*, lfzIO_STATUS_BLOCK* status, void* buffer, ULONG size, lfzFILE_INFORMATION_CLASS c, BOOL single, void*, BOOL restart);
-}
+typedef NTSTATUS(NTAPI* lfzNtQueryDirectoryFile)(HANDLE dir, HANDLE ev, void*, void*, IO_STATUS_BLOCK* status, void* buffer, ULONG size, lfzFILE_INFORMATION_CLASS c, BOOL single, void*, BOOL restart);
+typedef NTSTATUS(NTAPI* lfzNtOpenFile)(HANDLE* file, ACCESS_MASK DesiredAccess, OBJECT_ATTRIBUTES* attributes, IO_STATUS_BLOCK* status, ULONG ShareAccess, ULONG OpenOptions);
 
 struct dll final
 {
@@ -535,20 +528,75 @@ struct dll final
 	HMODULE h_{};
 };
 }
+
+bool read_dir_buffer(HANDLE dir, void* buf, ULONG size, lfzFILE_INFORMATION_CLASS c)
+{
+	static dll ntdll(L"ntdll.dll");
+	static lfzNtQueryDirectoryFile f = ntdll.h_ ? reinterpret_cast<lfzNtQueryDirectoryFile>(GetProcAddress(ntdll.h_, "NtQueryDirectoryFile")) : nullptr;
+	if (!f) {
+		return false;
+	}
+	IO_STATUS_BLOCK s{};
+	NTSTATUS res = f(dir, nullptr, nullptr, nullptr, &s, buf, size, c, FALSE, nullptr, FALSE);
+	if (res != 0 || !s.Information) {
+		return false;
+	}
+	return true;
+}
+
+HANDLE OpenAt(HANDLE dir, std::wstring const& name, ACCESS_MASK DesiredAccess, ULONG ShareAccess, ULONG OpenOptions)
+{
+	static dll ntdll(L"ntdll.dll");
+	static lfzNtOpenFile const func = ntdll.h_ ? reinterpret_cast<lfzNtOpenFile>(GetProcAddress(ntdll.h_, "NtOpenFile")) : nullptr;
+	if (!func) {
+		return INVALID_HANDLE_VALUE;
+	}
+
+	UNICODE_STRING uname;
+	uname.Length = name.size() * 2;
+	uname.MaximumLength = name.size() * 2 + 2;
+	uname.Buffer = const_cast<wchar_t*>(name.c_str());
+
+	OBJECT_ATTRIBUTES attrs{};
+	attrs.Length = sizeof(OBJECT_ATTRIBUTES);
+	attrs.RootDirectory = dir;
+	attrs.ObjectName = &uname;
+
+	HANDLE file;
+	IO_STATUS_BLOCK s{};
+	NTSTATUS res = func(&file, DesiredAccess | SYNCHRONIZE, &attrs, &s, ShareAccess, OpenOptions | FILE_SYNCHRONOUS_IO_NONALERT);
+	if (res) {
+		return INVALID_HANDLE_VALUE;
+	}
+	return file;
+}
+
+bool IsNameSurrogateReparsePoint(HANDLE dir, std::wstring const& name)
+{
+	HANDLE file = OpenAt(dir, name, FILE_READ_EA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT);
+	if (file != INVALID_HANDLE_VALUE) {
+		FILE_ATTRIBUTE_TAG_INFO buf{};
+
+		bool ret{};
+		if (GetFileInformationByHandleEx(file, FileAttributeTagInfo, &buf, sizeof(FILE_ATTRIBUTE_TAG_INFO)) != 0) {
+			ret = IsReparseTagNameSurrogate(buf.ReparseTag);
+		}
+		CloseHandle(file);
+
+		return ret;
+	}
+
+	return false;
+}
+}
+
 bool local_filesys::check_buffer()
 {
 	if (!cur_) {
-		static dll ntdll(L"ntdll.dll");
-		static lfzNtQueryDirectoryFile f = ntdll.h_ ? reinterpret_cast<lfzNtQueryDirectoryFile>(GetProcAddress(ntdll.h_, "NtQueryDirectoryFile")) : nullptr;
-		if (!f) {
-			return false;
-		}
-		lfzIO_STATUS_BLOCK s{};
-		DWORD res = f(dir_, nullptr, nullptr, nullptr, &s, buffer_.data(), buffer_.size(), lfzFileDirectoryInformation, FALSE, nullptr, FALSE);
-		if (res != 0 || !s.Information) {
-			return false;
-		}
 		cur_ = buffer_.data();
+		if (!read_dir_buffer(dir_, cur_, buffer_.size(), lfzFileDirectoryInformation)) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -650,11 +698,10 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 
 		t = (data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? dir : file;
 
-		is_link = (data.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;//FIXME&& IsNameSurrogateReparsePoint(m_find_path + name);
-#if FIXME
+		is_link = (data.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsNameSurrogateReparsePoint(dir_, name);
 		if (is_link && query_symlink_targets_) {
 			// Follow the reparse point
-			HANDLE hFile = CreateFile((m_find_path + name).c_str(), FILE_READ_ATTRIBUTES | FILE_READ_EA, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+			HANDLE hFile = OpenAt(dir_, name, FILE_READ_EA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN_FOR_BACKUP_INTENT); 
 			if (hFile != INVALID_HANDLE_VALUE) {
 				BY_HANDLE_FILE_INFORMATION info{};
 				int ret = GetFileInformationByHandle(hFile, &info);
@@ -699,9 +746,7 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 				*modification_time = datetime();
 			}
 		}
-		else
-#endif
-		{
+		else {
 			if (modification_time) {
 				FILETIME ft;
 				ft.dwLowDateTime = data.LastWriteTime.LowPart;
