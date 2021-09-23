@@ -309,34 +309,79 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 					ret += '\t';
 					break;
 				case 'u': {
-					wchar_t u{};
+					uint32_t u{};
 					if (end - p < 4) {
-						p = end;
 						return {};
 					}
 					for (size_t i = 0; i < 4; ++i) {
 						int h = hex_char_to_int(*(p++));
 						if (h == -1) {
-							p = end;
 							return {};
 						}
 						u <<= 4;
-						u += static_cast<wchar_t>(h);
+						u += static_cast<uint32_t>(h);
+					}
+					if (u >= 0xd800u && u <= 0xdbffu) {
+						// High Surrogate, look for partner
+						if (end - p < 6) {
+							return {};
+						}
+						else if (*(p++) != '\\') {
+							return {};
+						}
+						else if (*(p++) != 'u') {
+							return {};
+						}
+						uint32_t low{};
+						for (size_t i = 0; i < 4; ++i) {
+							int h = hex_char_to_int(*(p++));
+							if (h == -1) {
+								return {};
+							}
+							low <<= 4;
+							low += static_cast<uint32_t>(h);
+						}
+						if (low < 0xdc00u || low > 0xdfffu) {
+							// Not a Low Surrogate
+							return {};
+						}
+						u = (u & 0x3ffu) << 10;
+						u += low & 0x3ffu;
+						u += 0x10000u;
+						if (u > 0x10ffffu) {
+							// Too large
+							return {};
+						}
+					}
+					else if (u >= 0xdc00u && u <= 0xdfffu) {
+						// Stand-alone Low Surrogate, forbidden.
+						return {};
 					}
 					if (!u && !allow_null) {
-						p = end;
 						return {};
 					}
-					auto u8 = fz::to_utf8(std::wstring_view(&u, 1));
-					if (u8.empty()) {
-						p = end;
-						return {};
+
+					if (u <= 0x7f) {
+						ret += static_cast<unsigned char>(u);
 					}
-					ret += u8;
+					else if (u <= 0x7ff) {
+						ret += static_cast<char>(0xc0u | ((u >> 6u) & 0x1fu));
+						ret += static_cast<char>(0x80u | (u & 0x3fu));
+					}
+					else if (u <= 0xffff) {
+						ret += static_cast<char>(0xe0u | ((u >> 12u) & 0x0fu));
+						ret += static_cast<char>(0x80u | ((u >> 6u) & 0x3fu));
+						ret += static_cast<char>(0x80u | (u & 0x3fu));
+					}
+					else {
+						ret += static_cast<char>(0xf0u | ((u >> 18u) & 0x07u));
+						ret += static_cast<char>(0x80u | ((u >> 12u) & 0x3fu));
+						ret += static_cast<char>(0x80u | ((u >> 6u) & 0x3fu));
+						ret += static_cast<char>(0x80u | (u & 0x3fu));
+					}
 					break;
 				}
 				default:
-					p = end;
 					return {};
 			}
 		}
@@ -347,7 +392,6 @@ std::pair<std::string, bool> json_unescape_string(char const*& p, char const* en
 			in_escape = true;
 		}
 		else if (!c && !allow_null) {
-			p = end;
 			return {};
 		}
 		else {
@@ -369,7 +413,6 @@ json json::parse(char const*& p, char const* end, size_t max_depth)
 	if (p == end) {
 		return {};
 	}
-
 
 	json j;
 	if (*p == '"') {
