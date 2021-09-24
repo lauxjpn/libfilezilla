@@ -32,6 +32,8 @@ private:
 	struct impl;
 	std::unique_ptr<impl> impl_;
 };
+
+std::string GetSidFromToken(HANDLE h);
 }
 
 #endif
