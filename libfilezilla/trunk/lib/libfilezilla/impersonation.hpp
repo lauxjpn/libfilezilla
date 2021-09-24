@@ -6,6 +6,7 @@
 #if FZ_UNIX || FZ_WINDOWS
 
 #include <memory>
+#include <functional>
 
 namespace fz {
 
@@ -42,8 +43,11 @@ public:
 	}
 
 	bool operator==(impersonation_token const&) const;
+	bool operator<(impersonation_token const&) const;
 
 	fz::native_string username() const;
+
+	std::size_t hash() const noexcept;
 
 private:
 	friend class impersonation_token_impl;
@@ -54,6 +58,19 @@ private:
 // Applies to the entire current process
 bool FZ_PUBLIC_SYMBOL set_process_impersonation(impersonation_token const& token);
 #endif
+
+}
+
+namespace std {
+
+template <>
+struct hash<fz::impersonation_token>
+{
+	std::size_t operator()(fz::impersonation_token const& op) const noexcept
+	{
+		return op.hash();
+	}
+};
 
 }
 #endif

@@ -144,6 +144,11 @@ fz::native_string impersonation_token::username() const
 	return impl_ ? impl_->name_ : fz::native_string();
 }
 
+std::size_t impersonation_token::hash() const noexcept
+{
+	return impl_ ? std::hash<fz::native_string>{}(impl_->name_) : std::hash<fz::native_string>{}(fz::native_string());
+}
+
 // Note: Setuid binaries
 bool set_process_impersonation(impersonation_token const& token)
 {
@@ -172,6 +177,18 @@ bool impersonation_token::operator==(impersonation_token const& op) const
 	}
 
 	return std::tie(impl_->name_, impl_->uid_, impl_->gid_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_);
+}
+
+bool impersonation_token::operator<(impersonation_token const& op) const
+{
+	if (!impl_) {
+		return bool(op.impl_);
+	}
+	if (!op.impl_) {
+		return false;
+	}
+
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_) < std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_);
 }
 
 }
@@ -254,6 +271,11 @@ fz::native_string impersonation_token::username() const
 	return impl_ ? impl_->name_ : fz::native_string();
 }
 
+std::size_t impersonation_token::hash() const noexcept
+{
+	return impl_ ? std::hash<fz::native_string>{}(impl_->name_) : std::hash<fz::native_string>{}(fz::native_string());
+}
+
 bool impersonation_token::operator==(impersonation_token const& op) const
 {
 	if (!impl_) {
@@ -264,6 +286,18 @@ bool impersonation_token::operator==(impersonation_token const& op) const
 	}
 
 	return std::tie(impl_->name_, impl_->sid_) == std::tie(op.impl_->name_, op.impl_->sid_);
+}
+
+bool impersonation_token::operator<(impersonation_token const& op) const
+{
+	if (!impl_) {
+		return bool(op.impl_);
+	}
+	if (!op.impl_) {
+		return false;
+	}
+
+	return std::tie(impl_->name_, impl_->sid_) < std::tie(op.impl_->name_, op.impl_->sid_);
 }
 
 HANDLE get_handle(impersonation_token const& t) {
