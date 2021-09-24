@@ -4,6 +4,8 @@
 
 #include <map>
 
+#include <sddl.h>
+
 namespace fz {
 
 namespace {
@@ -156,6 +158,22 @@ holder<SID> security_descriptor_builder::impl::get_sid(entity e)
 	}
 }
 
+namespace {
+holder<TOKEN_USER> GetUserFromToken(HANDLE token)
+{
+	DWORD needed{};
+	GetTokenInformation(token, TokenUser, NULL, 0, &needed);
+	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+		auto user = holder<TOKEN_USER>::create(needed);
+		if (GetTokenInformation(token, TokenUser, user.get(), needed, &needed)) {
+			return user;
+		}
+	}
+
+	return {};
+}
+}
+
 bool security_descriptor_builder::impl::init_user()
 {
 	if (user_) {
@@ -166,19 +184,26 @@ bool security_descriptor_builder::impl::init_user()
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
 		return false;
 	}
-
-	DWORD needed{};
-	GetTokenInformation(token, TokenUser, NULL, 0, &needed);
-	if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-		auto user = holder<TOKEN_USER>::create(needed);
-		if (GetTokenInformation(token, TokenUser, user.get(), needed, &needed)) {
-			user_ = std::move(user);
-		}
-	}
+	user_ = GetUserFromToken(token);
 
 	CloseHandle(token);
 
 	return user_.operator bool();
 }
+
+std::string GetSidFromToken(HANDLE h)
+{
+	auto user = GetUserFromToken(h);
+	if (user) {
+		LPSTR sid{};
+		if (ConvertSidToStringSidA(user->User.Sid, &sid) != 0) {
+			std::string ret = sid;
+			LocalFree(sid);
+			return ret;
+		}
+	}
+	return {};
+}
+
 }
 #endif

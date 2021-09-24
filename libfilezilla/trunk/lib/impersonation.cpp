@@ -181,6 +181,8 @@ bool impersonation_token::operator==(impersonation_token const& op) const
 
 #include "libfilezilla/glue/windows.hpp"
 
+#include "windows/security_descriptor_builder.hpp"
+
 #include <tuple>
 
 namespace fz {
@@ -226,17 +228,25 @@ impersonation_token::impersonation_token(fz::native_string const& username, fz::
 
 	HANDLE token{INVALID_HANDLE_VALUE};
 	DWORD res = LogonUserW(username.c_str(), nullptr, passwd.c_str(), LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, &token);
+	if (!res) {
+		return;
+	}
+
+	HANDLE primary{INVALID_HANDLE_VALUE};
+	res = DuplicateTokenEx(token, 0, nullptr, SecurityImpersonation, TokenPrimary, &primary);
 	if (res != 0) {
-		HANDLE primary{INVALID_HANDLE_VALUE};
-		res = DuplicateTokenEx(token, 0, nullptr, SecurityImpersonation, TokenPrimary, &primary);
-		if (res != 0) {
+		std::string sid = GetSidFromToken(primary);
+		if (!sid.empty()) {
 			impl_ = std::make_unique<impersonation_token_impl>();
+			impl_->name_ = username;
+			impl_->sid_ = std::move(sid);
 			impl_->h_ = primary;
 		}
-		CloseHandle(token);
-
-		// FIXME: Fill sid_
+		else {
+			CloseHandle(primary);
+		}
 	}
+	CloseHandle(token);
 }
 
 fz::native_string impersonation_token::username() const
