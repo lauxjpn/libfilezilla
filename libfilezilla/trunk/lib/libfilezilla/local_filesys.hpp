@@ -106,10 +106,18 @@ public:
 	result begin_find_files(native_string path, bool dirs_only = false, bool query_symlink_targets = true);
 
 #if FZ_WINDOWS
-	// Takes ownership of handle
+	/**
+	 * \brief Begin enumerating a directory represented by a HANDLE
+	 *
+	 * Takes ownership of the HANDLE.
+	 */
 	result begin_find_files(HANDLE dir, bool dirs_only = false, bool query_symlink_targets = true);
 #elif FZ_UNIX
-	// Takes ownership of fd
+	/**
+	 * \brief Begin enumerating a directory represented by a file descriptor.
+	 *
+	 * Takes ownership of the descriptor.
+	 */
 	result begin_find_files(int fd, bool dirs_only = false, bool query_symlink_targets = true);
 #endif
 
@@ -119,11 +127,11 @@ public:
 	/**
 	 * \brief Gets the next file in the directory. Call until it returns false.
 	 *
-	 * Stores the metadata in any non-null arguments. Follows symbolic links.
+	 * Stores the metadata in any non-null arguments. Follows symbolic links iff
+	 * begin_find_files was called with query_symlink_targets set to true.
 	 *
 	 * \param is_link will be set to true iff file is a symbolic link.
-	 * \param t will receive the type of file, after following any symbolic links. Cannot return \c type::link.
-	 *
+	 * \param t will receive the type of file. If query_symlink_targets was set it cannot return \c type::link.
 	 */
 	bool get_next_file(native_string& name, bool &is_link, type & t, int64_t* size, datetime* modification_time, int* mode);
 
