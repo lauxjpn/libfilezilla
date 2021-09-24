@@ -5,6 +5,7 @@
 #include "libfilezilla/buffer.hpp"
 
 #include <optional>
+#include <tuple>
 
 #include <crypt.h>
 #include <pwd.h>
@@ -87,8 +88,6 @@ shadow_holder get_shadow(fz::native_string const& username)
 }
 }
 
-impersonation_token::~impersonation_token() noexcept = default;
-
 class impersonation_token_impl final
 {
 public:
@@ -103,6 +102,11 @@ public:
 
 
 impersonation_token::impersonation_token() = default;
+impersonation_token::~impersonation_token() noexcept = default;
+
+
+impersonation_token::impersonation_token(impersonation_token&&) noexcept = default;
+impersonation_token& impersonation_token::operator=(impersonation_token&&) noexcept = default;
 
 impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
 {
@@ -135,6 +139,11 @@ impersonation_token::impersonation_token(fz::native_string const& username, impe
 	}
 }
 
+fz::native_string impersonation_token::username() const
+{
+	return impl_ ? impl_->name_ : fz::native_string();
+}
+
 // Note: Setuid binaries
 bool set_process_impersonation(impersonation_token const& token)
 {
@@ -152,12 +161,27 @@ bool set_process_impersonation(impersonation_token const& token)
 
 	return true;
 }
+
+bool impersonation_token::operator==(impersonation_token const& op) const
+{
+	if (!impl_) {
+		return !op.impl_;
+	}
+	if (!op.impl_) {
+		return false;
+	}
+
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_);
+}
+
 }
 
 
 #elif FZ_WINDOWS
 
 #include "libfilezilla/glue/windows.hpp"
+
+#include <tuple>
 
 namespace fz {
 class impersonation_token_impl final
@@ -183,11 +207,16 @@ public:
 	impersonation_token_impl& operator=(impersonation_token_impl const&) = delete;
 
 	fz::native_string name_;
+	std::string sid_; // SID as string
 	HANDLE h_{INVALID_HANDLE_VALUE};
 };
 
 impersonation_token::impersonation_token() = default;
 impersonation_token::~impersonation_token() noexcept = default;
+
+impersonation_token::impersonation_token(impersonation_token&&) noexcept = default;
+impersonation_token& impersonation_token::operator=(impersonation_token&&) noexcept = default;
+
 
 impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
 {
@@ -205,7 +234,26 @@ impersonation_token::impersonation_token(fz::native_string const& username, fz::
 			impl_->h_ = primary;
 		}
 		CloseHandle(token);
+
+		// FIXME: Fill sid_
 	}
+}
+
+fz::native_string impersonation_token::username() const
+{
+	return impl_ ? impl_->name_ : fz::native_string();
+}
+
+bool impersonation_token::operator==(impersonation_token const& op) const
+{
+	if (!impl_) {
+		return !op.impl_;
+	}
+	if (!op.impl_) {
+		return false;
+	}
+
+	return std::tie(impl_->name_, impl_->sid_) == std::tie(op.impl_->name_, op.impl_->sid_);
 }
 
 HANDLE get_handle(impersonation_token const& t) {
