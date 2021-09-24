@@ -26,6 +26,9 @@ public:
 
 	impersonation_token();
 
+	impersonation_token(impersonation_token&&) noexcept;
+	impersonation_token& operator=(impersonation_token&&) noexcept;
+
 	explicit impersonation_token(fz::native_string const& username, fz::native_string const& password);
 
 #if FZ_UNIX
@@ -37,6 +40,8 @@ public:
 	explicit operator bool() const {
 		return impl_.operator bool();
 	}
+
+	bool operator==(impersonation_token const&) const;
 
 	fz::native_string username() const;
 
