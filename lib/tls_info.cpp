@@ -64,8 +64,8 @@ tls_session_info::tls_session_info(std::string const& host, unsigned int port,
 		std::string const& session_cipher,
 		std::string const& session_mac,
 		int algorithm_warnings,
-		std::vector<x509_certificate> && certificates,
-		bool system_trust,
+		std::vector<x509_certificate> && peer_certificates,
+		std::vector<x509_certificate> && system_trust_chain,
 		bool hostname_mismatch)
 	: host_(host)
 	, port_(port)
@@ -74,8 +74,8 @@ tls_session_info::tls_session_info(std::string const& host, unsigned int port,
 	, session_cipher_(session_cipher)
 	, session_mac_(session_mac)
 	, algorithm_warnings_(algorithm_warnings)
-	, certificates_(certificates)
-	, system_trust_(system_trust)
+	, peer_certificates_(peer_certificates)
+	, system_trust_chain_(system_trust_chain)
 	, hostname_mismatch_(hostname_mismatch)
 {
 }

@@ -157,7 +157,16 @@ public:
 
 		return gnutls_datum_t{};
 	}
+
+	static void verify_output_cb(gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t crl, unsigned int verification_output)
+	{
+		if (verify_output_cb_) {
+			verify_output_cb_(cert, issuer, crl, verification_output);
+		}
+	}
+	static thread_local std::function<void(gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t crl, unsigned int verification_output)> verify_output_cb_;
 };
+thread_local std::function<void(gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t crl, unsigned int verification_output)> tls_layerCallbacks::verify_output_cb_;
 
 namespace {
 extern "C" int handshake_hook_func(gnutls_session_t session, unsigned int htype, unsigned int post, unsigned int incoming, gnutls_datum_t const*)
@@ -173,6 +182,11 @@ extern "C" int db_store_func(void *ptr, gnutls_datum_t key, gnutls_datum_t data)
 extern "C" gnutls_datum_t db_retr_func(void *ptr, gnutls_datum_t key)
 {
 	return tls_layerCallbacks::retrieve_session(ptr, key);
+}
+extern "C" int c_verify_output_cb(gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t crl, unsigned int verification_output)
+{
+	tls_layerCallbacks::verify_output_cb(cert, issuer, crl, verification_output);
+	return 0;
 }
 
 std::string to_string(gnutls_datum_t const& d)
@@ -1664,7 +1678,6 @@ void tls_layer_impl::log_verification_error(int status)
 			logger_.log(logmsg::error, fztranslate("Received certificate chain could not be verified. Verification status is %d."), status);
 		}
 	}
-
 }
 
 int tls_layer_impl::verify_certificate()
@@ -1735,6 +1748,7 @@ int tls_layer_impl::verify_certificate()
 	//
 	// In any case, actual trust decision is done later by the user.
 
+	std::vector<x509_certificate> system_trust_chain;
 
 	// First, check system trust
 	if (uses_hostname && system_trust_store_) {
@@ -1742,11 +1756,42 @@ int tls_layer_impl::verify_certificate()
 		auto lease = system_trust_store_->impl_->lease();
 		auto cred = std::get<0>(lease);
 		if (cred) {
+			bool trust_path_ok{true};
+			std::vector<x509_certificate> trust_path;
+			tls_layerCallbacks::verify_output_cb_ = [this, &trust_path_ok, &trust_path](gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t, unsigned int verification_output) {
+				if (!trust_path_ok) {
+					return;
+				}
+				if (verification_output != 0 || !issuer || !cert) {
+					trust_path_ok = false;
+					return;
+				}
+				if (trust_path.empty()) {
+					x509_certificate root;
+					if (!extract_cert(issuer, root, true, &logger_)) {
+						trust_path_ok = false;
+						return;
+					}
+					trust_path.emplace_back(std::move(root));
+				}
+
+				x509_certificate subject;
+				if (!extract_cert(cert, subject, false, &logger_)) {
+					trust_path_ok = false;
+					return;
+				}
+				trust_path.emplace_back(std::move(subject));
+			};
+
+			gnutls_session_set_verify_output_function(session_, c_verify_output_cb);
 			gnutls_credentials_set(session_, GNUTLS_CRD_CERTIFICATE, cred);
 			unsigned int status = 0;
 			int verifyResult = gnutls_certificate_verify_peers3(session_, to_utf8(hostname_).c_str(), &status);
 			gnutls_credentials_set(session_, GNUTLS_CRD_CERTIFICATE, cert_credentials_);
 			std::get<1>(lease).unlock();
+
+			gnutls_session_set_verify_output_function(session_, nullptr);
+			tls_layerCallbacks::verify_output_cb_ = nullptr;
 
 			if (verifyResult < 0) {
 				logger_.log(logmsg::debug_warning, L"gnutls_certificate_verify_peers2 returned %d with status %u", verifyResult, status);
@@ -1756,6 +1801,17 @@ int tls_layer_impl::verify_certificate()
 			}
 
 			if (!status) {
+				if (!trust_path_ok) {
+					logger_.log(logmsg::error, fztranslate("Failed to extract certificate trust path"));
+					failure(0, true);
+					return EINVAL;
+				}
+
+				// Reverse chain so that it starts at server certificate
+				system_trust_chain.reserve(trust_path.size());
+				for (auto it = trust_path.rbegin(); it != trust_path.rend(); ++it) {
+					system_trust_chain.emplace_back(std::move(*it));
+				}
 				systemTrust = true;
 			}
 		}
@@ -1886,7 +1942,7 @@ int tls_layer_impl::verify_certificate()
 			get_mac(),
 			algorithmWarnings,
 			std::move(certificates),
-			systemTrust,
+			std::move(system_trust_chain),
 			hostnameMismatch
 		);
 
