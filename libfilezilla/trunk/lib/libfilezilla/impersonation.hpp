@@ -47,6 +47,9 @@ public:
 
 	fz::native_string username() const;
 
+	/// Returns home directory, may be empty.
+	fz::native_string home() const;
+
 	std::size_t hash() const noexcept;
 
 private:
