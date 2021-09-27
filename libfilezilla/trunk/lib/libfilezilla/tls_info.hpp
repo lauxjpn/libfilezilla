@@ -156,8 +156,8 @@ public:
 		std::string const& session_cipher,
 		std::string const& session_mac,
 		int algorithm_warnings,
-		std::vector<x509_certificate>&& certificates,
-		bool system_trust,
+	    std::vector<x509_certificate>&& peer_certificates,
+	    std::vector<x509_certificate>&& system_trust_chain,
 		bool hostname_mismatch);
 
 	/// The server's hostname used to connect
@@ -177,9 +177,25 @@ public:
 	 * The chain is ordered from the server's own certificate at index 0 up to the self-signed
 	 * root CA.
 	 *
-	 * Chain may be partial.
+	 * Chain may be partial, ie. not ending at a self-signed cert.
+	 *
+	 * If system_trust() is set, this is the chain to the actual trust anchor which may differ from the
+	 * chain sent by the server.
+	 *
+	 * If system_trust() is not set, it is chain as received from the server, after sorting.
 	 */
-	std::vector<fz::x509_certificate> const& get_certificates() const { return certificates_; }
+	std::vector<fz::x509_certificate> const& get_certificates() const { return system_trust_chain_.empty() ? peer_certificates_ : system_trust_chain_; }
+
+	/** \brief The certificate chain sent by the peer
+	 *
+	 * The chain is ordered from the server's own certificate at index 0 up to the self-signed
+	 * root CA.
+	 *
+	 * Chain may be partial, ie. not ending at a self-signed cert.
+	 *
+	 * This is is chain as received from the server, after sorting. \sa get_certificates()
+	 */
+	std::vector<fz::x509_certificate> const& get_peer_certificates() const { return peer_certificates_; }
 
 	/// TLS version
 	std::string const& get_protocol() const { return protocol_; }
@@ -200,7 +216,7 @@ public:
 
 	/// Returns true if the server certificate is to be trusted according to
 	/// the operating system's trust store.
-	bool system_trust() const { return system_trust_; }
+	bool system_trust() const { return !system_trust_chain_.empty(); }
 
 	/// True if the hostname in the SANs does not match the requested hostname
 	bool mismatched_hostname() const { return hostname_mismatch_; }
@@ -215,9 +231,9 @@ private:
 	std::string session_mac_;
 	int algorithm_warnings_{};
 
-	std::vector<x509_certificate> certificates_;
+	std::vector<x509_certificate> peer_certificates_;
+	std::vector<x509_certificate> system_trust_chain_;
 
-	bool system_trust_{};
 	bool hostname_mismatch_{};
 };
 }
