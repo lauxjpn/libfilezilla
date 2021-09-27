@@ -1762,25 +1762,23 @@ int tls_layer_impl::verify_certificate()
 				if (!trust_path_ok) {
 					return;
 				}
-				if (verification_output != 0 || !issuer || !cert) {
+				if (!issuer || !cert) {
 					trust_path_ok = false;
 					return;
 				}
-				if (trust_path.empty()) {
-					x509_certificate root;
-					if (!extract_cert(issuer, root, true, &logger_)) {
-						trust_path_ok = false;
-						return;
-					}
-					trust_path.emplace_back(std::move(root));
+				if (verification_output != 0) {
+					trust_path.clear();
+					return;
 				}
 
-				x509_certificate subject;
-				if (!extract_cert(cert, subject, false, &logger_)) {
+				x509_certificate info;
+				if (!extract_cert(issuer, info, true, &logger_)) {
 					trust_path_ok = false;
 					return;
 				}
-				trust_path.emplace_back(std::move(subject));
+				if (trust_path.empty() || info.get_fingerprint_sha256() != trust_path.back().get_fingerprint_sha256()) {
+					trust_path.emplace_back(std::move(info));
+				}
 			};
 
 			gnutls_session_set_verify_output_function(session_, c_verify_output_cb);
@@ -1801,14 +1799,20 @@ int tls_layer_impl::verify_certificate()
 			}
 
 			if (!status) {
-				if (!trust_path_ok) {
+				if (!trust_path_ok || trust_path.empty()) {
 					logger_.log(logmsg::error, fztranslate("Failed to extract certificate trust path"));
 					failure(0, true);
 					return EINVAL;
 				}
 
-				// Reverse chain so that it starts at server certificate
-				system_trust_chain.reserve(trust_path.size());
+				// Reverse chain so that it starts at server certificate and add the server cert
+				system_trust_chain.reserve(trust_path.size() + 1);
+				x509_certificate cert;
+				if (!extract_cert(certs.certs[0], cert, false, &logger_)) {
+					failure(0, true);
+					return ECONNABORTED;
+				}
+				system_trust_chain.emplace_back(std::move(cert));
 				for (auto it = trust_path.rbegin(); it != trust_path.rend(); ++it) {
 					system_trust_chain.emplace_back(std::move(*it));
 				}
