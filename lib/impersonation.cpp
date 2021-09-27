@@ -96,6 +96,7 @@ public:
 	}
 
 	fz::native_string name_;
+	fz::native_string home_;
 	uid_t uid_{};
 	gid_t gid_{};
 };
@@ -119,6 +120,9 @@ impersonation_token::impersonation_token(fz::native_string const& username, fz::
 			if (encrypted && !strcmp(encrypted, shadow.shadow_->sp_pwdp)) {
 				impl_ = std::make_unique<impersonation_token_impl>();
 				impl_->name_ = username;
+				if (pwd.pwd_->pw_dir) {
+					impl_->home_ = pwd.pwd_->pw_dir;
+				}
 				impl_->uid_ = pwd.pwd_->pw_uid;
 				impl_->gid_ = pwd.pwd_->pw_gid;
 			}
@@ -133,6 +137,9 @@ impersonation_token::impersonation_token(fz::native_string const& username, impe
 		if (pwd.pwd_) {
 			impl_ = std::make_unique<impersonation_token_impl>();
 			impl_->name_ = username;
+			if (pwd.pwd_->pw_dir) {
+				impl_->home_ = pwd.pwd_->pw_dir;
+			}
 			impl_->uid_ = pwd.pwd_->pw_uid;
 			impl_->gid_ = pwd.pwd_->pw_gid;
 		}
@@ -176,7 +183,7 @@ bool impersonation_token::operator==(impersonation_token const& op) const
 		return false;
 	}
 
-	return std::tie(impl_->name_, impl_->uid_, impl_->gid_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_);
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_);
 }
 
 bool impersonation_token::operator<(impersonation_token const& op) const
@@ -188,7 +195,12 @@ bool impersonation_token::operator<(impersonation_token const& op) const
 		return false;
 	}
 
-	return std::tie(impl_->name_, impl_->uid_, impl_->gid_) < std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_);
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_) < std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_);
+}
+
+fz::native_string impersonation_token::home() const
+{
+	return impl_ ? impl_->home_ : fz::native_string();
 }
 
 }
@@ -197,8 +209,9 @@ bool impersonation_token::operator<(impersonation_token const& op) const
 #elif FZ_WINDOWS
 
 #include "libfilezilla/glue/windows.hpp"
-
 #include "windows/security_descriptor_builder.hpp"
+
+#include <shlobj.h>
 
 #include <tuple>
 
@@ -300,9 +313,22 @@ bool impersonation_token::operator<(impersonation_token const& op) const
 	return std::tie(impl_->name_, impl_->sid_) < std::tie(op.impl_->name_, op.impl_->sid_);
 }
 
+fz::native_string impersonation_token::home() const
+{
+	fz::native_string ret;
+
+	wchar_t* out{};
+	if (SHGetKnownFolderPath(FOLDERID_Profile, 0, impl_->h_, &out) == S_OK) {
+		ret.SetPath(out);
+		CoTaskMemFree(out);
+	}
+	return ret;
+}
+
 HANDLE get_handle(impersonation_token const& t) {
 	return impersonation_token_impl::get_handle(t);
 }
+
 }
 
 #elif 0
