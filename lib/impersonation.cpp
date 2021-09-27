@@ -319,7 +319,7 @@ fz::native_string impersonation_token::home() const
 
 	wchar_t* out{};
 	if (SHGetKnownFolderPath(FOLDERID_Profile, 0, impl_->h_, &out) == S_OK) {
-		ret.SetPath(out);
+		ret = out;
 		CoTaskMemFree(out);
 	}
 	return ret;
