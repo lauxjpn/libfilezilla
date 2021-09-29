@@ -48,6 +48,7 @@ public:
 	bool spawn(std::vector<native_string> const& command_with_args, bool redirect_io = true);
 
 #if FZ_WINDOWS || FZ_UNIX
+	/// Creates a process running under the user represented by the impersonation token
 	bool spawn(impersonation_token const& it, native_string const& cmd, std::vector<native_string> const& args, bool redirect_io = true);
 #endif
 
