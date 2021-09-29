@@ -6,7 +6,7 @@
 # If any interfaces have been added since the last public release, then increment age.
 # If any interfaces have been removed or changed since the last public release, then set age to 0.
 # CURRENT:REVISION:AGE
-LIBRARY_VERSION=12:0:0
+LIBRARY_VERSION=20:0:0
 
 
 AC_CONFIG_HEADERS([config/config.hpp])
