@@ -1,6 +1,6 @@
 0.33.0 (2021-09-29)
 
-+ MSW: Add local_filesys::begin_fid_files overload accepting a directory HANDLE
++ MSW: Add local_filesys::begin_find_files overload accepting a directory HANDLE
 + If peer certificate chain is trusted by the system trust store, tls_session_info::get_certificates now returns the actual path to the trust anchor, use tls_session_info::get_peer_certificates to get the peer certificates as received by the server. GnuTLS 3.7.0 or later is required.
 - JSON: Correctly handle \u-encoded UTF-16 surrogate pairs
 
