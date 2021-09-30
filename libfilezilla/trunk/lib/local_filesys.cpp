@@ -1207,4 +1207,59 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 #endif
 }
 
+local_filesys::local_filesys(local_filesys && op)
+{
+#if FZ_WINDOWS
+	uintptr_t offset{};
+	if (op.cur_) {
+		offset = op.cur_ - op.buffer_.data();
+	}
+
+	buffer_ = std::move(op.buffer_);
+	if (op.cur_) {
+		cur_ = buffer_.data() + offset;
+	}
+	dir_ = op.dir_;
+
+	op.buffer_.clear();
+	op.cur_ = nullptr;
+	op.dir_ = INVALID_HANDLE_VALUE;
+#else
+	dir_ = op.dir_;
+	op.dir_ = nullptr;
+#endif
+	dirs_only_ = op.dirs_only_;
+	query_symlink_targets_ = op.query_symlink_targets_;
+}
+
+local_filesys& local_filesys::operator=(local_filesys && op)
+{
+	if (&op != this) {
+		end_find_files();
+
+#if FZ_WINDOWS
+		uintptr_t offset{};
+		if (op.cur_) {
+			offset = op.cur_ - op.buffer_.data();
+		}
+
+		buffer_ = std::move(op.buffer_);
+		if (op.cur_) {
+			cur_ = buffer_.data() + offset;
+		}
+		dir_ = op.dir_;
+
+		op.buffer_.clear();
+		op.cur_ = nullptr;
+		op.dir_ = INVALID_HANDLE_VALUE;
+#else
+		dir_ = op.dir_;
+		op.dir_ = nullptr;
+#endif
+		dirs_only_ = op.dirs_only_;
+		query_symlink_targets_ = op.query_symlink_targets_;
+	}
+	return *this;
+}
+
 }
