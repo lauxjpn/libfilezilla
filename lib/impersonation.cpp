@@ -319,7 +319,9 @@ fz::native_string impersonation_token::home() const
 
 	if (impl_) {
 		wchar_t* out{};
-		if (SHGetKnownFolderPath(FOLDERID_Profile, 0, impl_->h_, &out) == S_OK) {
+		// Manually define it instead of using FOLDERID_Profile as it would prevent building a DLL.
+		static GUID const profile = { 0x5E6C858F, 0x0E22, 0x4760, {0x9A, 0xFE, 0xEA, 0x33, 0x17, 0xB6, 0x71, 0x73} };
+		if (SHGetKnownFolderPath(profile, 0, impl_->h_, &out) == S_OK) {
 			ret = out;
 			CoTaskMemFree(out);
 		}
