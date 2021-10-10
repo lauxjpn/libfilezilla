@@ -19,7 +19,7 @@ bool recursive_remove::remove(const native_string& path)
 
 #if FZ_WINDOWS
 extern "C" {
-typedef int (*shfileop_t)(LPSHFILEOPSTRUCT);
+typedef int (*shfileop_t)(LPSHFILEOPSTRUCTW);
 }
 #endif
 
@@ -32,8 +32,8 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 	// to delete all contents.
 
 #ifdef FZ_WINDOWS
-	static dll const shell32(L"shell32.dll");
-	static shfileop_t const shfileop = shell32 ? reinterpret_cast<shfileop_t>(GetProcAddress(shell32.h_, "SHFileOperation")) : nullptr;
+	shdlls& dlls = shdlls::get();
+	static shfileop_t const shfileop = dlls.shell32_ ? reinterpret_cast<shfileop_t>(GetProcAddress(dlls.shell32_.h_, "SHFileOperationW")) : nullptr;
 	if (shfileop) {
 		// SHFileOperation accepts a list of null-terminated strings. Go through all
 		// paths to get the required buffer length
@@ -69,7 +69,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 
 			adjust_shfileop(op);
 
-			if (shfileop(&op) != 0) {
+			if shfileop(&op) != 0) {
 				success = false;
 			}
 		}
