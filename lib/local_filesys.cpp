@@ -4,6 +4,7 @@
 #include "libfilezilla/file.hpp"
 
 #ifdef FZ_WINDOWS
+#include "windows/dll.hpp"
 #include "windows/security_descriptor_builder.hpp"
 #include <winternl.h>
 #else
@@ -508,25 +509,6 @@ typedef struct {
 
 typedef NTSTATUS(NTAPI* lfzNtQueryDirectoryFile)(HANDLE dir, HANDLE ev, void*, void*, IO_STATUS_BLOCK* status, void* buffer, ULONG size, lfzFILE_INFORMATION_CLASS c, BOOL single, void*, BOOL restart);
 typedef NTSTATUS(NTAPI* lfzNtOpenFile)(HANDLE* file, ACCESS_MASK DesiredAccess, OBJECT_ATTRIBUTES* attributes, IO_STATUS_BLOCK* status, ULONG ShareAccess, ULONG OpenOptions);
-
-struct dll final
-{
-	explicit dll(wchar_t const* name)
-	{
-		h_ = LoadLibraryW(name);
-	}
-
-	~dll() {
-		if (h_) {
-			FreeLibrary(h_);
-		}
-	}
-
-	dll(dll const&) = delete;
-	dll& operator=(dll const&) = delete;
-
-	HMODULE h_{};
-};
 }
 
 bool read_dir_buffer(HANDLE dir, void* buf, ULONG size, lfzFILE_INFORMATION_CLASS c)
@@ -1071,6 +1053,40 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 	}
 
 	return result{result::ok};
+}
+
+result remove_dir(native_string const& absolute_path)
+{
+	if (absolute_path.empty()) {
+		return result{result::nodir};
+	}
+#if FZ_WINDOWS
+	if (!RemoveDirectoryW(absolute_path.c_str())) {
+		DWORD const err = GetLastError();
+		switch (err) {
+			case ERROR_PATH_NOT_FOUND:
+				return {result::nodir};
+			case ERROR_ACCESS_DENIED:
+				return {result::noperm};
+			default:
+				return {result::other};
+		}
+	}
+#else
+	if (rmdir(absolute_path.c_str()) != 0) {
+		switch (errno) {
+			case EACCES:
+			case EPERM:
+				return result{result::noperm};
+			case ENOTDIR:
+			case ENOENT:
+				return result{result::nodir};
+			default:
+				return result{result::other};
+		}
+	}
+#endif
+	return {result::ok};
 }
 
 #ifndef FZ_WINDOWS

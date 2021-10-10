@@ -194,6 +194,12 @@ enum class mkdir_permissions
  */
 result FZ_PUBLIC_SYMBOL mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions permissions = mkdir_permissions::normal, native_string * last_created = nullptr);
 
+/** \brief Removes sempty directory
+ *
+ * For recursive remove, see \ref fz::recursive_remove
+ */
+result FZ_PUBLIC_SYMBOL remove_dir(native_string const& absolute_path);
+
 /**
  * \brief Rename/move the passed file or directory
  *

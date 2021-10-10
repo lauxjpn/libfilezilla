@@ -98,6 +98,7 @@ libfilezilla_la_SOURCES += \
 	windows/security_descriptor_builder.cpp
 
 nobase_include_HEADERS += \
+	windows/dll.hpp \
 	windows/security_descriptor_builder.hpp
 
 windows/libfilezilla_rc.o: $(srcdir)/windows/libfilezilla.rc $(srcdir)/windows/manifest.xml windows/version.rc

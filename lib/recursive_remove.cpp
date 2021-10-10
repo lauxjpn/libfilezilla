@@ -1,7 +1,10 @@
-#include "libfilezilla/recursive_remove.hpp"
+#include "libfilezilla/file.hpp"
 #include "libfilezilla/local_filesys.hpp"
+#include "libfilezilla/recursive_remove.hpp"
 
-#ifndef FZ_WINDOWS
+#if FZ_WINDOWS
+#include "windows/dll.hpp"
+#else
 #include <unistd.h>
 #endif
 
@@ -14,6 +17,12 @@ bool recursive_remove::remove(const native_string& path)
 	return remove(paths);
 }
 
+#if FZ_WINDOWS
+extern "C" {
+typedef int (*shfileop_t)(LPSHFILEOPSTRUCT);
+}
+#endif
+
 bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 {
 	bool success = true;
@@ -23,46 +32,50 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 	// to delete all contents.
 
 #ifdef FZ_WINDOWS
-	// SHFileOperation accepts a list of null-terminated strings. Go through all
-	// paths to get the required buffer length
+	static dll const shell32(L"shell32.dll");
+	static shfileop_t const shfileop = shell32 ? (shfileop_t)GetProcAddress(shell32.h_, "SHFileOperation") : nullptr;
+	if (shfileop) {
+		// SHFileOperation accepts a list of null-terminated strings. Go through all
+		// paths to get the required buffer length
 
-	size_t len = 1; // String list terminated by empty string
+		size_t len = 1; // String list terminated by empty string
 
-	for (auto const& dir : dirsToVisit) {
-		len += dir.size() + 1;
-	}
-
-	// Allocate memory
-	native_string::value_type* pBuffer = new native_string::value_type[len];
-	native_string::value_type* p = pBuffer;
-
-	for (auto& dir : dirsToVisit) {
-		if (!dir.empty() && local_filesys::is_separator(dir.back())) {
-			dir.pop_back();
-		}
-		if (local_filesys::get_file_type(dir) == local_filesys::unknown) {
-			continue;
+		for (auto const& dir : dirsToVisit) {
+			len += dir.size() + 1;
 		}
 
-		wcscpy(p, dir.c_str());
-		p += dir.size() + 1;
-	}
-	if (p != pBuffer) {
-		*p = 0;
+		// Allocate memory
+		native_string::value_type* pBuffer = new native_string::value_type[len];
+		native_string::value_type* p = pBuffer;
 
-		// Now we can delete the files in the buffer
-		SHFILEOPSTRUCT op{};
-		op.wFunc = FO_DELETE;
-		op.pFrom = pBuffer;
+		for (auto& dir : dirsToVisit) {
+			if (!dir.empty() && local_filesys::is_separator(dir.back())) {
+				dir.pop_back();
+			}
+			if (local_filesys::get_file_type(dir) == local_filesys::unknown) {
+				continue;
+			}
 
-		adjust_shfileop(op);
-
-		if (SHFileOperation(&op) != 0) {
-			success = false;
+			wcscpy(p, dir.c_str());
+			p += dir.size() + 1;
 		}
+		if (p != pBuffer) {
+			*p = 0;
+
+			// Now we can delete the files in the buffer
+			SHFILEOPSTRUCT op{};
+			op.wFunc = FO_DELETE;
+			op.pFrom = pBuffer;
+
+			adjust_shfileop(op);
+
+			if (SHFileOperation(&op) != 0) {
+				success = false;
+			}
+		}
+		delete [] pBuffer;
 	}
-	delete [] pBuffer;
-#else
+#endif
 	if (!confirm()) {
 		return false;
 	}
@@ -89,7 +102,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 		}
 
 		if (fs.get_file_type(path) != local_filesys::dir) {
-			if (unlink(path.c_str()) != 0) {
+			if (!remove_file(path)) {
 				success = false;
 			}
 			dirsToVisit.erase(iter);
@@ -127,7 +140,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 
 		// Delete all files and links in current directory enumerated before
 		for (auto const& filename : filesToDelete) {
-			if (unlink(filename.c_str()) != 0) {
+			if (!remove_file(filename)) {
 				success = false;
 			}
 		}
@@ -135,11 +148,10 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 
 	// Delete the now empty directories
 	for (auto const& dir : dirsToDelete) {
-		if (rmdir(dir.c_str()) != 0) {
+		if (!remove_dir(dir)) {
 			success = false;
 		}
 	}
-#endif
 
 	return success;
 }
