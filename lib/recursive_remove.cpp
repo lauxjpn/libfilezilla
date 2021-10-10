@@ -74,6 +74,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 			}
 		}
 		delete [] pBuffer;
+		return success;
 	}
 #endif
 	if (!confirm()) {
