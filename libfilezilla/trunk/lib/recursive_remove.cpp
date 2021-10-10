@@ -69,7 +69,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 
 			adjust_shfileop(op);
 
-			if shfileop(&op) != 0) {
+			if (shfileop(&op) != 0) {
 				success = false;
 			}
 		}
