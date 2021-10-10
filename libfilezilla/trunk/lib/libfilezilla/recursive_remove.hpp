@@ -16,8 +16,9 @@ namespace fz {
 
 /** \brief Recursively deletes directories.
  *
- * Behavior varies by platform. On Windows, SHFileOperation is used,
- * whereas we manually traverse the directory tree on other platforms.
+ * Behavior varies by platform. On Windows, SHFileOperation is used if shell32.dll is loadable.
+ *
+ * The generic implementation manually traverse the directory tree on other platforms.
  */
 class FZ_PUBLIC_SYMBOL recursive_remove
 {
