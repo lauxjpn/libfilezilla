@@ -95,6 +95,7 @@ libfilezilla_la_LIBADD = $(libdeps)
 if FZ_WINDOWS
 
 libfilezilla_la_SOURCES += \
+	windows/dll.cpp \
 	windows/security_descriptor_builder.cpp
 
 nobase_include_HEADERS += \

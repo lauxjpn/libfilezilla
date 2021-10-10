@@ -27,6 +27,22 @@ public:
 
 	HMODULE h_{};
 };
+
+class shdlls final
+{
+protected:
+	shdlls();
+	~shdlls();
+
+	shdlls(shdlls const&) = delete;
+	shdlls* operator=(shdlls const&) = delete;
+
+public:
+	static shdlls& get();
+
+	dll shell32_;
+	dll ole32_;
+};
 }
 
 #endif
