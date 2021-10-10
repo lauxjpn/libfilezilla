@@ -318,6 +318,8 @@ bool impersonation_token::operator<(impersonation_token const& op) const
 namespace {
 extern "C" {
 typedef HRESULT (*getknownfolderpath_t)(REFKNOWNFOLDERID, DWORD, HANDLE, wchar_t**);
+typedef HRESULT (*getknownfolderpath_t)(REFKNOWNFOLDERID, DWORD, HANDLE, wchar_t**);
+typedef void (*cotaskmemfree_t)(void*);
 }
 }
 
@@ -331,11 +333,13 @@ fz::native_string impersonation_token::home() const
 		static GUID const profile = { 0x5E6C858F, 0x0E22, 0x4760, {0x9A, 0xFE, 0xEA, 0x33, 0x17, 0xB6, 0x71, 0x73} };
 
 		static dll const shell32(L"shell32.dll");
+		static dll const ole32(L"ole32.dll");
 		static getknownfolderpath_t const getknownfolderpath = shell32 ? reinterpret_cast<getknownfolderpath_t>(GetProcAddress(shell32.h_, "SHGetKnownFolderPath")) : nullptr;
+		static cotaskmemfree_t const cotaskmemfree = ole32 ? reinterpret_cast<cotaskmemfree_t>(GetProcAddress(ole32.h_, "CoTaskMemFree")) : nullptr;
 		
-		if (getknownfolderpath && getknownfolderpath(profile, 0, impl_->h_, &out) == S_OK) {
+		if (getknownfolderpath && cotaskmemfree && getknownfolderpath(profile, 0, impl_->h_, &out) == S_OK) {
 			ret = out;
-			CoTaskMemFree(out);
+			cotaskmemfree(out);
 		}
 	}
 	return ret;
