@@ -63,7 +63,7 @@ bool recursive_remove::remove(std::list<native_string> dirsToVisit)
 			*p = 0;
 
 			// Now we can delete the files in the buffer
-			SHFILEOPSTRUCT op{};
+			SHFILEOPSTRUCTW op{};
 			op.wFunc = FO_DELETE;
 			op.pFrom = pBuffer;
 
