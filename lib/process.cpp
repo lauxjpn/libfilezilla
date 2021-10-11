@@ -435,6 +435,8 @@ public:
 					_exit(1);
 				}
 			}
+#else
+			(void)it;
 #endif
 
 			// Execute process
