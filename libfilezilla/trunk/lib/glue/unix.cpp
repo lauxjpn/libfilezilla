@@ -113,13 +113,13 @@ int send_fd(int socket, fz::buffer & buf, int fd, int & error)
 	if (fd != -1) {
 		msg.msg_control = cmsg_u.buf;
 		msg.msg_controllen = sizeof(cmsg_u.buf);
+		memset(msg.msg_control, 0, msg.msg_controllen);
 
 		struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msg);
 		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 		cmsg->cmsg_level = SOL_SOCKET;
 		cmsg->cmsg_type = SCM_RIGHTS;
 		memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
-
 	}
 
 
