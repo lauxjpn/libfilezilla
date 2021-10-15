@@ -7,9 +7,9 @@ namespace fz {
 class dll final
 {
 public:
-	explicit dll(wchar_t const* name)
+	explicit dll(wchar_t const* name, DWORD flags)
 	{
-		h_ = LoadLibraryW(name);
+		h_ = LoadLibraryExW(name, NULL, flags);
 	}
 
 	~dll() {
