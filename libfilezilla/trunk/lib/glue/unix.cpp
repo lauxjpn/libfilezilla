@@ -149,9 +149,9 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 	}
 
 #ifdef MSG_NOSIGNAL
-	const int flags = MSG_NOSIGNAL;
+	const int flags = MSG_NOSIGNAL|MSG_CMSG_CLOEXEC;
 #else
-	const int flags = 0;
+	const int flags = MSG_CMSG_CLOEXEC;
 #endif
 
 	struct msghdr msg{};
