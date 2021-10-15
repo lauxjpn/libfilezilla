@@ -332,10 +332,9 @@ fz::native_string impersonation_token::home() const
 		// Manually define it instead of using FOLDERID_Profile as it would prevent building a DLL.
 		static GUID const profile = { 0x5E6C858F, 0x0E22, 0x4760, {0x9A, 0xFE, 0xEA, 0x33, 0x17, 0xB6, 0x71, 0x73} };
 
-		static dll const shell32(L"shell32.dll");
-		static dll const ole32(L"ole32.dll");
-		static getknownfolderpath_t const getknownfolderpath = shell32 ? reinterpret_cast<getknownfolderpath_t>(GetProcAddress(shell32.h_, "SHGetKnownFolderPath")) : nullptr;
-		static cotaskmemfree_t const cotaskmemfree = ole32 ? reinterpret_cast<cotaskmemfree_t>(GetProcAddress(ole32.h_, "CoTaskMemFree")) : nullptr;
+		static auto& dlls = shdlls::get();
+		static getknownfolderpath_t const getknownfolderpath = dlls.shell32_ ? reinterpret_cast<getknownfolderpath_t>(GetProcAddress(dlls.shell32_.h_, "SHGetKnownFolderPath")) : nullptr;
+		static cotaskmemfree_t const cotaskmemfree = dlls.ole32_ ? reinterpret_cast<cotaskmemfree_t>(GetProcAddress(dlls.ole32_.h_, "CoTaskMemFree")) : nullptr;
 		
 		if (getknownfolderpath && cotaskmemfree && getknownfolderpath(profile, 0, impl_->h_, &out) == S_OK) {
 			ret = out;

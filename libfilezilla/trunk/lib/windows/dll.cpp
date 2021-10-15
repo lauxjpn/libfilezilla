@@ -11,8 +11,8 @@ typedef HRESULT (*couninit_t)();
 }
 
 shdlls::shdlls()
-	: shell32_(L"shell32.dll")
-	, ole32_(L"ole32.dll")
+	: shell32_(L"shell32.dll", LOAD_LIBRARY_SEARCH_SYSTEM32)
+	, ole32_(L"ole32.dll", LOAD_LIBRARY_SEARCH_SYSTEM32)
 {
 	coinitex_t const coinitex = ole32_ ? reinterpret_cast<coinitex_t>(GetProcAddress(ole32_.h_, "CoInitializeEx")) : nullptr;
 	if (coinitex) {

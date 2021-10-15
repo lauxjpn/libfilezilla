@@ -513,7 +513,7 @@ typedef NTSTATUS(NTAPI* lfzNtOpenFile)(HANDLE* file, ACCESS_MASK DesiredAccess, 
 
 bool read_dir_buffer(HANDLE dir, void* buf, ULONG size, lfzFILE_INFORMATION_CLASS c)
 {
-	static dll ntdll(L"ntdll.dll");
+	static dll ntdll(L"ntdll.dll", LOAD_LIBRARY_SEARCH_SYSTEM32);
 	static lfzNtQueryDirectoryFile f = ntdll.h_ ? reinterpret_cast<lfzNtQueryDirectoryFile>(GetProcAddress(ntdll.h_, "NtQueryDirectoryFile")) : nullptr;
 	if (!f) {
 		return false;
@@ -528,7 +528,7 @@ bool read_dir_buffer(HANDLE dir, void* buf, ULONG size, lfzFILE_INFORMATION_CLAS
 
 HANDLE OpenAt(HANDLE dir, std::wstring const& name, ACCESS_MASK DesiredAccess, ULONG ShareAccess, ULONG OpenOptions)
 {
-	static dll ntdll(L"ntdll.dll");
+	static dll ntdll(L"ntdll.dll", LOAD_LIBRARY_SEARCH_SYSTEM32);
 	static lfzNtOpenFile const func = ntdll.h_ ? reinterpret_cast<lfzNtOpenFile>(GetProcAddress(ntdll.h_, "NtOpenFile")) : nullptr;
 	if (!func) {
 		return INVALID_HANDLE_VALUE;
