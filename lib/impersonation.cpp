@@ -1,5 +1,5 @@
 #include "libfilezilla/impersonation.hpp"
-
+#include <iostream>
 #if FZ_UNIX
 
 #include "libfilezilla/buffer.hpp"
@@ -8,6 +8,7 @@
 #include <tuple>
 
 #include <crypt.h>
+#include <grp.h>
 #include <pwd.h>
 #include <shadow.h>
 #include <string.h>
@@ -161,6 +162,10 @@ bool set_process_impersonation(impersonation_token const& token)
 {
 	auto impl = impersonation_token_impl::get(token);
 	if (!impl) {
+		return false;
+	}
+
+	if (setgroups(0, nullptr) != 0) {
 		return false;
 	}
 
@@ -335,7 +340,7 @@ fz::native_string impersonation_token::home() const
 		static auto& dlls = shdlls::get();
 		static getknownfolderpath_t const getknownfolderpath = dlls.shell32_ ? reinterpret_cast<getknownfolderpath_t>(GetProcAddress(dlls.shell32_.h_, "SHGetKnownFolderPath")) : nullptr;
 		static cotaskmemfree_t const cotaskmemfree = dlls.ole32_ ? reinterpret_cast<cotaskmemfree_t>(GetProcAddress(dlls.ole32_.h_, "CoTaskMemFree")) : nullptr;
-		
+
 		if (getknownfolderpath && cotaskmemfree && getknownfolderpath(profile, 0, impl_->h_, &out) == S_OK) {
 			ret = out;
 			cotaskmemfree(out);
