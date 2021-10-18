@@ -1,5 +1,5 @@
 #include "libfilezilla/impersonation.hpp"
-#include <iostream>
+
 #if FZ_UNIX
 
 #include "libfilezilla/buffer.hpp"
@@ -100,6 +100,7 @@ public:
 	fz::native_string home_;
 	uid_t uid_{};
 	gid_t gid_{};
+	std::vector<gid_t> sup_groups_;
 };
 
 
@@ -109,6 +110,30 @@ impersonation_token::~impersonation_token() noexcept = default;
 
 impersonation_token::impersonation_token(impersonation_token&&) noexcept = default;
 impersonation_token& impersonation_token::operator=(impersonation_token&&) noexcept = default;
+
+namespace {
+std::vector<gid_t> get_supplementary(std::string const& username, gid_t primary)
+{
+	std::vector<gid_t> ret;
+
+	int size = 100;
+	while (true) {
+		ret.resize(size);
+		int res = getgrouplist(username.c_str(), primary, ret.data(), &size);
+		if (size < 0 || (res < 0 && static_cast<size_t>(size) <= ret.size())) {
+			// Something went wrong
+			ret.clear();
+			break;
+		}
+
+		ret.resize(size);
+		if (res >= 0) {
+			break;
+		}
+	}
+	return ret;
+}
+}
 
 impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
 {
@@ -126,6 +151,7 @@ impersonation_token::impersonation_token(fz::native_string const& username, fz::
 				}
 				impl_->uid_ = pwd.pwd_->pw_uid;
 				impl_->gid_ = pwd.pwd_->pw_gid;
+				impl_->sup_groups_ = get_supplementary(username, pwd.pwd_->pw_gid);
 			}
 		}
 	}
@@ -143,6 +169,7 @@ impersonation_token::impersonation_token(fz::native_string const& username, impe
 			}
 			impl_->uid_ = pwd.pwd_->pw_uid;
 			impl_->gid_ = pwd.pwd_->pw_gid;
+			impl_->sup_groups_ = get_supplementary(username, pwd.pwd_->pw_gid);
 		}
 	}
 }
@@ -165,7 +192,7 @@ bool set_process_impersonation(impersonation_token const& token)
 		return false;
 	}
 
-	if (setgroups(0, nullptr) != 0) {
+	if (setgroups(impl->sup_groups_.size(), impl->sup_groups_.data()) != 0) {
 		return false;
 	}
 
@@ -188,7 +215,7 @@ bool impersonation_token::operator==(impersonation_token const& op) const
 		return false;
 	}
 
-	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_);
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_, impl_->sup_groups_) == std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_, impl_->sup_groups_);
 }
 
 bool impersonation_token::operator<(impersonation_token const& op) const
@@ -200,7 +227,7 @@ bool impersonation_token::operator<(impersonation_token const& op) const
 		return false;
 	}
 
-	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_) < std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_);
+	return std::tie(impl_->name_, impl_->uid_, impl_->gid_, impl_->home_, impl_->sup_groups_) < std::tie(op.impl_->name_, op.impl_->uid_, op.impl_->gid_, op.impl_->home_, impl_->sup_groups_);
 }
 
 fz::native_string impersonation_token::home() const
