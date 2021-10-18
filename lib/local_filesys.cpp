@@ -884,13 +884,17 @@ native_string local_filesys::get_link_target(native_string const& path)
 		CloseHandle(hFile);
 	}
 #else
-	size_t const size = 1024;
-	char out[size];
-
-	ssize_t res = readlink(path.c_str(), out, size);
-	if (res > 0 && static_cast<size_t>(res) < size) {
-		out[res] = 0;
-		target = out;
+	target.resize(1024);
+	while (true) {
+		ssize_t res = readlink(path.c_str(), target.data(), target.size());
+		if (res < 0) {
+			return {};
+		}
+		if (static_cast<size_t>(res) < target.size()) {
+			target.resize(res);
+			break;
+		}
+		target.resize(target.size() * 2);
 	}
 #endif
 	return target;
