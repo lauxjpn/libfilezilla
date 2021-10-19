@@ -1758,8 +1758,12 @@ int tls_layer_impl::verify_certificate()
 		if (cred) {
 			bool trust_path_ok{true};
 			std::vector<x509_certificate> trust_path;
-			tls_layerCallbacks::verify_output_cb_ = [this, &trust_path_ok, &trust_path](gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t, unsigned int verification_output) {
+			tls_layerCallbacks::verify_output_cb_ = [this, &trust_path_ok, &trust_path](gnutls_x509_crt_t cert, gnutls_x509_crt_t issuer, gnutls_x509_crl_t crl, unsigned int verification_output) {
 				if (!trust_path_ok) {
+					return;
+				}
+				if (cert && !issuer && crl && !verification_output) {
+					// Verified against a CRL that the cert isn't expired
 					return;
 				}
 				if (!issuer || !cert) {
