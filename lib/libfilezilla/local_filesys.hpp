@@ -1,6 +1,7 @@
 #ifndef LIBFILEZILLA_LOCAL_FILESYS_HEADER
 #define LIBFILEZILLA_LOCAL_FILESYS_HEADER
 
+#include "fsresult.hpp"
 #include "libfilezilla.hpp"
 #include "time.hpp"
 
@@ -14,36 +15,6 @@
  * \brief Declares local_filesys class to enumerate local files and query their metadata such as type, size and modification time.
  */
 namespace fz {
-
-/**
- * \brief Small class to return filesystem errors
- */
-class FZ_PUBLIC_SYMBOL result final
-{
-public:
-	enum error {
-		ok,
-
-		/// Permission denied
-		noperm,
-
-		/// Requested file does not exist or is not a file
-		nofile,
-
-		/// Requested dir does not exist or is not a dir
-		nodir,
-
-		/// Out of disk space
-		nospace,
-
-		/// Some other error
-		other
-	};
-
-	explicit operator bool() const { return error_ == 0; }
-
-	error error_{};
-};
 
 /**
  * \brief This class can be used to enumerate the contents of local directories and to query

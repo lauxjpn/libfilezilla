@@ -1,6 +1,7 @@
 #ifndef LIBFILEZILLA_FILE_HEADER
 #define LIBFILEZILLA_FILE_HEADER
 
+#include "fsresult.hpp"
 #include "libfilezilla.hpp"
 
 #ifdef FZ_WINDOWS
@@ -92,7 +93,7 @@ public:
 	bool opened() const;
 	explicit operator bool() const { return opened(); }
 
-	bool open(native_string const& f, mode m, creation_flags d = existing);
+	result open(native_string const& f, mode m, creation_flags d = existing);
 
 	void close();
 
