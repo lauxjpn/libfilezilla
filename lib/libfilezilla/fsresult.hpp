@@ -3,6 +3,8 @@
 
 #include "private/visibility.hpp"
 
+#include <stdint.h>
+
 namespace fz {
 /**
  * \brief Small class to return filesystem errors
@@ -40,7 +42,7 @@ public:
 	};
 
 #if FZ_WINDOWS
-	typedef DWORD raw_t;
+	typedef uint32_t raw_t; // DWORD alternative without windows.h
 #else
 	typedef int raw_t;
 #endif

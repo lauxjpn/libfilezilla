@@ -50,7 +50,7 @@ result file::open(native_string const& f, mode m, creation_flags d)
 	close();
 
 	if (f.empty()) {
-		return {result::invalid}
+		return {result::invalid};
 	}
 
 	DWORD dispositionFlags;
