@@ -374,7 +374,7 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only, bool 
 	end_find_files();
 
 	if (path.empty()) {
-		return result{result::nodir};
+		return {result::invalid};
 	}
 
 	dirs_only_ = dirs_only;
@@ -387,11 +387,12 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only, bool 
 
 	dir_ = CreateFile(path.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 	if (dir_ == INVALID_HANDLE_VALUE) {
-		switch (GetLastError()) {
+		auto const err = GetLastError();
+		switch (err) {
 		case ERROR_ACCESS_DENIED:
-			return result{result::noperm};
+			return result{result::noperm, err};
 		default:
-			return result{result::other};
+			return result{result::other, err};
 		}
 	}
 
@@ -404,19 +405,20 @@ result local_filesys::begin_find_files(native_string path, bool dirs_only, bool 
 
 	dir_ = opendir(path.c_str());
 	if (!dir_) {
-		switch (errno) {
+		int const err = errno;
+		switch (err) {
 			case EACCES:
 			case EPERM:
-				return result{result::noperm};
+				return {result::noperm, err};
 			case ENOTDIR:
 			case ENOENT:
-				return result{result::nodir};
+				return {result::nodir, err};
 			default:
-				return result{result::other};
+				return {result::other, err};
 		}
 	}
 
-	return result{result::ok};
+	return {result::ok};
 #endif
 }
 
@@ -434,7 +436,7 @@ result local_filesys::begin_find_files(HANDLE dir, bool dirs_only, bool query_sy
 
 	dir_ = dir;
 	buffer_.resize(64 * 1024);
-	return result{result::ok};
+	return {result::ok};
 }
 #elif FZ_UNIX
 result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlink_targets)
@@ -451,15 +453,16 @@ result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlin
 	dir_ = fdopendir(fd);
 	if (!dir_) {
 		close(fd);
-		switch (errno) {
+		int const err = errno;
+		switch (err) {
 			case EACCES:
 			case EPERM:
-				return result{result::noperm};
+				return {result::noperm, err};
 			case ENOTDIR:
 			case ENOENT:
-				return result{result::nodir};
+				return {result::nodir, err};
 			default:
-				return result{result::other};
+				return {result::other, err};
 		}
 	}
 
@@ -903,7 +906,6 @@ native_string local_filesys::get_link_target(native_string const& path)
 namespace {
 result do_mkdir(native_string const& path, mkdir_permissions permissions)
 {
-	result ret{result::other};
 #ifdef FZ_WINDOWS
 
 	SECURITY_ATTRIBUTES attr{};
@@ -924,22 +926,36 @@ result do_mkdir(native_string const& path, mkdir_permissions permissions)
 	}
 	
 	if (CreateDirectory(path.c_str(), &attr)) {
-		ret = {result::ok};
+		return {result::ok};
 	}
-	else if (GetLastError() == ERROR_ACCESS_DENIED) {
-		ret = {result::noperm};
+
+	auto const err = GetLastError();
+	switch (err) {
+	case ERROR_ACCESS_DENIED:
+		return {result::noperm, err};
+	case ERROR_DISK_FULL:
+		return {result::nospace, err};
+	default:
+		return {result::other, err};
 	}
 #else
 	int res = ::mkdir(path.c_str(), (permissions == mkdir_permissions::normal) ? 0777 : 0700);
 	if (!res) {
-		ret = {result::ok};
+		return {result::ok};
 	}
-	else if (errno == EACCES || errno == EPERM) {
-		ret = {result::noperm};
+
+	int const err = errno;
+	switch (err) {
+	case EACCES:
+	case EPERM:
+		return {result::noperm, err};
+	case EDQUOT:
+	case ENOSPC:
+		return {result::nospace, err};
+	default:
+		return {result::other, err};
 	}
 #endif
-
-	return ret;
 }
 }
 
@@ -957,11 +973,11 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 		unc = true;
 		size_t pos = absolute_path.find_first_of(L"\\/", 2);
 		if (pos == std::wstring::npos || pos == 2) {
-			return result{result::other};
+			return {result::invalid};
 		}
 		size_t pos2 = absolute_path.find_first_of(L"\\/", pos + 1);
 		if (pos2 == pos + 1) {
-			return result{result::other};
+			return {result::invalid};
 		}
 		min_len = (pos2 == std::wstring::npos) ? absolute_path.size() : (pos2 - 1);
 	}
@@ -969,17 +985,17 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 	if (!unc) {
 		auto c = absolute_path[offset];
 		if (absolute_path.size() < offset + 2 || absolute_path[offset + 1] != ':' || !is_drive_letter(c)) {
-			return result{result::other};
+			return {result::invalid};
 		}
 		size_t pos = absolute_path.find_first_of(L"\\/", offset + 2);
 		if (pos != std::wstring::npos && pos != offset + 2) {
-			return result{result::other};
+			return result{result::invalid};
 		}
 		min_len = offset + 2;
 	}
 #else
 	if (absolute_path.empty() || absolute_path[0] != '/') {
-		return result{result::other};
+		return {result::invalid};
 	}
 	size_t const min_len = 1;
 #endif
@@ -1022,7 +1038,7 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 					break;
 				}
 				else if (t != fz::local_filesys::unknown) {
-					return result{result::nodir};
+					return {result::nodir};
 				}
 			}
 			else {
@@ -1030,7 +1046,7 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 			}
 		}
 		if (!found) {
-			return result{result::other};
+			return {result::other};
 		}
 
 		// Step 3: Create the segments
@@ -1056,37 +1072,38 @@ result mkdir(native_string const& absolute_path, bool recurse, mkdir_permissions
 		}
 	}
 
-	return result{result::ok};
+	return {result::ok};
 }
 
 result remove_dir(native_string const& absolute_path)
 {
 	if (absolute_path.empty()) {
-		return result{result::nodir};
+		return {result::invalid};
 	}
 #if FZ_WINDOWS
 	if (!RemoveDirectoryW(absolute_path.c_str())) {
 		DWORD const err = GetLastError();
 		switch (err) {
 			case ERROR_PATH_NOT_FOUND:
-				return {result::nodir};
+				return {result::nodir, err};
 			case ERROR_ACCESS_DENIED:
-				return {result::noperm};
+				return {result::noperm, err};
 			default:
-				return {result::other};
+				return {result::other, err};
 		}
 	}
 #else
 	if (rmdir(absolute_path.c_str()) != 0) {
-		switch (errno) {
+		int const err = errno;
+		switch (err) {
 			case EACCES:
 			case EPERM:
-				return result{result::noperm};
+				return {result::noperm, err};
 			case ENOTDIR:
 			case ENOENT:
-				return result{result::nodir};
+				return {result::nodir, err};
 			default:
-				return result{result::other};
+				return {result::other, err};
 		}
 	}
 #endif
@@ -1156,18 +1173,18 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 		return {result::ok};
 	}
 
-	DWORD err = GetLastError();
+	DWORD const err = GetLastError();
 	switch (err) {
 		case ERROR_FILE_NOT_FOUND:
-			return {result::nofile};
+			return {result::nofile, err};
 		case ERROR_PATH_NOT_FOUND:
-		return {result::nodir};
+		return {result::nodir, err};
 		case ERROR_ACCESS_DENIED:
-			return {result::noperm};
+			return {result::noperm, err};
 		case ERROR_DISK_FULL:
-			return {result::nospace};
+			return {result::nospace, err};
 		default:
-			return {result::other};
+			return {result::other, err};
 	}
 #else
 	int res = rename(source.c_str(), dest.c_str());
@@ -1175,25 +1192,25 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 		return {result::ok};
 	}
 
-	switch (errno) {
+	int const err = errno;
+	switch (err) {
 	case EPERM:
 	case EACCES:
-		return {result::noperm};
+		return {result::noperm, err};
 	case ENOSPC:
-		return {result::nospace};
+		return {result::nospace, err};
 	case ENOTDIR:
-		return {result::nodir};
+		return {result::nodir, err};
 	case ENOENT:
 	case EISDIR:
-		return {result::nofile};
+		return {result::nofile, err};
 	case EXDEV:
+		if (!allow_copy) {
+			return {result::other, err};
+		}
 		break;
 	default:
-		return {result::other};
-	}
-
-	if (!allow_copy) {
-		return {result::other};
+		return {result::other, err};
 	}
 
 	bool dest_opened{};
@@ -1207,19 +1224,18 @@ result rename_file(native_string const& source, native_string const& dest, bool 
 
 	res = unlink(source.c_str());
 	if (res != 0) {
-		switch (errno) {
+		int const err = errno;
+		switch (err) {
 		case EPERM:
 		case EACCES:
-			return {result::noperm};
+			return {result::noperm, err};
 		case ENOTDIR:
-			return {result::nodir};
+			return {result::nodir, err};
 		case ENOENT:
 		case EISDIR:
-			return {result::nofile};
-		case EXDEV:
-			break;
+			return {result::nofile, err};
 		default:
-			return {result::other};
+			return {result::other, err};
 		}
 	}
 

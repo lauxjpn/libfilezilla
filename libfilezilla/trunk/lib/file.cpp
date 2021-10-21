@@ -45,9 +45,13 @@ file& file::operator=(file && op) noexcept
 	return *this;
 }
 
-bool file::open(native_string const& f, mode m, creation_flags d)
+result file::open(native_string const& f, mode m, creation_flags d)
 {
 	close();
+
+	if (f.empty()) {
+		return {result::invalid}
+	}
 
 	DWORD dispositionFlags;
 	if (m == writing) {
@@ -80,13 +84,25 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 
 		auto sd = sdb.get_sd();
 		if (!sd) {
-			return false;
+			return {result::other};
 		}
 		attr.lpSecurityDescriptor = sd;
 	}
 	fd_ = CreateFile(f.c_str(), (m == reading) ? GENERIC_READ : GENERIC_WRITE, shareMode, &attr, dispositionFlags, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 
-	return fd_ != INVALID_HANDLE_VALUE;
+	if (fd_ == INVALID_HANDLE_VALUE) {
+		auto const err = GetLastError();
+		switch (err) {
+		case ERROR_ACCESS_DENIED:
+			return {result::noperm, err};
+		case ERROR_DISK_FULL:
+			return {result::nospace, err};
+		default:
+			return {result::other, err};
+		}
+	}
+
+	return {result::ok};
 }
 
 void file::close()
@@ -204,9 +220,13 @@ file& file::operator=(file && op) noexcept
 	return *this;
 }
 
-bool file::open(native_string const& f, mode m, creation_flags d)
+result file::open(native_string const& f, mode m, creation_flags d)
 {
 	close();
+
+	if (f.empty()) {
+		return {result::invalid};
+	}
 
 	int flags = O_CLOEXEC;
 	if (m == reading) {
@@ -223,14 +243,24 @@ bool file::open(native_string const& f, mode m, creation_flags d)
 		mode |= S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 	}
 	fd_ = ::open(f.c_str(), flags, mode);
+	if (fd_ == -1) {
+		int const err = errno;
+		switch (err) {
+		case EACCES:
+			return {result::noperm, err};
+		case EDQUOT:
+		case ENOSPC:
+			return {result::nospace, err};
+		default:
+			return {result::other, err};
+		}
+	}
 
 #if HAVE_POSIX_FADVISE
-	if (fd_ != -1) {
-		(void)posix_fadvise(fd_, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_NOREUSE);
-	}
+	(void)posix_fadvise(fd_, 0, 0, POSIX_FADV_SEQUENTIAL | POSIX_FADV_NOREUSE);
 #endif
 
-	return fd_ != -1;
+	return {result::ok};
 }
 
 void file::close()
