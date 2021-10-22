@@ -48,6 +48,7 @@ nobase_include_HEADERS = \
 	libfilezilla/event_loop.hpp \
 	libfilezilla/file.hpp \
 	libfilezilla/format.hpp \
+	libfilezilla/fsresult.hpp \
 	libfilezilla/hash.hpp \
 	libfilezilla/hostname_lookup.hpp \
 	libfilezilla/impersonation.hpp \
