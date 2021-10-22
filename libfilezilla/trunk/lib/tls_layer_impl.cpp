@@ -1766,12 +1766,12 @@ int tls_layer_impl::verify_certificate()
 					// Verified against a CRL that the cert isn't expired
 					return;
 				}
-				if (!issuer || !cert) {
-					trust_path_ok = false;
-					return;
-				}
 				if (verification_output != 0) {
 					trust_path.clear();
+					return;
+				}
+				if (!issuer || !cert) {
+					trust_path_ok = false;
 					return;
 				}
 
