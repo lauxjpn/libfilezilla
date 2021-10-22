@@ -606,8 +606,12 @@ bool local_filesys::get_next_file(native_string& name)
 		if (dirs_only_ && !(data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
 			continue;
 		}
-		name.assign(data.FileName, data.FileNameLength / sizeof(wchar_t));
-		if (name == fzT(".") || name == fzT("..")) {
+
+		// Array may be larger than neceessary, look for terminating null
+		std::wstring_view v(static_cast<wchar_t const*>(data.FileName), data.FileNameLength / sizeof(wchar_t));
+		size_t pos = v.find(wchar_t(0));
+		name.assign(v.substr(0, pos));
+		if (name.empty() || name == fzT(".") || name == fzT("..")) {
 			continue;
 		}
 
@@ -676,8 +680,12 @@ bool local_filesys::get_next_file(native_string& name, bool &is_link, local_file
 		if (dirs_only_ && !(data.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
 			continue;
 		}
-		name.assign(data.FileName, data.FileNameLength / sizeof(wchar_t));
-		if (name == fzT(".") || name == fzT("..")) {
+
+		// Array may be larger than neceessary, look for terminating null
+		std::wstring_view v(static_cast<wchar_t const*>(data.FileName), data.FileNameLength / sizeof(wchar_t));
+		size_t pos = v.find(wchar_t(0));
+		name.assign(v.substr(0, pos));
+		if (name.empty() || name == fzT(".") || name == fzT("..")) {
 			continue;
 		}
 
