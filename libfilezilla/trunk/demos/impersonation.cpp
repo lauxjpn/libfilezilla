@@ -94,6 +94,10 @@ int main(int argc, char *argv[])
 
 	// Drop privileges
 	fz::impersonation_token nobody("nobody", fz::impersonation_flag::pwless);
+	if (!nobody) {
+		std::cerr << "Parent: Could not get token for \"nobody\"\n";
+		abort();
+	}
 	if (!fz::set_process_impersonation(nobody)) {
 		std::cerr << "Parent: Could not drop privileges to \"nobody\"\n";
 		abort();

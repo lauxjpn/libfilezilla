@@ -7,14 +7,12 @@
 
 #include "string.hpp"
 
-#if FZ_UNIX || FZ_WINDOWS
-
 #include <memory>
 #include <functional>
 
 namespace fz {
 
-#if FZ_UNIX
+#if !FZ_WINDOWS
 enum class impersonation_flag
 {
 	pwless /// Impersonate as any user without checking credentials
@@ -42,7 +40,7 @@ public:
 	/// Creates an impersonation token, verifying credentials in the proceess
 	explicit impersonation_token(fz::native_string const& username, fz::native_string const& password);
 
-#if FZ_UNIX
+#if !FZ_WINDOWS
 	/// Doesn't verify credentials
 	explicit impersonation_token(fz::native_string const& username, impersonation_flag flag);
 #endif
@@ -70,7 +68,7 @@ private:
 	std::unique_ptr<impersonation_token_impl> impl_;
 };
 
-#if FZ_UNIX
+#if !FZ_WINDOWS
 /// Applies to the entire current process, calls setuid/setgid
 bool FZ_PUBLIC_SYMBOL set_process_impersonation(impersonation_token const& token);
 #endif
@@ -90,6 +88,5 @@ struct hash<fz::impersonation_token>
 };
 
 }
-#endif
 
 #endif

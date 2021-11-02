@@ -30,7 +30,6 @@ bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2], bool require_atomic_creation = fal
  */
 void FZ_PUBLIC_SYMBOL disable_sigpipe();
 
-#if FZ_UNIX
 /// Creates a connected pair of unix domain sockets of SOCK_STREAM type
 bool FZ_PUBLIC_SYMBOL create_socketpair(int fds[2]);
 
@@ -61,8 +60,6 @@ int FZ_PUBLIC_SYMBOL send_fd(int socket, fz::buffer & buf, int fd, int & error);
  * fd is set to -1.
  */
 int FZ_PUBLIC_SYMBOL read_fd(int socket, fz::buffer & buf, int &fd, int & error);
-#endif
-
 }
 
 #else
