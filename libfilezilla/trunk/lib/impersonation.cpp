@@ -133,26 +133,35 @@ std::vector<gid_t> get_supplementary(std::string const& username, gid_t primary)
 	}
 	return ret;
 }
+
+bool check_auth(fz::native_string const& username, fz::native_string const& password)
+{
+	auto shadow = get_shadow(username);
+	if (shadow.shadow_) {
+		struct crypt_data data{};
+		char* encrypted = crypt_r(password.c_str(), shadow.shadow_->sp_pwdp, &data);
+		if (encrypted && !strcmp(encrypted, shadow.shadow_->sp_pwdp)) {
+			return true;
+		}
+	}
+
+	return false;
+}
 }
 
-impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
+impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& password)
 {
 	auto pwd = get_passwd(username);
 	if (pwd.pwd_) {
-		auto shadow = get_shadow(username);
-		if (shadow.shadow_) {
-			struct crypt_data data{};
-			char* encrypted = crypt_r(passwd.c_str(), shadow.shadow_->sp_pwdp, &data);
-			if (encrypted && !strcmp(encrypted, shadow.shadow_->sp_pwdp)) {
-				impl_ = std::make_unique<impersonation_token_impl>();
-				impl_->name_ = username;
-				if (pwd.pwd_->pw_dir) {
-					impl_->home_ = pwd.pwd_->pw_dir;
-				}
-				impl_->uid_ = pwd.pwd_->pw_uid;
-				impl_->gid_ = pwd.pwd_->pw_gid;
-				impl_->sup_groups_ = get_supplementary(username, pwd.pwd_->pw_gid);
+		if (check_auth(username, password)) {
+			impl_ = std::make_unique<impersonation_token_impl>();
+			impl_->name_ = username;
+			if (pwd.pwd_->pw_dir) {
+				impl_->home_ = pwd.pwd_->pw_dir;
 			}
+			impl_->uid_ = pwd.pwd_->pw_uid;
+			impl_->gid_ = pwd.pwd_->pw_gid;
+			impl_->sup_groups_ = get_supplementary(username, pwd.pwd_->pw_gid);
 		}
 	}
 }
@@ -284,14 +293,14 @@ impersonation_token::impersonation_token(impersonation_token&&) noexcept = defau
 impersonation_token& impersonation_token::operator=(impersonation_token&&) noexcept = default;
 
 
-impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& passwd)
+impersonation_token::impersonation_token(fz::native_string const& username, fz::native_string const& password)
 {
 	if (username.find_first_of(L"\"/\\[]:;|=,+*?<>") != fz::native_string::npos) {
 		return;
 	}
 
 	HANDLE token{INVALID_HANDLE_VALUE};
-	DWORD res = LogonUserW(username.c_str(), nullptr, passwd.c_str(), LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, &token);
+	DWORD res = LogonUserW(username.c_str(), nullptr, password.c_str(), LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, &token);
 	if (!res) {
 		return;
 	}
@@ -385,14 +394,28 @@ HANDLE get_handle(impersonation_token const& t) {
 #elif 0
 namespace fz {
 struct impersonation_token_impl{};
+
 impersonation_token::impersonation_token() {}
+impersonation_token::impersonation_token(impersonation_token&&) noexcept {}
+impersonation_token& impersonation_token::operator=(impersonation_token&&) noexcept { return *this; }
+
 impersonation_token::impersonation_token(fz::native_string const&, fz::native_string const&) {}
-impersonation_token::impersonation_token(fz::native_string const&, impersonation_flag) {}
 impersonation_token::~impersonation_token() noexcept {}
 
+bool impersonation_token::operator==(impersonation_token const&) const { return true; }
+bool impersonation_token::operator<(impersonation_token const&) const { return false; }
+
+fz::native_string impersonation_token::username() const { return {}; }
+fz::native_string impersonation_token::home() const { return {}; }
+std::size_t impersonation_token::hash() const noexcept { return {}; }
+
+#if FZ_UNIX
+impersonation_token::impersonation_token(fz::native_string const&, impersonation_flag) {}
 bool set_process_impersonation(impersonation_token const&)
 {
 	return false;
 }
+#endif
+
 }
 #endif
