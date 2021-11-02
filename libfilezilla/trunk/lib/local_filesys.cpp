@@ -438,7 +438,7 @@ result local_filesys::begin_find_files(HANDLE dir, bool dirs_only, bool query_sy
 	buffer_.resize(64 * 1024);
 	return {result::ok};
 }
-#elif FZ_UNIX
+#else
 result local_filesys::begin_find_files(int fd, bool dirs_only, bool query_symlink_targets)
 {
 	end_find_files();
