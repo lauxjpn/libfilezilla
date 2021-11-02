@@ -1,19 +1,25 @@
 #include "libfilezilla/impersonation.hpp"
 
-#if FZ_UNIX
+#if FZ_UNIX || FZ_MAC
 
 #include "libfilezilla/buffer.hpp"
 
 #include <optional>
 #include <tuple>
 
+#if FZ_UNIX
 #include <crypt.h>
+#include <shadow.h>
+#endif
 #include <grp.h>
 #include <pwd.h>
-#include <shadow.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#if FZ_MAC
+#include <CoreServices/CoreServices.h>
+#endif
 
 namespace fz {
 namespace {
@@ -52,7 +58,7 @@ passwd_holder get_passwd(fz::native_string const& username)
 	return ret;
 }
 
-
+#if FZ_UNIX
 struct shadow_holder {
 	shadow_holder() = default;
 	shadow_holder(shadow_holder const&) = delete;
@@ -87,6 +93,7 @@ shadow_holder get_shadow(fz::native_string const& username)
 
 	return ret;
 }
+#endif
 }
 
 class impersonation_token_impl final
@@ -119,7 +126,14 @@ std::vector<gid_t> get_supplementary(std::string const& username, gid_t primary)
 	int size = 100;
 	while (true) {
 		ret.resize(size);
-		int res = getgrouplist(username.c_str(), primary, ret.data(), &size);
+#if FZ_MAC
+		typedef int glt;
+		static_assert(sizeof(gid_t) == sizeof(glt));
+#else
+		typedef gid_t glt;
+#endif
+
+		int res = getgrouplist(username.c_str(), primary, reinterpret_cast<glt*>(ret.data()), &size);
 		if (size < 0 || (res < 0 && static_cast<size_t>(size) <= ret.size())) {
 			// Something went wrong
 			ret.clear();
@@ -136,6 +150,7 @@ std::vector<gid_t> get_supplementary(std::string const& username, gid_t primary)
 
 bool check_auth(fz::native_string const& username, fz::native_string const& password)
 {
+#if FZ_UNIX
 	auto shadow = get_shadow(username);
 	if (shadow.shadow_) {
 		struct crypt_data data{};
@@ -144,7 +159,36 @@ bool check_auth(fz::native_string const& username, fz::native_string const& pass
 			return true;
 		}
 	}
+#elif FZ_MAC
+	bool ret{};
 
+	CFStringRef cfu = CFStringCreateWithCString(NULL, username.c_str(), kCFStringEncodingUTF8);
+	if (cfu) {
+		CSIdentityQueryRef q = CSIdentityQueryCreateForName(kCFAllocatorDefault, cfu, kCSIdentityQueryStringEquals, kCSIdentityClassUser, CSGetDefaultIdentityAuthority());
+		if (q) {
+			if (CSIdentityQueryExecute(q, kCSIdentityQueryGenerateUpdateEvents, NULL)) {
+				CFArrayRef users = CSIdentityQueryCopyResults(q);
+				if (users) {
+					if (CFArrayGetCount(users) == 1) {
+						CSIdentityRef user = (CSIdentityRef)(CFArrayGetValueAtIndex(users, 0));
+						if (user) {
+							CFStringRef pw = CFStringCreateWithCString(NULL, password.c_str(), kCFStringEncodingUTF8);
+							if (pw) {
+								ret = CSIdentityAuthenticateUsingPassword(user, pw);
+								CFRelease(pw);
+							}
+						}
+					}
+					CFRelease(users);
+				}
+			}
+			CFRelease(q);
+		}
+		CFRelease(cfu);
+	}
+
+	return ret;
+#endif
 	return false;
 }
 }
