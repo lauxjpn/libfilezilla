@@ -86,7 +86,7 @@ public:
 	 * Takes ownership of the HANDLE.
 	 */
 	result begin_find_files(HANDLE dir, bool dirs_only = false, bool query_symlink_targets = true);
-#elif FZ_UNIX
+#else
 	/**
 	 * \brief Begin enumerating a directory represented by a file descriptor.
 	 *
