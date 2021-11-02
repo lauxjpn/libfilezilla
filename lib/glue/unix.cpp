@@ -67,16 +67,26 @@ void disable_sigpipe()
 	std::call_once(flag, [](){ signal(SIGPIPE, SIG_IGN); });
 }
 
-#if FZ_UNIX
 bool create_socketpair(int fds[2])
 {
 	disable_sigpipe();
 
-	bool ret = socketpair(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0, fds) == 0;
+	int flags = SOCK_STREAM;
+#ifdef SOCK_CLOEXEC
+	flags |= SOCK_CLOEXEC;
+#endif
+	bool ret = socketpair(AF_UNIX, flags, 0, fds) == 0;
 	if (!ret) {
 		fds[0] = -1;
 		fds[1] = -1;
 	}
+#ifndef SOCK_CLOEXEC
+	if (ret) {
+	    set_cloexec(fds[0]);
+	    set_cloexec(fds[1]);
+	}
+#endif
+
 	return ret;
 }
 
@@ -87,7 +97,7 @@ int send_fd(int socket, fz::buffer & buf, int fd, int & error)
 		return -1;
 	}
 	if (socket < 0) {
-		error = EBADFD;
+		error = EBADF;
 		return -1;
 	}
 
@@ -144,14 +154,16 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 {
 	fd = -1;
 	if (socket < 0) {
-		error = EBADFD;
+		error = EBADF;
 		return -1;
 	}
 
+	int flags{};
 #ifdef MSG_NOSIGNAL
-	const int flags = MSG_NOSIGNAL|MSG_CMSG_CLOEXEC;
-#else
-	const int flags = MSG_CMSG_CLOEXEC;
+	flags |= MSG_NOSIGNAL;
+#endif
+#ifdef MSG_CMSG_CLOEXEC
+	flags |= MSG_CMSG_CLOEXEC;
 #endif
 
 	struct msghdr msg{};
@@ -184,6 +196,9 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 		struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msg);
 		if (cmsg && cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
 			memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
+#ifndef MSG_CMSG_CLOEXEC
+			set_cloexec(fd);
+#endif
 		};
 	}
 	else {
@@ -192,6 +207,5 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 
 	return res;
 }
-#endif
 
 }
