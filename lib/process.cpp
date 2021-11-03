@@ -860,15 +860,29 @@ forkblock::~forkblock()
 }
 
 namespace {
-void check_forkblocks()
+void atfork_lock_forkblock()
 {
+	// Unsafe if fork is called from a signal handler
+	forkblock_mtx_.lock();
+}
+
+void atfork_unlock_forkblock()
+{
+	// Unsafe if fork is called from a signal handler
+	forkblock_mtx_.unlock();
+}
+
+void atfork_check_forkblocks()
+{
+	// Last line of defense.
 	if (forkblocks_) {
 		_exit(1);
 	}
 }
 
+
 int const atfork_registered = []() {
-	return pthread_atfork(nullptr, nullptr, &check_forkblocks);
+	return pthread_atfork(&atfork_lock_forkblock, &atfork_unlock_forkblock, &atfork_check_forkblocks);
 }();
 }
 

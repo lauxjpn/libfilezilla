@@ -123,8 +123,10 @@ bool FZ_PUBLIC_SYMBOL spawn_detached_process(std::vector<native_string> const& c
  *
  * fz::process::spawn() will wait until there is no forkblock.
  *
- * In case of a wild fork() in third-party code, the child will _exit(1)
- * if there is a forkblock.
+ * In case of a wild fork() in third-party code, pthread_atfork handlers will enforce a wait.
+ * This may deadlock. Behavior is undefined if fork is called from a signal handler.
+ *
+ * If you fork while the current thread holds a forklock, the child will immediately exit.
  */
 class FZ_PUBLIC_SYMBOL forkblock final
 {
