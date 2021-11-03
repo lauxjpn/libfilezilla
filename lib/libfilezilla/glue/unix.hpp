@@ -11,7 +11,11 @@
 
 namespace fz {
 
-/// Sets FD_CLOEXEC on file descriptor
+/**
+ * \brief Sets FD_CLOEXEC on file descriptor
+ *
+ * If you use this function, you probably also want to use \ref fz::forkblock
+ */
 bool FZ_PUBLIC_SYMBOL set_cloexec(int fd);
 
 /**
@@ -22,7 +26,7 @@ bool FZ_PUBLIC_SYMBOL set_cloexec(int fd);
  *
  * On failure sets fds to -1.
  */
-bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2], bool require_atomic_creation = false);
+bool FZ_PUBLIC_SYMBOL create_pipe(int fds[2]);
 
 /** \brief Disables SIGPIPE
  *

@@ -263,6 +263,7 @@ private:
 #else
 
 #include "libfilezilla/glue/unix.hpp"
+#include "libfilezilla/mutex.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -271,6 +272,7 @@ private:
 #include <string.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -308,12 +310,12 @@ public:
 	pipe(pipe const&) = delete;
 	pipe& operator=(pipe const&) = delete;
 
-	bool create(bool require_atomic_creation = false)
+	bool create()
 	{
 		reset();
 
 		int fds[2];
-		if (!create_pipe(fds, require_atomic_creation)) {
+		if (!create_pipe(fds)) {
 			return false;
 		}
 
@@ -359,6 +361,9 @@ void get_argv(native_string const& cmd, std::vector<native_string>::const_iterat
 	}
 	*v = nullptr;
 }
+
+std::atomic<unsigned int> forkblocks_{};
+mutex forkblock_mtx_;
 }
 
 class process::impl
@@ -395,6 +400,7 @@ public:
 		std::unique_ptr<char *[]> argV;
 		get_argv(cmd, begin, end, argList, argV);
 
+		scoped_lock l(forkblock_mtx_);
 		pid_t pid = fork();
 		if (pid < 0) {
 			return false;
@@ -777,12 +783,14 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 	pid_t const parent = getppid();
 	pid_t const ppgid = getpgid(parent);
 
+	scoped_lock l(forkblock_mtx_);
+
 	// We're using a pipe created with O_CLOEXEC to signal failure from execv.
-	// Note that this flags must be set atomically, setting FD_CLOEXEC after creation
-	// leads to a deadlock if a different thread calls exec in-between.
-	// Unfortunately even in early 2020, macOS does not have pipe2.
+	// Fortunately the forkblock avoids a deadlock if the cloexec flag isn't set
+	// atomically and another threa execs in-between, as even in 2022, macOS
+	// doesn't have pipe2.
 	pipe errpipe;
-	errpipe.create(true);
+	errpipe.create();
 
 	pid_t pid = fork();
 	if (!pid) {
@@ -838,4 +846,30 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 	}
 #endif
 }
+
+forkblock::forkblock()
+{
+	forkblock_mtx_.lock();
+	++forkblocks_;
+}
+
+forkblock::~forkblock()
+{
+	--forkblocks_;
+	forkblock_mtx_.unlock();
+}
+
+namespace {
+void check_forkblocks()
+{
+	if (forkblocks_) {
+		_exit(1);
+	}
+}
+
+int const atfork_registered = []() {
+	return pthread_atfork(nullptr, nullptr, &check_forkblocks);
+}();
+}
+
 }
