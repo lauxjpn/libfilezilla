@@ -14,6 +14,7 @@
 
 #ifndef FZ_WINDOWS
   #include "libfilezilla/glue/unix.hpp"
+  #include "libfilezilla/process.hpp"
 
   #define mutex mutex_override // Sadly on some platforms system headers include conflicting names
   #include <sys/types.h>
@@ -582,6 +583,9 @@ protected:
 		if (fd == -1 && errno == EINVAL)
 #endif
 		{
+#if !defined(FZ_WINDOWS)
+			forkblock b;
+#endif
 			fd = ::socket(addr.ai_family, addr.ai_socktype, addr.ai_protocol);
 
 #if !defined(FZ_WINDOWS)
@@ -1587,6 +1591,9 @@ socket_descriptor listen_socket::fast_accept(int &error)
 		if (fd == -1 && errno == ENOSYS)
 #endif
 		{
+#if !defined(FZ_WINDOWS)
+			forkblock b;
+#endif
 			fd = ::accept(fd_, nullptr, nullptr);
 #if !defined(FZ_WINDOWS)
 			set_cloexec(fd);
