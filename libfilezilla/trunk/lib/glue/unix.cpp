@@ -1,5 +1,6 @@
 #include "../libfilezilla/buffer.hpp"
 #include "../libfilezilla/glue/unix.hpp"
+#include "../libfilezilla/process.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,7 +29,7 @@ bool set_cloexec(int fd)
 	return false;
 }
 
-bool create_pipe(int fds[2], bool require_atomic_creation)
+bool create_pipe(int fds[2])
 {
 	disable_sigpipe();
 
@@ -46,10 +47,7 @@ bool create_pipe(int fds[2], bool require_atomic_creation)
 	else
 #endif
 	{
-		if (require_atomic_creation) {
-			return false;
-		}
-
+		forkblock b;
 		if (pipe(fds) != 0) {
 			return false;
 		}
@@ -74,6 +72,8 @@ bool create_socketpair(int fds[2])
 	int flags = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
 	flags |= SOCK_CLOEXEC;
+#else
+	forkblock b;
 #endif
 	bool ret = socketpair(AF_UNIX, flags, 0, fds) == 0;
 	if (!ret) {
@@ -164,6 +164,8 @@ int read_fd(int socket, fz::buffer & buf, int & fd, int & error)
 #endif
 #ifdef MSG_CMSG_CLOEXEC
 	flags |= MSG_CMSG_CLOEXEC;
+#else
+	forkblock b;
 #endif
 
 	struct msghdr msg{};

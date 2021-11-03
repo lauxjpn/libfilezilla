@@ -118,6 +118,25 @@ private:
  */
 bool FZ_PUBLIC_SYMBOL spawn_detached_process(std::vector<native_string> const& cmd_with_args);
 
+#if !FZ_WINDOWS
+/** \brief Temporarily suppress fork() if CLOEXEC cannot be set atomically at creation
+ *
+ * fz::process::spawn() will wait until there is no forkblock.
+ *
+ * In case of a wild fork() in third-party code, the child will _exit(1)
+ * if there is a forkblock.
+ */
+class FZ_PUBLIC_SYMBOL forkblock final
+{
+public:
+	forkblock();
+	~forkblock();
+
+	forkblock(forkblock const&) = delete;
+	forkblock& operator=(forkblock const&) = delete;
+};
+#endif
+
 }
 
 #endif
