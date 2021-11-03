@@ -847,6 +847,7 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 #endif
 }
 
+#if !FZ_WINDOWS
 forkblock::forkblock()
 {
 	forkblock_mtx_.lock();
@@ -885,5 +886,6 @@ int const atfork_registered = []() {
 	return pthread_atfork(&atfork_lock_forkblock, &atfork_unlock_forkblock, &atfork_check_forkblocks);
 }();
 }
+#endif
 
 }
