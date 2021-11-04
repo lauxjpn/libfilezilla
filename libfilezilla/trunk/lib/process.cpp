@@ -861,16 +861,21 @@ forkblock::~forkblock()
 }
 
 namespace {
+bool forked_child_{};
 void atfork_lock_forkblock()
 {
 	// Unsafe if fork is called from a signal handler
-	forkblock_mtx_.lock();
+	if (!forked_child_) {
+		forkblock_mtx_.lock();
+	}
 }
 
 void atfork_unlock_forkblock()
 {
 	// Unsafe if fork is called from a signal handler
-	forkblock_mtx_.unlock();
+	if (!forked_child_) {
+		forkblock_mtx_.unlock();
+	}
 }
 
 void atfork_check_forkblocks()
@@ -879,8 +884,7 @@ void atfork_check_forkblocks()
 	if (forkblocks_) {
 		_exit(1);
 	}
-	// Need to re-initialize the mutex as it is in an invalid state in the child
-	new (&forkblock_mtx_) mutex(true);
+	forked_child_ = true;
 }
 
 
