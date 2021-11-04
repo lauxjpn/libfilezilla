@@ -879,6 +879,8 @@ void atfork_check_forkblocks()
 	if (forkblocks_) {
 		_exit(1);
 	}
+	// Need to re-initialize the mutex as it is in an invalid state in the child
+	new (&forkblock_mtx_) mutex(true);
 }
 
 
