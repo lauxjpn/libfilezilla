@@ -435,15 +435,11 @@ public:
 				}
 			}
 
-#if FZ_UNIX
 			if (it && *it) {
 				if (!set_process_impersonation(*it)) {
 					_exit(1);
 				}
 			}
-#else
-			(void)it;
-#endif
 
 			// Execute process
 			execv(cmd.c_str(), argV.get()); // noreturn on success
