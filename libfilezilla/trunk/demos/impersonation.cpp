@@ -45,7 +45,11 @@ int main(int argc, char *argv[])
 		assert(recv(sockfd, &v, 1, 0) == 1);
 
 		std::cerr << "Child: Opening /tmp/test.txt\n";
-		auto f = fz::file("/tmp/test.txt", fz::file::writing, fz::file::empty | fz::file::current_user_only);
+		fz::file f;
+		if (!f.open("/tmp/test.txt", fz::file::writing, fz::file::empty | fz::file::current_user_only)) {
+			std::cerr << "Could not open /tmp/test.txt\n";
+			abort();
+		}
 		int fd = f.detach();
 		fz::buffer b;
 		b.append("okay\n");
@@ -56,7 +60,9 @@ int main(int argc, char *argv[])
 			if (res < 0) {
 				abort();
 			}
-			close(fd);
+			if (fd != 1) {
+				close(fd);
+			}
 			fd = -1;
 		}
 
