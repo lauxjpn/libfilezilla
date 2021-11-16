@@ -1281,8 +1281,10 @@ int tls_layer_impl::continue_shutdown()
 
 void tls_layer_impl::set_verification_result(bool trusted)
 {
+	logger_.log(logmsg::debug_verbose, L"set_verification_result(%s)", trusted ? "true"sv : "false"sv);
+
 	if (state_ != socket_state::connecting && !handshake_successful_) {
-		logger_.log(logmsg::debug_warning, L"TrustCurrentCert called at wrong time.");
+		logger_.log(logmsg::debug_warning, L"set_verification_result called at wrong time.");
 		return;
 	}
 
@@ -1822,6 +1824,7 @@ int tls_layer_impl::verify_certificate()
 				}
 				systemTrust = true;
 			}
+			logger_.log(logmsg::debug_verbose, L"System trust store decision: %s", systemTrust ? "true"sv : "false"sv);
 		}
 		else {
 			std::get<1>(lease).unlock();
@@ -1885,8 +1888,6 @@ int tls_layer_impl::verify_certificate()
 				}
 			}
 		}
-
-		logger_.log(logmsg::status, fztranslate("Verifying certificate..."));
 
 		std::vector<x509_certificate> certificates;
 		certificates.reserve(certs.certs_size);
@@ -1954,6 +1955,7 @@ int tls_layer_impl::verify_certificate()
 			hostnameMismatch
 		);
 
+		logger_.log(logmsg::debug_verbose, L"Sending certificate_verification_event");
 		verification_handler_->send_event<certificate_verification_event>(&tls_layer_, std::move(session_info));
 
 		return EAGAIN;
