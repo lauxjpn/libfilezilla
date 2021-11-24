@@ -176,9 +176,20 @@ void buffer::append(std::vector<uint8_t> const& data)
 	append(reinterpret_cast<unsigned char const*>(data.data()), data.size());
 }
 
+void buffer::append(fz::buffer const& b)
+{
+	append(b.get(), b.size());
+}
+
 void buffer::append(unsigned char v)
 {
 	append(&v, 1);
+}
+
+void buffer::append(size_t len, unsigned char c)
+{
+	memset(get(len), c, len);
+	add(len);
 }
 
 void buffer::reserve(size_t capacity)
