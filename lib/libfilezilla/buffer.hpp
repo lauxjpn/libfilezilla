@@ -85,7 +85,26 @@ public:
 	void append(unsigned char const* data, size_t len);
 	void append(std::string_view const& str);
 	void append(std::vector<uint8_t> const& data);
+	void append(fz::buffer const& b);
 	void append(unsigned char v);
+	void append(size_t len, unsigned char c);
+
+	buffer& operator+=(unsigned char v) {
+		append(v);
+		return *this;
+	}
+	buffer& operator+=(std::string_view const& str) {
+		append(str);
+		return *this;
+	}
+	buffer& operator+=(std::vector<uint8_t> const& data) {
+		append(data);
+		return *this;
+	}
+	buffer& operator+=(fz::buffer const& b) {
+		append(b);
+		return *this;
+	}
 
 	bool empty() const { return size_ == 0; }
 	explicit operator bool() const {
