@@ -113,9 +113,8 @@ void json::clear()
 }
 
 namespace {
-void json_append_escaped(std::string& out, std::string const& s)
+void json_append_escaped(std::string & out, std::string const& s)
 {
-	out.reserve(s.size());
 	for (auto & c : s) {
 		switch (c) {
 		case '\r':
@@ -147,8 +146,13 @@ void json_append_escaped(std::string& out, std::string const& s)
 }
 
 std::string json::to_string(bool pretty, size_t depth) const
+{	std::string ret;
+	to_string(ret, pretty, depth);
+	return ret;
+}
+
+void json::to_string(std::string & ret, bool pretty, size_t depth) const
 {
-	std::string ret;
 	switch (type_) {
 	case json_type::object: {
 		ret += '{';
@@ -177,7 +181,7 @@ std::string json::to_string(bool pretty, size_t depth) const
 			if (pretty) {
 				ret += ' ';
 			}
-			ret += c.second.to_string(pretty, depth + 1);
+			c.second.to_string(ret, pretty, depth + 1);
 		}
 		if (pretty) {
 			ret += '\n';
@@ -208,7 +212,7 @@ std::string json::to_string(bool pretty, size_t depth) const
 				ret += "null";
 			}
 			else {
-				ret += c.to_string(pretty, depth + 1);
+				c.to_string(ret, pretty, depth + 1);
 			}
 		}
 		if (pretty) {
@@ -219,24 +223,22 @@ std::string json::to_string(bool pretty, size_t depth) const
 		break;
 	}
 	case json_type::boolean:
-		ret = std::get<3>(value_) ? "true" : "false";
+		ret += std::get<3>(value_) ? "true" : "false";
 		break;
 	case json_type::number:
-		ret = std::get<0>(value_);
+		ret += std::get<0>(value_);
 		break;
 	case json_type::null:
-		ret = "null";
+		ret += "null";
 		break;
 	case json_type::string:
-		ret = '"';
+		ret += '"';
 		json_append_escaped(ret, std::get<0>(value_));
 		ret += '"';
 		break;
 	case json_type::none:
 		break;
 	}
-
-	return ret;
 }
 
 json json::parse(std::string_view const& s, size_t max_depth)

@@ -128,12 +128,21 @@ public:
 
 	explicit operator bool() const { return type_ != json_type::none; }
 
-	/** \brief Serializes JSONS structure
+	/** \brief Serializes JSON structure
 	 *
 	 * Children of objects with none type are ignored.
 	 * Children of arrays with none type are serialized as null.
 	 */
 	std::string to_string(bool pretty = false, size_t depth = 0) const;
+
+	/** \brief Serializes JSON structure
+	 *
+	 * Children of objects with none type are ignored.
+	 * Children of arrays with none type are serialized as null.
+	 *
+	 * Does not clear output string
+	 */
+	void to_string(std::string & ret, bool pretty = false, size_t depth = 0) const;
 
 	/** \brief Parses JSON structure from input.
 	 *
