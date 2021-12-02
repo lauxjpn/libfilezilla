@@ -4,6 +4,7 @@
 #include "libfilezilla.hpp"
 
 #include <vector>
+#include <type_traits>
 
 /** \file
 * \brief Declares fz::buffer
@@ -64,6 +65,19 @@ public:
 
 	/// Increase size by the passed amount. Call this after having obtained a writable buffer with get(size_t write_size)
 	void add(size_t added);
+
+	/**
+	 * \brief Overload of add for signed types, only adds if value is positive.
+	 *
+	 * Does nothing on values <= 0, useful for directly passing the ssize_t result of
+	 * the system's recv() or read() functions.
+	 */
+	template<typename T, std::enable_if_t<std::is_signed_v<T>, int> = 0>
+	void add(T added) {
+		if (added > 0) {
+			add(static_cast<size_t>(added));
+		}
+	}
 
 	/** \brief Removes consumed bytes from the beginning of the buffer.
 	 *
