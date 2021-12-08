@@ -208,4 +208,19 @@ int tls_layer::new_session_ticket()
 {
 	return impl_ ? impl_->new_session_ticket() : false;
 }
+
+void tls_layer::set_unexpected_eof_cb(std::function<bool()> const& cb)
+{
+	if (impl_) {
+		std::function<bool()> f = cb;
+		impl_->set_unexpected_eof_cb(std::move(f));
+	}
+}
+
+void tls_layer::set_unexpected_eof_cb(std::function<bool()> && cb)
+{
+	if (impl_) {
+		impl_->set_unexpected_eof_cb(std::move(cb));
+	}
+}
 }

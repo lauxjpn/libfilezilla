@@ -99,6 +99,8 @@ public:
 	void set_min_tls_ver(tls_ver ver);
 	void set_max_tls_ver(tls_ver ver);
 
+	void set_unexpected_eof_cb(std::function<bool()> && cb);
+
 private:
 	bool init();
 	void deinit();
@@ -144,6 +146,8 @@ private:
 	tls_layer& tls_layer_;
 
 	logger_interface & logger_;
+
+	std::function<bool()> unexpected_eof_cb_;
 
 	gnutls_session_t session_{};
 

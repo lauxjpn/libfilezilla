@@ -1182,18 +1182,20 @@ void tls_layer_impl::failure(int code, bool send_close, std::wstring const& func
 {
 	logger_.log(logmsg::debug_debug, L"tls_layer_impl::failure(%d)", code);
 	if (code) {
-		log_error(code, function);
-		if (socket_eof_) {
-			if (code == GNUTLS_E_UNEXPECTED_PACKET_LENGTH
-#ifdef GNUTLS_E_PREMATURE_TERMINATION
-				|| code == GNUTLS_E_PREMATURE_TERMINATION
-#endif
-				)
-			{
-				if (state_ != socket_state::shut_down || !shutdown_silence_read_errors_) {
-					logger_.log(logmsg::status, server_ ? fztranslate("Client did not properly shut down TLS connection") : fztranslate("Server did not properly shut down TLS connection"));
-				}
+		bool suppress{};
+		auto level = logmsg::error;
+		if (socket_eof_ && code == (GNUTLS_E_UNEXPECTED_PACKET_LENGTH || code == GNUTLS_E_PREMATURE_TERMINATION)) {
+			suppress = state_ == socket_state::shut_down && shutdown_silence_read_errors_;
+			if (!suppress && state_ == socket_state::connected && unexpected_eof_cb_) {
+				suppress = !unexpected_eof_cb_();
 			}
+			if (suppress) {
+				level = logmsg::debug_warning;
+			}
+		}
+		log_error(code, function, level);
+		if (!suppress && socket_eof_ && (code == GNUTLS_E_UNEXPECTED_PACKET_LENGTH || code == GNUTLS_E_PREMATURE_TERMINATION)) {
+			logger_.log(logmsg::status, server_ ? fztranslate("Client did not properly shut down TLS connection") : fztranslate("Server did not properly shut down TLS connection"));
 		}
 	}
 
@@ -2597,6 +2599,11 @@ int tls_layer_impl::new_session_ticket()
 
 	failure(res, false, L"gnutls_session_ticket_send");
 	return socket_error_ ? socket_error_ : ECONNABORTED;
+}
+
+void tls_layer_impl::set_unexpected_eof_cb(std::function<bool()> && cb)
+{
+	unexpected_eof_cb_ = std::move(cb);
 }
 
 }

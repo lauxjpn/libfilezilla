@@ -211,6 +211,22 @@ public:
 	 */
 	int new_session_ticket();
 
+	/** \brief Sets a callback to control whether unexpected eof is seen as error
+	 *
+	 * With TLS, an EOF on the socket prior to receiving a closure alert normally is an error.
+	 * In many cases this is harmless though, e.g. if the connection is idle.
+	 *
+	 * If this callback is set, premature termination is no longer seen as error if the
+	 * callback returns false.
+	 *
+	 * Callback must not call any tls_layer function.
+	 *
+	 * Only controls the layer's own logging. Functions such as read will still return
+	 * ECONNABORTED.
+	 */
+	void set_unexpected_eof_cb(std::function<bool()> const& cb);
+	void set_unexpected_eof_cb(std::function<bool()> && cb);
+
 	virtual socket_state get_state() const override;
 
 	virtual int connect(native_string const& host, unsigned int port, address_type family = address_type::unknown) override;
