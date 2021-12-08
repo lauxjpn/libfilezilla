@@ -19,11 +19,11 @@ template<typename T>
 class sparse_optional final
 {
 public:
-	sparse_optional();
+	sparse_optional() noexcept = default;
 	explicit sparse_optional(T const& v);
 
 	/// Takes ownership of pointer.
-	explicit sparse_optional(T * v);
+	explicit sparse_optional(T * v) noexcept;
 
 	sparse_optional(sparse_optional<T> const& v);
 	sparse_optional(sparse_optional<T> && v) noexcept;
@@ -46,15 +46,8 @@ public:
 	sparse_optional<T>& operator=(sparse_optional<T> const& v);
 	sparse_optional<T>& operator=(sparse_optional<T> && v) noexcept;
 private:
-	T* v_;
+	T* v_{};
 };
-
-
-template<typename T>
-sparse_optional<T>::sparse_optional()
-	: v_()
-{
-}
 
 template<typename T>
 sparse_optional<T>::sparse_optional(T const& v)
@@ -63,7 +56,7 @@ sparse_optional<T>::sparse_optional(T const& v)
 }
 
 template<typename T>
-sparse_optional<T>::sparse_optional(T * v)
+sparse_optional<T>::sparse_optional(T * v) noexcept
 	: v_(v)
 {
 }
