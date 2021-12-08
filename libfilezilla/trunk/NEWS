@@ -1,3 +1,11 @@
+0.35.0 (2021-12-08)
+
++ *nix: Added fz::forkblock which can be used to safely set FD_CLOEXEC on descriptors even if the system lacks SOCK_CLOCKEXEC, MSG_CMSG_CLOEXEC, pipe2 or accept4
++ macOS: Impersonation support
++ Added fz::tls_layer::set_unexpected_eof_cb, in some situations it may be desirable that unexpected closure is not reported as a hard errror
+- Added various convenience overloads for fz::buffer
+- Performance improvement for fz::json::to_string
+
 0.34.2 (2021-10-26)
 
 + fz::file::open now returns fz::result
