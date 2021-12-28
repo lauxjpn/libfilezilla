@@ -158,6 +158,7 @@ private:
 	gnutls_certificate_credentials_t cert_credentials_{};
 
 	std::vector<std::string> alpn_;
+	bool alpn_server_priority_{};
 
 	socket_state state_{};
 

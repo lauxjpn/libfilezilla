@@ -179,9 +179,14 @@ public:
 	 * If the peer does not use/support ALPN, the handshake continues and no protocol is negotiated.
 	 * 
 	 * Needs to be called prior to handshaking.
+	 *
+	 * Which protocol is eventually chosen is always a server-side decsion.
+	 * Iff running as server, server_priority controls the ALPN should be chosen
+	 * based on the server's or the client's order in the list of ALPNs supported
+	 * by both. server_priority is ignored if unning as client.
 	 */
 	bool set_alpn(std::string_view const& alpn);
-	bool set_alpn(std::vector<std::string> const& alpns);
+	bool set_alpn(std::vector<std::string> const& alpns, bool server_priority = false);
 
 	/** \brief Sets minimum allowed TLS version
 	 */

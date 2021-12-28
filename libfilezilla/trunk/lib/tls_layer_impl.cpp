@@ -2527,7 +2527,11 @@ bool tls_layer_impl::do_set_alpn()
 		data[i].data = reinterpret_cast<unsigned char *>(const_cast<char*>(alpn_[i].c_str()));
 		data[i].size = alpn_[i].size();
 	}
-	int res = gnutls_alpn_set_protocols(session_, data, alpn_.size(), GNUTLS_ALPN_MANDATORY);
+	int flags = GNUTLS_ALPN_MANDATORY;
+	if (alpn_server_priority_ && server_) {
+		flags |= GNUTLS_ALPN_SERVER_PRECEDENCE;
+	}
+	int res = gnutls_alpn_set_protocols(session_, data, alpn_.size(), flags);
 	delete [] data;
 
 	if (res) {
