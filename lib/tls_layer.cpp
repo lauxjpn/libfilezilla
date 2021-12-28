@@ -154,16 +154,18 @@ bool tls_layer::set_alpn(std::string_view const& alpn)
 
 	impl_->alpn_.clear();
 	impl_->alpn_.emplace_back(alpn);
+	impl_->alpn_server_priority_ = false;
 	return true;
 }
 
-bool tls_layer::set_alpn(std::vector<std::string> const& alpn)
+bool tls_layer::set_alpn(std::vector<std::string> const& alpn, bool server_priority)
 {
 	if (!impl_) {
 		return false;
 	}
 
 	impl_->alpn_ = alpn;
+	impl_->alpn_server_priority_ = server_priority;
 	return true;
 }
 
