@@ -241,6 +241,27 @@ std::vector<uint8_t> sha512_impl(DataContainer const& in)
 }
 
 template<typename KeyContainer, typename DataContainer>
+std::vector<uint8_t> hmac_sha1_impl(KeyContainer const& key, DataContainer const& data)
+{
+	static_assert(sizeof(typename KeyContainer::value_type) == 1, "Bad container type");
+	static_assert(sizeof(typename DataContainer::value_type) == 1, "Bad container type");
+
+	std::vector<uint8_t> ret;
+
+	hmac_sha1_ctx ctx;
+	nettle_hmac_sha1_set_key(&ctx, key.size(), key.empty() ? nullptr : reinterpret_cast<uint8_t const*>(key.data()));
+
+	if (!data.empty()) {
+		nettle_hmac_sha1_update(&ctx, data.size(), reinterpret_cast<uint8_t const*>(data.data()));
+	}
+
+	ret.resize(SHA1_DIGEST_SIZE);
+	nettle_hmac_sha1_digest(&ctx, ret.size(), ret.data());
+
+	return ret;
+}
+
+template<typename KeyContainer, typename DataContainer>
 std::vector<uint8_t> hmac_sha256_impl(KeyContainer const& key, DataContainer const& data)
 {
 	static_assert(sizeof(typename KeyContainer::value_type) == 1, "Bad container type");
@@ -300,6 +321,26 @@ std::vector<uint8_t> sha512(std::vector<uint8_t> const& data)
 std::vector<uint8_t> sha512(std::string_view const& data)
 {
 	return sha512_impl(data);
+}
+
+std::vector<uint8_t> hmac_sha1(std::string_view const& key, std::string_view const& data)
+{
+	return hmac_sha1_impl(key, data);
+}
+
+std::vector<uint8_t> hmac_sha1(std::vector<uint8_t> const& key, std::vector<uint8_t> const& data)
+{
+	return hmac_sha1_impl(key, data);
+}
+
+std::vector<uint8_t> hmac_sha1(std::vector<uint8_t> const& key, std::string_view const& data)
+{
+	return hmac_sha1_impl(key, data);
+}
+
+std::vector<uint8_t> hmac_sha1(std::string_view const& key, std::vector<uint8_t> const& data)
+{
+	return hmac_sha1_impl(key, data);
 }
 
 std::vector<uint8_t> hmac_sha256(std::string_view const& key, std::string_view const& data)
