@@ -26,6 +26,8 @@ namespace fz {
 class FZ_PUBLIC_SYMBOL buffer final
 {
 public:
+	typedef unsigned char value_type;
+
 	buffer() noexcept = default;
 
 	/// Initially reserves the passed capacity
@@ -42,6 +44,9 @@ public:
 	/// Undefined if buffer is empty
 	unsigned char const* get() const { return pos_; }
 	unsigned char* get() { return pos_; }
+
+	/// Same as get()
+	unsigned char* data() { return pos_; }
 
 	/** \brief Returns a writable buffer guaranteed to be large enough for write_size bytes, call add when done.
 	 *
