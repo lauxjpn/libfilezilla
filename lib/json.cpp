@@ -459,7 +459,7 @@ json json::parse(char const*& p, char const* end, size_t max_depth)
 				return {};
 			}
 			auto [name, r] = json_unescape_string(p, end, false);
-			if (!r || name.empty()) {
+			if (!r) {
 				return {};
 			}
 
