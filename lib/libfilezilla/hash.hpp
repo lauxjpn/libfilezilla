@@ -15,8 +15,8 @@ namespace fz {
 /// List of supported hashing algorithms
 enum class hash_algorithm
 {
-	md5,
-	sha1,
+	md5, // insecure
+	sha1, // insecure
 	sha256,
 	sha512
 };
@@ -70,6 +70,15 @@ std::vector<uint8_t> FZ_PUBLIC_SYMBOL md5(std::vector<uint8_t> const& data);
 /// \brief Standard SHA256
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sha256(std::string_view const& data);
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL sha256(std::vector<uint8_t> const& data);
+
+/** \brief Standard HMAC using SHA1
+ *
+ * While HMAC-SHA1 (as opposed to plain SHA1) is still considered secure in 2021, avoid using this for new things
+ */
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha1(std::string_view const& key, std::string_view const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha1(std::vector<uint8_t> const& key, std::vector<uint8_t> const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha1(std::vector<uint8_t> const& key, std::string_view const& data);
+std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha1(std::string_view const& key, std::vector<uint8_t> const& data);
 
 /// \brief Standard HMAC using SHA256
 std::vector<uint8_t> FZ_PUBLIC_SYMBOL hmac_sha256(std::string_view const& key, std::string_view const& data);
