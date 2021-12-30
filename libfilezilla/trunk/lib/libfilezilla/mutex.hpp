@@ -13,8 +13,32 @@
 #include <pthread.h>
 #endif
 
-namespace fz {
+//#define LFZ_DEBUG_MUTEXES
+#ifdef LFZ_DEBUG_MUTEXES
 
+#include <memory>
+
+namespace fz {
+class mutex;
+/// \private
+struct FZ_PUBLIC_SYMBOL mutex_debug final
+{
+	mutex_debug(mutex* mtx)
+	    : mtx_(mtx)
+	{}
+
+	static void record_lock(void* m);
+	static void record_unlock(void* m);
+
+	size_t count_{};
+	mutex* mtx_{};
+
+	std::vector<std::tuple<std::weak_ptr<mutex_debug>, std::vector<void*>>> order_;
+};
+}
+#endif
+
+namespace fz {
 /**
  * \brief Lean replacement for std::(recursive_)mutex
  *
@@ -51,6 +75,10 @@ private:
 #else
 	pthread_mutex_t m_;
 #endif
+#ifdef LFZ_DEBUG_MUTEXES
+public:
+	std::shared_ptr<mutex_debug> h_;
+#endif
 };
 
 /** \brief A simple scoped lock.
@@ -72,11 +100,17 @@ public:
 #else
 		pthread_mutex_lock(m_);
 #endif
+#ifdef LFZ_DEBUG_MUTEXES
+		mutex_debug::record_lock(m_);
+#endif
 	}
 
 	~scoped_lock()
 	{
 		if (locked_) {
+#ifdef LFZ_DEBUG_MUTEXES
+		mutex_debug::record_unlock(m_);
+#endif
 #ifdef FZ_WINDOWS
 			LeaveCriticalSection(m_);
 #else
@@ -120,6 +154,10 @@ public:
 #else
 		pthread_mutex_lock(m_);
 #endif
+#ifdef LFZ_DEBUG_MUTEXES
+		mutex_debug::record_lock(m_);
+#endif
+
 	}
 
 	/** \brief Releases the mutex.
@@ -129,6 +167,9 @@ public:
 	void unlock()
 	{
 		locked_ = false;
+#ifdef LFZ_DEBUG_MUTEXES
+		mutex_debug::record_unlock(m_);
+#endif
 #ifdef FZ_WINDOWS
 		LeaveCriticalSection(m_);
 #else
