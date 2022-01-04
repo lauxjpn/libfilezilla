@@ -144,7 +144,11 @@ void event_loop::stop_timer(timer_id id)
 		scoped_lock lock(sync_);
 		for (auto it = timers_.begin(); it != timers_.end(); ++it) {
 			if (it->id_ == id) {
-				timers_.erase(it);
+				if (&*it != &timers_.back()) {
+					*it = std::move(timers_.back());
+				}
+				timers_.pop_back();
+
 				if (timers_.empty()) {
 					deadline_ = monotonic_clock();
 				}
@@ -254,7 +258,11 @@ bool event_loop::process_timers(scoped_lock & l, monotonic_clock & now)
 
 		// Update the expired timer
 		if (!it->interval_) {
-			timers_.erase(it);
+			// Remove one-shot timer
+			if (&*it != &timers_.back()) {
+				*it = std::move(timers_.back());
+			}
+			timers_.pop_back();
 		}
 		else {
 			it->deadline_ = now + it->interval_;
