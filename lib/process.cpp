@@ -339,27 +339,14 @@ public:
 	int write_{-1};
 };
 
-void make_arg(native_string const& arg, std::vector<std::unique_ptr<native_string::value_type[]>> & argList)
+void get_argv(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, std::vector<char*> & argV)
 {
-	auto ret = std::make_unique<char[]>(arg.size() + 1);
-	memcpy(ret.get(), arg.c_str(), arg.size() + 1);
-	argList.push_back(std::move(ret));
-}
-
-void get_argv(native_string const& cmd, std::vector<native_string>::const_iterator const& begin, std::vector<native_string>::const_iterator const& end, std::vector<std::unique_ptr<char[]>> & argList, std::unique_ptr<char *[]> & argV)
-{
-	argList.reserve(end - begin + 1);
-	make_arg(cmd, argList);
+	argV.reserve(end - begin + 2);
+	argV.emplace_back(const_cast<char*>(cmd.c_str()));
 	for (auto it = begin; it != end; ++it) {
-		make_arg(*it, argList);
+		argV.emplace_back(const_cast<char*>(it->c_str()));
 	}
-
-	argV = std::make_unique<char*[]>(argList.size() + 1);
-	char ** v = argV.get();
-	for (auto const& a : argList) {
-		*(v++) = a.get();
-	}
-	*v = nullptr;
+	argV.emplace_back(nullptr);
 }
 
 std::atomic<unsigned int> forkblocks_{};
@@ -396,9 +383,8 @@ public:
 			return false;
 		}
 
-		std::vector<std::unique_ptr<char[]>> argList;
-		std::unique_ptr<char *[]> argV;
-		get_argv(cmd, begin, end, argList, argV);
+		std::vector<char*> argV;
+		get_argv(cmd, begin, end, argV);
 
 		scoped_lock l(forkblock_mtx_);
 		pid_t pid = fork();
@@ -442,7 +428,7 @@ public:
 			}
 
 			// Execute process
-			execv(cmd.c_str(), argV.get()); // noreturn on success
+			execv(cmd.c_str(), argV.data()); // noreturn on success
 
 			_exit(-1);
 		}
@@ -771,10 +757,9 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 	}
 #endif
 
-	std::vector<std::unique_ptr<char[]>> argList;
-	std::unique_ptr<char *[]> argV;
+	std::vector<char *> argV;
 	auto begin = cmd_with_args.cbegin() + 1;
-	get_argv(cmd_with_args.front(), begin, cmd_with_args.cend(), argList, argV);
+	get_argv(cmd_with_args.front(), begin, cmd_with_args.cend(), argV);
 
 	pid_t const parent = getppid();
 	pid_t const ppgid = getpgid(parent);
@@ -797,7 +782,7 @@ bool spawn_detached_process(std::vector<native_string> const& cmd_with_args)
 		if (!inner_pid) {
 			// Change the process group ID of the new process so that terminating the outer process does not terminate the child
 			setpgid(0, ppgid);
-			execv(argV.get()[0], argV.get());
+			execv(cmd_with_args[0].c_str(), argV.data());
 
 			if (errpipe.write_ != -1) {
 				ssize_t w;
