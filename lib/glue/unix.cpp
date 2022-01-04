@@ -10,8 +10,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include <mutex>
-
 namespace fz {
 
 bool set_cloexec(int fd)
@@ -61,8 +59,7 @@ bool create_pipe(int fds[2])
 
 void disable_sigpipe()
 {
-	static std::once_flag flag;
-	std::call_once(flag, [](){ signal(SIGPIPE, SIG_IGN); });
+	[[maybe_unused]] static bool const once = []() { signal(SIGPIPE, SIG_IGN); return true; }();
 }
 
 bool create_socketpair(int fds[2])
