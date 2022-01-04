@@ -61,7 +61,7 @@ bool create_pipe(int fds[2])
 
 void disable_sigpipe()
 {
-	std::once_flag flag;
+	static std::once_flag flag;
 	std::call_once(flag, [](){ signal(SIGPIPE, SIG_IGN); });
 }
 
