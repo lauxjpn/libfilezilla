@@ -32,7 +32,6 @@
   <PropertyGroup>
     <IncludePath>$(dependency_include);$(IncludePath)</IncludePath>
     <LibraryPath>$(dependency_lib);$(LibraryPath)</LibraryPath>
-    <ExecutablePath>$(ExecutablePath);$(dependency_bin);</ExecutablePath>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="dependency_include">
