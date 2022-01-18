@@ -3,33 +3,49 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
 
+    <!-- Instructions:
+
+      Build libgmp, Nettle, and GnuTLS using Msys2/MinGW, install to ~/prefix
+
+      Generate import libraries for the DLLs:      
+        cd ~/prefix/lib
+        for i in ../bin/*.dll; do
+          gendef $i
+        done
+        for i in *.def; do
+          dlltool -d $i -D ${i%def}.dll -l ${i%def}.lib
+        done
+
+    -->
+
     <!-- EDIT THE LINES BELOW -->
 
-    <nettle_include>x:\xample\nettle-3.4\include</nettle_include>
-    <nettle_lib>x:\xample\nettle-3.4\bin</nettle_lib>
-    <gnutls_include>x:\xample\gnutls-3.5.7-win32\include</gnutls_include>
-    <gnutls_lib>x:\xample\gnutls-3.5.7-win32\bin</gnutls_lib>
+    <dependency_include>x:\msys64\home\user\prefix\include</dependency_include>
+    <dependency_lib>x:\msys64\home\user\prefix\lib</dependency_lib>
+    <dependency_bin>x:\msys64\home\user\prefix\bin;x:\msys64\mingw64\bin</dependency_bin>
+    <!-- Change library version numbers if needed -->
+    <dependency_imports>libgnutls-30.lib;libhogweed-6.lib;libnettle-8.lib</dependency_imports>
 
     <!-- EDIT THE LINES ABOVE -->
 
   </PropertyGroup>
   <PropertyGroup>
-    <IncludePath>$(gnutls_include);$(nettle_include);$(IncludePath)</IncludePath>
-    <LibraryPath>$(gnutls_lib)$(nettle_lib);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(dependency_include);$(IncludePath)</IncludePath>
+    <LibraryPath>$(dependency_lib);$(LibraryPath)</LibraryPath>
+    <ExecutablePath>$(ExecutablePath);$(dependency_bin);</ExecutablePath>
   </PropertyGroup>
-  <ItemDefinitionGroup />
   <ItemGroup>
-    <BuildMacro Include="nettle_include">
-      <Value>$(nettle_include)</Value>
+    <BuildMacro Include="dependency_include">
+      <Value>$(dependency_include)</Value>
     </BuildMacro>
-    <BuildMacro Include="nettle_lib">
-      <Value>$(nettle_lib)</Value>
+    <BuildMacro Include="dependency_lib">
+      <Value>$(dependency_lib)</Value>
     </BuildMacro>
-    <BuildMacro Include="gnutls_include">
-      <Value>$(gnutls_include)</Value>
+    <BuildMacro Include="dependency_bin">
+      <Value>$(dependency_bin)</Value>
     </BuildMacro>
-    <BuildMacro Include="gnutls_lib">
-      <Value>$(gnutls_lib)</Value>
+    <BuildMacro Include="dependency_imports">
+      <Value>$(dependency_imports)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>
